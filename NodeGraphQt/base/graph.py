@@ -21,8 +21,8 @@ from grandalf.graphs import Vertex, Edge, Graph
 
 class defaultview:
     def __init__(self, w, h):
-        self.w = w
-        self.h = h
+        self.w = h
+        self.h = w
 
 
 class NodeGraph(QtCore.QObject):
@@ -362,6 +362,7 @@ class NodeGraph(QtCore.QObject):
         # node.model.name = node.NODE_NAME
         node.update()
         self._nodes.append(node)
+        node.view.parent = self
 
         v = Vertex(node)
         self.layout_vertices[node] = v
@@ -383,10 +384,7 @@ class NodeGraph(QtCore.QObject):
         sug.draw()
 
         for n, v in self.layout_vertices.items():
-            n.set_pos(v.view.xy[1], v.view.xy[0])
-            n.update()
-
-        self.center_selection()
+            n.set_pos(v.view.xy[1] - v.view.h / 2, v.view.xy[0] - v.view.w / 2)
 
     def connect(self, port1, port2):
         node1 = port1.model.node

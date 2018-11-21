@@ -34,7 +34,7 @@ def inst_children(node):
             graph_node = HierGear(child, node)
 
         child_node_map[child] = graph_node
-        node.add_node(graph_node)
+        # node.add_node(graph_node)
 
     for child, graph_node in child_node_map.items():
         child = graph_node.gear
@@ -43,18 +43,22 @@ def inst_children(node):
             graph_node.collapse()
 
         for port in child.in_ports:
-            for consumer in port.consumer.consumers:
-                if consumer.gear in child_node_map:
-                    consumer_graph_node = child_node_map[consumer.gear]
-                    src_port = graph_node.input(port.index)
-                    src_port.connect_to(
-                        consumer_graph_node.input(consumer.index))
+            producer = port.producer.producer
+
+            if producer.gear is node.gear:
+                src_port = node.input(producer.index)
+                dest_port = graph_node.input(port.index)
+                node.connect(src_port, dest_port)
 
         for port in child.out_ports:
             for consumer in port.consumer.consumers:
-                if consumer.gear in child_node_map:
-                    consumer_graph_node = child_node_map[consumer.gear]
 
+                if consumer.gear is node.gear:
+                    consumer_graph_node = node
+                else:
+                    consumer_graph_node = child_node_map.get(consumer.gear)
+
+                if consumer_graph_node:
                     if isinstance(consumer, InPort):
                         src_port = graph_node.output(port.index)
                         dest_port = consumer_graph_node.input(consumer.index)
@@ -86,32 +90,6 @@ class Top:
 
     def layout(self):
         self._graph.layout()
-        # V = [gear_graph_node_map[g].vertex for g in self.gear.child]
-        # g = Graph(V, self.layout_edges)
-
-        # v_init = [
-        #     gear_graph_node_map[g].vertex for g in self.gear.child
-        #     if all(p.consumer.producer.gear is self.gear for p in g.in_ports)
-        # ]
-
-        # class defaultview(object):
-        #     w, h = 100, 200
-
-        # for v in V:
-        #     v.view = defaultview()
-        # sug = SugiyamaLayout(g.C[0])
-        # sug.init_all(roots=v_init)
-        # sug.draw()
-
-        # for g in self.gear.child:
-        #     n = gear_graph_node_map[g]
-        #     n.set_pos(n.vertex.view.xy[1] - 500, n.vertex.view.xy[0])
-
-        # for l in sug.layers:
-        #     for n in l:
-        #         print(n.view.xy, end='')
-
-        #     print()
 
 
 class HierGear(Backdrop):
@@ -139,6 +117,8 @@ class HierGear(Backdrop):
         for port in gear.out_ports:
             self.add_output(port.basename)
 
+        self.parent.add_node(self)
+
         self.NODE_NAME = gear.basename
         self.set_name(gear.basename)
         self.set_selected(False)
@@ -156,29 +136,6 @@ class HierGear(Backdrop):
 
     def connect(self, port1, port2):
         self.view.connect(port1, port2)
-
-    # def layout(self):
-    #     V = [gear_graph_node_map[g].vertex for g in self.gear.child]
-    #     g = Graph(V, self.layout_edges)
-
-    #     v_init = [
-    #         gear_graph_node_map[g].vertex for g in self.gear.child
-    #         if all(p.consumer.producer.gear is self.gear for p in g.in_ports)
-    #     ]
-
-    #     class defaultview(object):
-    #         w, h = 100, 200
-
-    #     for v in V:
-    #         v.view = defaultview()
-    #     sug = SugiyamaLayout(g.C[0])
-    #     sug.init_all(roots=v_init)
-    #     sug.draw()
-
-    #     x, y = self.pos()
-    #     for g in self.gear.child:
-    #         n = gear_graph_node_map[g]
-    #         n.set_pos(n.vertex.view.xy[1] + x, n.vertex.view.xy[0] + y)
 
 
 class NodeGear(Node):
@@ -210,6 +167,7 @@ class NodeGear(Node):
 
         self.set_name(gear.basename)
         self.set_selected(False)
+        self.parent.add_node(self)
 
     def layout(self):
         pass
@@ -223,7 +181,7 @@ if __name__ == '__main__':
 
     viewer = graph.viewer()
     viewer.setWindowTitle('My Node Graph')
-    viewer.resize(1100, 800)
+    viewer.resize(800, 500)
     viewer.show()
 
     # registered nodes.
@@ -297,6 +255,7 @@ if __name__ == '__main__':
 
         top = Top(root, graph)
         top.layout()
+        top.graph.center_selection()
 
         # v = Visitor(params, fullname)
 

@@ -118,9 +118,9 @@ class Port(object):
         undo_stack.beginMacro('connected port')
 
         pre_conn_port = None
-        src_conn_ports = self.connected_ports()
-        if not self.multi_connection() and src_conn_ports:
-            pre_conn_port = src_conn_ports[0]
+        # src_conn_ports = self.connected_ports()
+        # if not self.multi_connection() and src_conn_ports:
+        #     pre_conn_port = src_conn_ports[0]
 
         if not port:
             if pre_conn_port:

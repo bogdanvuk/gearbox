@@ -97,6 +97,7 @@ class BackdropNodeItem(AbstractNodeItem):
         self.layout_vertices = {}
         self.layout_root_vertices = []
         self.layout_edges = []
+        self._prev_size = None
 
     def _combined_rect(self, nodes):
         group = self.scene().createItemGroup(nodes)
@@ -105,11 +106,6 @@ class BackdropNodeItem(AbstractNodeItem):
         return rect
 
     def mousePressEvent(self, event):
-        print("Here?")
-        print(self.pos)
-        for n, v in self.layout_vertices.items():
-            print(n.pos)
-
         if event.button() == QtCore.Qt.MouseButton.LeftButton:
             pos = event.scenePos()
             rect = QtCore.QRectF(pos.x() - 5, pos.y() - 5, 10, 10)
@@ -121,10 +117,10 @@ class BackdropNodeItem(AbstractNodeItem):
             if self.selected:
                 return
 
-            viewer = self.viewer()
-            [n.setSelected(False) for n in viewer.selected_nodes()]
+            # viewer = self.viewer()
+            # [n.setSelected(False) for n in viewer.selected_nodes()]
 
-            self._nodes += self.get_nodes(False)
+            # self._nodes += self.get_nodes(False)
             [n.setSelected(True) for n in self._nodes]
 
     def mouseReleaseEvent(self, event):
@@ -137,6 +133,9 @@ class BackdropNodeItem(AbstractNodeItem):
         self._width = pos.x() + self._sizer.size
         self._height = pos.y() + self._sizer.size
         self.post_init()
+
+    def mouseDoubleClickEvent(self, event):
+        self.auto_resize()
 
     def on_sizer_double_clicked(self):
         self.auto_resize()
@@ -177,6 +176,7 @@ class BackdropNodeItem(AbstractNodeItem):
         painter.setPen(QtGui.QPen(QtGui.QColor(*border_color), 1))
         painter.drawPath(path)
 
+        # import pdb; pdb.set_trace()
         for port in self.inputs + self.outputs:
             for pipe in port.connected_pipes:
                 pipe.draw_path(pipe._input_port, pipe._output_port)
@@ -187,17 +187,24 @@ class BackdropNodeItem(AbstractNodeItem):
         node1 = port1.model.node.view
         node2 = port2.model.node.view
 
+        print(f'Connecting: {port1.model.node} -> {port2.model.node}')
+
         port1.connect_to(port2)
+
+        print(f'{port1.view._pipes}')
 
         if (node2 is not self) and (node1 is not self):
             self.layout_edges.append(
                 Edge(self.layout_vertices[node1], self.layout_vertices[node2]))
-        elif node1 is self:
-            self.layout_root_vertices.append(node1)
+        # elif node1 is self:
+        #     self.layout_root_vertices.append(node2)
+        # elif node2 is self:
+        #     self.layout_root_vertices.append(node1)
 
     def add_node(self, node):
         view = node.view
         view.update()
+        view.parent = self
 
         self._nodes.append(view)
         v = Vertex(view)
@@ -208,8 +215,8 @@ class BackdropNodeItem(AbstractNodeItem):
     def layout(self):
         class defaultview:
             def __init__(self, w, h):
-                self.w = w
-                self.h = h
+                self.w = h
+                self.h = w
 
         g = Graph(list(self.layout_vertices.values()), self.layout_edges)
 
@@ -244,31 +251,50 @@ class BackdropNodeItem(AbstractNodeItem):
         for node in self._nodes:
             node.hide()
 
+        if self._prev_size:
+            self._sizer.set_pos(self._prev_size[0], self._prev_size[1])
+            self._prev_size = None
+            self.parent.layout()
+
     def expand(self):
         for node in self._nodes:
             node.show()
 
         self.show()
 
+        padding = 40
+        self._prev_size = (self.width, self.height)
+
+        nodes_rect = self._combined_rect(self._nodes)
+
+        self._sizer.set_pos(nodes_rect.width() + (padding * 2),
+                            nodes_rect.height() + (padding * 2))
+        self.parent.layout()
+
+        [n.setSelected(True) for n in self.get_nodes()]
+
     def set_pos(self, x=0.0, y=0.0):
         self.pos = (x, y)
+        print(self.pos)
+
+        padding = 40
+        x_min = min(
+            v.view.xy[1] - v.view.h / 2 for v in self.layout_vertices.values())
+
+        y_min = min(
+            v.view.xy[0] - v.view.w / 2 for v in self.layout_vertices.values())
+
         for n, v in self.layout_vertices.items():
-            n.pos = x + v.view.xy[1], y + v.view.xy[0]
+            n.pos = (x + v.view.xy[1] - x_min - v.view.h / 2 + padding,
+                     y + v.view.xy[0] - y_min - v.view.w / 2 + padding)
 
     def auto_resize(self, nodes=None):
-        nodes = nodes or self.get_nodes(True)
-        if nodes:
-            padding = 40
-            nodes_rect = self._combined_rect(nodes)
-            self.pos = [nodes_rect.x() - padding, nodes_rect.y() - padding]
-            self._sizer.set_pos(nodes_rect.width() + (padding * 2),
-                                nodes_rect.height() + (padding * 2))
+        if self._prev_size:
+            self.collapse()
+        else:
             self.expand()
-            return
 
-        width, height = self._min_size
-        self._sizer.set_pos(width, height)
-        self.expand()
+        print(f'Size: {self.width}, {self.height}')
 
     def pre_init(self, viewer, pos=None):
         """
