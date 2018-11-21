@@ -51,7 +51,7 @@ class NodeGraph(QtCore.QObject):
     def _init_actions(self):
         # setup tab search shortcut.
         tab = QAction('Search Nodes', self)
-        tab.setShortcut('tab')
+        tab.setShortcut('/')
         tab.triggered.connect(self._toggle_tab_search)
         self._viewer.addAction(tab)
         setup_actions(self)
