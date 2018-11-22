@@ -4,8 +4,8 @@ import os
 import re
 
 from PySide2 import QtCore, QtWidgets
-from PySide2.QtGui import QClipboard
-from PySide2.QtWidgets import QAction, QUndoStack
+from PySide2.QtGui import QClipboard, QKeySequence
+from PySide2.QtWidgets import QAction, QUndoStack, QShortcut
 
 from .actions import setup_actions
 from .commands import (NodeAddedCmd, NodeRemovedCmd, NodeMovedCmd,
@@ -33,6 +33,33 @@ class NodeGraphModel(object):
         self.acyclic = True
 
 
+def _find_rec(path, root):
+    parts = path.split("/")
+
+    # if parts[0] == '..':
+    #     return _find_rec("/".join(parts[1:]), root.parent)
+
+    for node in root._nodes:
+        child = node.model
+        if hasattr(child, 'basename') and child.basename == parts[0]:
+            break
+    else:
+        raise Exception()
+
+    if len(parts) == 1:
+        return node
+    else:
+        path_rest = "/".join(parts[1:])
+        if path_rest:
+            return _find_rec("/".join(parts[1:]), node)
+        else:
+            return node
+
+
+def find_node_by_path(root, path):
+    return _find_rec(path, root)
+
+
 class NodeGraph(QtWidgets.QMainWindow):
 
     node_selected = QtCore.Signal(NodeItem)
@@ -54,8 +81,10 @@ class NodeGraph(QtWidgets.QMainWindow):
         mainWidget.setLayout(hbox)
         mainWidget.setContentsMargins(0, 0, 0, 0)
 
-        textbox = Minibuffer()
-        hbox.addWidget(textbox)
+        self.minibuffer = Minibuffer()
+        self.minibuffer.completed.connect(self._minibuffer_completed)
+
+        hbox.addWidget(self.minibuffer)
         self.setCentralWidget(mainWidget)
 
         self._init_actions()
@@ -66,11 +95,7 @@ class NodeGraph(QtWidgets.QMainWindow):
         self.layout_edges = []
         self.layout_layers = None
 
-    def onSceneDestroyed(self, obj):
-        print('tmpScene destroyed')
-
     def _wire_signals(self):
-        self._viewer.search_triggered.connect(self._on_search_triggered)
         self._viewer.connection_changed.connect(self._on_connection_changed)
         self._viewer.node_selected.connect(self._on_node_selected)
 
@@ -82,12 +107,34 @@ class NodeGraph(QtWidgets.QMainWindow):
         self._viewer.addAction(tab)
         setup_actions(self)
 
+        QShortcut(QKeySequence(QtCore.Qt.Key_Tab),
+                  self._viewer).activated.connect(self._expand_selected)
+
+    def _expand_selected(self):
+        for node in self.selected_nodes():
+            if node.collapsed:
+                node.expand()
+            else:
+                node.collapse()
+
+    def _minibuffer_completed(self, text):
+        print(text)
+        for node in self.selected_nodes():
+            node.setSelected(False)
+
+        try:
+            node = find_node_by_path(self.top, text)
+        except:
+            print('Not found')
+
+        node.setSelected(True)
+        self._viewer.ensureVisible(node)
+
     def _toggle_tab_search(self):
         """
         toggle the tab search widget.
         """
-        self._viewer.tab_search_set_nodes()
-        self._viewer.tab_search_toggle()
+        self.minibuffer.complete()
 
     def _on_node_selected(self, node_id):
         """
@@ -390,11 +437,7 @@ class NodeGraph(QtWidgets.QMainWindow):
         Returns:
             list[NodeGraphQt.Node]: list of nodes.
         """
-        nodes = []
-        for item in self._viewer.selected_nodes():
-            node = self._model.nodes[item.id]
-            nodes.append(node)
-        return nodes
+        return self._viewer.selected_nodes()
 
     def select_all(self):
         """

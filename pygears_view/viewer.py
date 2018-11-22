@@ -10,7 +10,6 @@ from .pipe import Pipe
 from .port import PortItem
 from .scene import NodeScene
 from .stylesheet import STYLE_QMENU
-from .tab_search import TabSearchWidget
 
 ZOOM_MIN = -0.95
 ZOOM_MAX = 2.0
@@ -60,7 +59,6 @@ class ContextMenu(object):
 class NodeViewer(QtWidgets.QGraphicsView):
 
     moved_nodes = QtCore.Signal(dict)
-    search_triggered = QtCore.Signal(str, tuple)
     connection_changed = QtCore.Signal(list, list)
     node_selected = QtCore.Signal(str)
 
@@ -87,8 +85,6 @@ class NodeViewer(QtWidgets.QGraphicsView):
         self._undo_stack = QtWidgets.QUndoStack(self)
         self._context_menu = QtWidgets.QMenu('nodes', self)
         self._context_menu.setStyleSheet(STYLE_QMENU)
-        self._search_widget = TabSearchWidget(self)
-        self._search_widget.search_submitted.connect(self._on_search_submitted)
 
         # workaround fix on OSX shortcuts from the non-native menu actions
         # don't seem to trigger so we create a dummy menu bar.
@@ -145,10 +141,6 @@ class NodeViewer(QtWidgets.QGraphicsView):
                 items.append(item)
         return items
 
-    def _on_search_submitted(self, node_type):
-        pos = self.mapToScene(self._previous_pos)
-        self.search_triggered.emit(node_type, (pos.x(), pos.y()))
-
     # --- re-implemented methods ---
 
     def resizeEvent(self, event):
@@ -170,10 +162,6 @@ class NodeViewer(QtWidgets.QGraphicsView):
         self._origin_pos = event.pos()
         self._previous_pos = event.pos()
         self._prev_selection = self.selected_nodes()
-
-        # close tab search
-        if self._search_widget.isVisible():
-            self.tab_search_toggle()
 
         if alt_modifier:
             return
@@ -485,24 +473,6 @@ class NodeViewer(QtWidgets.QGraphicsView):
 
         self._detached_port = None
         self.end_live_connection()
-
-    def tab_search_set_nodes(self, nodes=None):
-        self._search_widget.set_nodes(nodes)
-
-    def tab_search_toggle(self):
-        pos = self._previous_pos
-        state = not self._search_widget.isVisible()
-        if state:
-            rect = self._search_widget.rect()
-            new_pos = QtCore.QPoint(pos.x() - rect.width() / 2,
-                                    pos.y() - rect.height() / 2)
-            self._search_widget.move(new_pos)
-            self._search_widget.setVisible(state)
-            rect = self.mapToScene(rect).boundingRect()
-            self.scene().update(rect)
-        else:
-            self._search_widget.setVisible(state)
-            self.clearFocus()
 
     def context_menu(self):
         return ContextMenu(self, self._context_menu)

@@ -246,6 +246,10 @@ class NodeItem(AbstractNodeItem):
     def hierarchical(self):
         return bool(self.model.child)
 
+    @property
+    def collapsed(self):
+        return not bool(self._prev_size)
+
     def auto_resize(self, nodes=None):
         if self._prev_size:
             self.collapse()

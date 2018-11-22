@@ -1,10 +1,13 @@
+import os
 from PySide2 import QtWidgets, QtCore
-from .stylesheet import STYLE_MINIBUFFER
+from .stylesheet import STYLE_MINIBUFFER, STYLE_TABSEARCH_LIST
+from .tab_search import TabSearchCompleter, TreeModel
+from pygears.conf import Inject, reg_inject
 
 
 class Minibuffer(QtWidgets.QLineEdit):
 
-    search_submitted = QtCore.Signal(str)
+    completed = QtCore.Signal(str)
 
     def __init__(self, parent=None, node_dict=None):
         super().__init__(parent)
@@ -14,17 +17,27 @@ class Minibuffer(QtWidgets.QLineEdit):
         self.setDisabled(True)
         # self.hide()
 
-        self._node_dict = node_dict or {}
+    @reg_inject
+    def complete(self, root=Inject('gear/hier_root')):
+        self.setDisabled(False)
+        self._completer = TabSearchCompleter()
+        self._model = TreeModel(root)
+        self._completer.setModel(self._model)
+        self._completer.setCompletionColumn(0)
+        self._completer.setCompletionRole(QtCore.Qt.DisplayRole)
+        self._completer.setCaseSensitivity(QtCore.Qt.CaseInsensitive)
 
-        # self._completer = TabSearchCompleter()
-        # self._completer.setModel(self._model)
-        # self.setCompleter(self._completer)
+        self.setCompleter(self._completer)
+        popup = self._completer.popup()
+        popup.setStyleSheet(STYLE_TABSEARCH_LIST)
+        self.editingFinished.connect(self._on_search_submitted)
+        self.textChanged.connect(self._singled_out)
+        self.prev_text_len = len(self.text())
 
-        # popup = self._completer.popup()
-        # popup.clicked.connect(self._on_search_submitted)
-        # self.returnPressed.connect(self._on_search_submitted)
-        # self.textChanged.connect(self._singled_out)
-        # self.prev_text_len = len(self.text())
+        self.setSelection(0, len(self.text()))
+        self.setFocus()
+        self.completer().popup().show()
+        self.completer().complete()
 
     def _singled_out(self, text):
         if (self._completer.completionCount() == 1):
@@ -60,28 +73,9 @@ class Minibuffer(QtWidgets.QLineEdit):
         return super().event(event)
 
     def _on_search_submitted(self, index=0):
-        print("Here?")
-
-        self.text = self._completer.currentCompletion()
-
-        # node_type = self._node_dict.get(self.text())
-        # if node_type:
-        #     self.search_submitted.emit(node_type)
-        # self.close()
-        # self.parentWidget().clearFocus()
-
-    # def showEvent(self, event):
-    #     super(TabSearchWidget, self).showEvent(event)
-    #     self.setSelection(0, len(self.text()))
-    #     self.setFocus()
-    #     if not self.text():
-    #         self.completer().popup().show()
-    #         self.completer().complete()
-
-    # @reg_inject
-    # def set_nodes(self, node_dict=None, root=Inject('gear/hier_root')):
-    #     self._model = TreeModel(root)
-    #     self._completer.setModel(self._model)
-    #     self._completer.setCompletionColumn(0)
-    #     self._completer.setCompletionRole(QtCore.Qt.DisplayRole)
-    #     self._completer.setCaseSensitivity(QtCore.Qt.CaseInsensitive)
+        if self.text():
+            print("Done!")
+            self.completed.emit(self.text())
+            self.setText('')
+            self.setDisabled(True)
+            self.parentWidget().clearFocus()

@@ -3,7 +3,7 @@ import sys
 
 from PySide2 import QtWidgets
 
-from pygears_view.graph import NodeGraph
+from pygears_view.graph import NodeGraph, find_node_by_path
 from pygears import bind
 from pygears.conf.log import INFO
 from pygears.common import add, shred
@@ -35,8 +35,13 @@ if __name__ == '__main__':
         top = NodeItem(root, graph)
         top.layout()
         top.graph.center_selection()
+        return top
 
-    make_graph()
+    top = make_graph()
+    graph.top = top
+
+    # node = find_node_by_path(graph.top, 'shred')
+    # print(node)
 
     graph.show()
     app.exec_()
