@@ -177,6 +177,7 @@ if __name__ == '__main__':
     viewer = graph.viewer()
     viewer.setWindowTitle('My Node Graph')
     viewer.resize(800, 500)
+    viewer.setGeometry(500, viewer.y(), 800, 500)
     viewer.show()
 
     add(2, 4) | shred

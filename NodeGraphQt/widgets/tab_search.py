@@ -58,7 +58,7 @@ class TreeModel(QtCore.QAbstractItemModel):
         else:
             return self.rootItem.columnCount()
 
-    def data(self, index, role):
+    def data(self, index, role=QtCore.Qt.DisplayRole):
         if not index.isValid():
             return None
 
@@ -79,7 +79,8 @@ class TreeModel(QtCore.QAbstractItemModel):
         return QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable
 
     def headerData(self, section, orientation, role):
-        if orientation == QtCore.Qt.Horizontal and role == QtCore.Qt.DisplayRole:
+        if (orientation == QtCore.Qt.Horizontal
+                and role == QtCore.Qt.DisplayRole):
             return self.rootItem.data(section)
 
         return None
@@ -120,6 +121,7 @@ class TreeModel(QtCore.QAbstractItemModel):
         else:
             parentItem = parent.internalPointer()
 
+        # print(f"childCount: {parentItem.childCount()}")
         return parentItem.childCount()
 
     def setupModelData(self, root, parent):
@@ -178,14 +180,14 @@ class TabSearchCompleter(QtWidgets.QCompleter):
         r = '/'.join(result)
         return r
 
-    def updateModel(self):
-        if not self._using_orig_model:
-            self._filter_model.setSourceModel(self._source_model)
+    # def updateModel(self):
+    #     if not self._using_orig_model:
+    #         self._filter_model.setSourceModel(self._source_model)
 
-        pattern = QtCore.QRegExp(self._local_completion_prefix,
-                                 QtCore.Qt.CaseInsensitive,
-                                 QtCore.QRegExp.FixedString)
-        self._filter_model.setFilterRegExp(pattern)
+    #     pattern = QtCore.QRegExp(self._local_completion_prefix,
+    #                              QtCore.Qt.CaseInsensitive,
+    #                              QtCore.QRegExp.FixedString)
+    #     self._filter_model.setFilterRegExp(pattern)
 
     # def setModel(self, model):
     #     self._source_model = model
@@ -228,15 +230,11 @@ class TabSearchWidget(QtWidgets.QLineEdit):
             completion_text = self._completer.currentCompletion()
             if (len(completion_text) > len(text)) and (len(text) >
                                                        self.prev_text_len):
+                list_index = self._completer.currentIndex()
+                index = self._completer.completionModel().mapToSource(
+                    list_index)
 
-                model = self._completer.completionModel()
-                gear_model_index = model.sibling(
-                    self._completer.currentRow(), 1,
-                    self._completer.currentIndex())
-
-                gear = model.data(gear_model_index)
-
-                if gear.child:
+                if self._model.hasChildren(index):
                     completion_text += '/'
 
                 self.setText(completion_text)
@@ -252,8 +250,9 @@ class TabSearchWidget(QtWidgets.QLineEdit):
         self._completer.setCurrentRow(cur_row)
 
     def event(self, event):
-        if event.type() == QtCore.QEvent.KeyPress and event.key(
-        ) == QtCore.Qt.Key_Tab:
+        if (event.type() == QtCore.QEvent.KeyPress
+                and event.key() == QtCore.Qt.Key_Tab
+                and event.modifiers() == QtCore.Qt.NoModifier):
             prefix = os.path.commonprefix(list(self.completions()))
             self.setText(prefix)
             return False
@@ -280,8 +279,6 @@ class TabSearchWidget(QtWidgets.QLineEdit):
 
     @reg_inject
     def set_nodes(self, node_dict=None, root=Inject('gear/hier_root')):
-        self._node_dict = node_dict or {}
-
         self._model = TreeModel(root)
         self._completer.setModel(self._model)
         self._completer.setCompletionColumn(0)
