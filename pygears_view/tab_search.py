@@ -3,7 +3,7 @@ import os
 from PySide2 import QtCore, QtWidgets
 
 from pygears.conf import Inject, reg_inject
-from NodeGraphQt.widgets.stylesheet import STYLE_TABSEARCH, STYLE_TABSEARCH_LIST
+from .stylesheet import STYLE_TABSEARCH, STYLE_TABSEARCH_LIST
 
 from pygears.core.hier_node import HierVisitorBase
 
