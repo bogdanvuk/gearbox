@@ -1,8 +1,6 @@
 import os
 from PySide2 import QtWidgets, QtCore
 from .stylesheet import STYLE_MINIBUFFER, STYLE_TABSEARCH_LIST
-from .tab_search import TabSearchCompleter, TreeModel
-from pygears.conf import Inject, reg_inject
 
 
 class Minibuffer(QtWidgets.QLineEdit):
@@ -17,16 +15,10 @@ class Minibuffer(QtWidgets.QLineEdit):
         self.setDisabled(True)
         # self.hide()
 
-    @reg_inject
-    def complete(self, root=Inject('gear/hier_root')):
+    def complete(self, completer):
         self.setDisabled(False)
-        self._completer = TabSearchCompleter()
-        self._model = TreeModel(root)
-        self._completer.setModel(self._model)
-        self._completer.setCompletionColumn(0)
-        self._completer.setCompletionRole(QtCore.Qt.DisplayRole)
-        self._completer.setCaseSensitivity(QtCore.Qt.CaseInsensitive)
 
+        self._completer = completer
         self.setCompleter(self._completer)
         popup = self._completer.popup()
         popup.setStyleSheet(STYLE_TABSEARCH_LIST)
@@ -48,7 +40,7 @@ class Minibuffer(QtWidgets.QLineEdit):
                 index = self._completer.completionModel().mapToSource(
                     list_index)
 
-                if self._model.hasChildren(index):
+                if index.model().hasChildren(index):
                     completion_text += '/'
 
                 self.setText(completion_text)

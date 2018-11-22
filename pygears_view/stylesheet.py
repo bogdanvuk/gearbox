@@ -54,7 +54,7 @@ QLineEdit {
     padding: 2px;
     margin: 0px;
     color: rgba(255, 255, 255, 150);
-    background: rgba(20, 20, 20, 255);
+    background: rgba(35, 35, 35, 255);
     selection-background-color: rgba(219, 158, 0, 255);
 }
 '''

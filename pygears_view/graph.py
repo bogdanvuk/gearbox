@@ -16,8 +16,8 @@ from .viewer import NodeViewer
 from grandalf.layouts import SugiyamaLayout
 from grandalf.graphs import Vertex, Edge, Graph
 
-from .tab_search import TabSearchWidget
 from .minibuffer import Minibuffer
+from .node_search import node_search_completer
 
 
 class defaultview:
@@ -137,7 +137,7 @@ class NodeGraph(QtWidgets.QMainWindow):
         """
         toggle the tab search widget.
         """
-        self.minibuffer.complete()
+        self.minibuffer.complete(node_search_completer(self.top))
 
     def _on_node_selected(self, node_id):
         """

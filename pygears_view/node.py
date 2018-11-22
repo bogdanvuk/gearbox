@@ -105,11 +105,11 @@ def hier_painter(self, painter, option, widget):
         painter.setPen(QtCore.Qt.NoPen)
         painter.drawRect(rect)
 
-    txt_rect = QtCore.QRectF(top_rect.x(),
-                             top_rect.y() + 1.5, rect.width(),
-                             top_rect.height())
-    painter.setPen(QtGui.QColor(*self.text_color))
-    painter.drawText(txt_rect, QtCore.Qt.AlignCenter, self.name)
+    # txt_rect = QtCore.QRectF(top_rect.x(),
+    #                          top_rect.y() + 1.5, rect.width(),
+    #                          top_rect.height())
+    # painter.setPen(QtGui.QColor(*self.text_color))
+    # painter.drawText(txt_rect, QtCore.Qt.AlignCenter, self.name)
 
     path = QtGui.QPainterPath()
     path.addRect(rect)
