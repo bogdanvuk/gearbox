@@ -221,6 +221,27 @@ class NodeItem(AbstractNodeItem):
     def mouseDoubleClickEvent(self, event):
         self.auto_resize()
 
+    def mousePressEvent(self, event):
+        if event.button() == QtCore.Qt.MouseButton.LeftButton:
+            pos = event.scenePos()
+            rect = QtCore.QRectF(pos.x() - 5, pos.y() - 5, 10, 10)
+            item = self.scene().items(rect)[0]
+
+            # if isinstance(item, (PortItem, Pipe)):
+            #     self.setFlag(self.ItemIsMovable, False)
+            #     return
+            # if self.selected:
+            #     return
+
+            [n.setSelected(True) for n in self._nodes]
+            self.setSelected(True)
+
+    def mouseReleaseEvent(self, event):
+        super().mouseReleaseEvent(event)
+        self.setFlag(self.ItemIsMovable, True)
+        [n.setSelected(True) for n in self._nodes]
+        self.setSelected(True)
+
     @property
     def hierarchical(self):
         return bool(self.model.child)
@@ -569,6 +590,7 @@ class NodeItem(AbstractNodeItem):
 
     def add_node(self, node):
         node.update()
+        node.parent = self
 
         self._nodes.append(node)
         v = Vertex(node)
