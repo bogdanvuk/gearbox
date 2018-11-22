@@ -120,7 +120,6 @@ def hier_painter(self, painter, option, widget):
     painter.setPen(QtGui.QPen(QtGui.QColor(*border_color), 1))
     painter.drawPath(path)
 
-    # import pdb; pdb.set_trace()
     for port in self.inputs + self.outputs:
         for pipe in port.connected_pipes:
             pipe.draw_path(pipe._input_port, pipe._output_port)
@@ -211,13 +210,17 @@ class NodeItem(AbstractNodeItem):
             for port in model.in_ports + model.out_ports:
                 self._add_port(port)
 
+        # First add node to the scene, so that all pipes can be rendered in the
+        # inst_children() procedure
+        if not model.root() == model:
+            self.graph.viewer().add_node(self, self.pos)
+
         self.child_node_map = inst_children(self, graph)
+
         if self.parent is not None:
             self.parent.add_node(self)
 
         if not model.root() == model:
-            self.graph.viewer().add_node(self, self.pos)
-
             for node in self._nodes:
                 node.hide()
 
