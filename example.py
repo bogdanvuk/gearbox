@@ -21,7 +21,6 @@ if __name__ == '__main__':
     viewer.setWindowTitle('My Node Graph')
     viewer.resize(800, 500)
     viewer.setGeometry(500, viewer.y(), 800, 500)
-    viewer.show()
 
     add(2, 4) | shred
     # const(val=2) | shred
@@ -39,4 +38,48 @@ if __name__ == '__main__':
 
     make_graph()
 
+    graph.show()
     app.exec_()
+
+# import sys
+
+# from PySide2 import QtGui
+
+# class SomeScene(QtWidgets.QGraphicsScene):
+#     def __init__(self, parent = None):
+#         QtWidgets.QGraphicsScene.__init__(self, parent)
+
+#         pixmap = QtGui.QPixmap('someImage')
+#         item = QtWidgets.QGraphicsPixmapItem(pixmap)
+#         self.addItem(item)
+
+
+# class MainWindow(QtWidgets.QMainWindow):
+#     def __init__(self, parent = None):
+#         QtWidgets.QMainWindow.__init__(self, parent)
+
+#         # This scene will be destroyed because it is local.
+#         tmpScene = SomeScene()
+#         tmpScene.destroyed.connect(self.onSceneDestroyed)
+
+#         self.scene = SomeScene()
+#         view = QtWidgets.QGraphicsView(self.scene)
+
+#         hbox = QtWidgets.QHBoxLayout()
+#         hbox.addWidget(view)
+
+#         hbox.setMargin(0)
+#         mainWidget = QtWidgets.QWidget()
+#         mainWidget.setLayout(hbox)
+#         # QtWidgets.QStatusBar(mainWidget)
+
+#         self.setCentralWidget(mainWidget)
+#         self.statusBar().showMessage('Proba')
+
+#     def onSceneDestroyed(self, obj):
+#         print('tmpScene destroyed')
+
+# app = QtWidgets.QApplication(sys.argv)
+# mainWindow = MainWindow()
+# mainWindow.show()
+# sys.exit(app.exec_())

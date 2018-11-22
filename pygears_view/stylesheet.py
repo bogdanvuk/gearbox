@@ -48,6 +48,17 @@ QLineEdit {
 }
 '''
 
+STYLE_MINIBUFFER = '''
+QLineEdit {
+    border-radius: 0px;
+    padding: 2px;
+    margin: 0px;
+    color: rgba(255, 255, 255, 150);
+    background: rgba(20, 20, 20, 255);
+    selection-background-color: rgba(219, 158, 0, 255);
+}
+'''
+
 
 STYLE_TABSEARCH_LIST = '''
 QListView {

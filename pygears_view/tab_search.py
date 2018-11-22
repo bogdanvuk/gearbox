@@ -205,10 +205,11 @@ class TabSearchWidget(QtWidgets.QLineEdit):
     def __init__(self, parent=None, node_dict=None):
         super(TabSearchWidget, self).__init__(parent)
         self.setAttribute(QtCore.Qt.WA_MacShowFocusRect, 0)
-        self.setStyleSheet(STYLE_TABSEARCH)
+        # self.setStyleSheet(STYLE_TABSEARCH)
         self.setMinimumSize(200, 22)
         self.setTextMargins(2, 0, 2, 0)
-        self.hide()
+        # self.setDisabled(True)
+        # self.hide()
 
         self._node_dict = node_dict or {}
 

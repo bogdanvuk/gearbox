@@ -3,9 +3,9 @@ import json
 import os
 import re
 
-from PySide2 import QtCore
+from PySide2 import QtCore, QtWidgets
 from PySide2.QtGui import QClipboard
-from PySide2.QtWidgets import QUndoStack, QAction
+from PySide2.QtWidgets import QAction, QUndoStack
 
 from .actions import setup_actions
 from .commands import (NodeAddedCmd, NodeRemovedCmd, NodeMovedCmd,
@@ -15,6 +15,9 @@ from .viewer import NodeViewer
 
 from grandalf.layouts import SugiyamaLayout
 from grandalf.graphs import Vertex, Edge, Graph
+
+from .tab_search import TabSearchWidget
+from .minibuffer import Minibuffer
 
 
 class defaultview:
@@ -30,15 +33,31 @@ class NodeGraphModel(object):
         self.acyclic = True
 
 
-class NodeGraph(QtCore.QObject):
+class NodeGraph(QtWidgets.QMainWindow):
 
     node_selected = QtCore.Signal(NodeItem)
 
     def __init__(self, parent=None):
-        super(NodeGraph, self).__init__(parent)
+        super().__init__(parent)
+
         self._model = NodeGraphModel()
         self._viewer = NodeViewer()
         self._undo_stack = QUndoStack(self)
+
+        hbox = QtWidgets.QVBoxLayout()
+        hbox.setSpacing(0)
+        hbox.addWidget(self._viewer)
+
+        hbox.setMargin(0)
+        hbox.setContentsMargins(0, 0, 0, 0)
+        mainWidget = QtWidgets.QWidget()
+        mainWidget.setLayout(hbox)
+        mainWidget.setContentsMargins(0, 0, 0, 0)
+
+        textbox = Minibuffer()
+        hbox.addWidget(textbox)
+        self.setCentralWidget(mainWidget)
+
         self._init_actions()
         self._wire_signals()
         self._nodes = []
@@ -46,6 +65,9 @@ class NodeGraph(QtCore.QObject):
         self.layout_root_vertices = []
         self.layout_edges = []
         self.layout_layers = None
+
+    def onSceneDestroyed(self, obj):
+        print('tmpScene destroyed')
 
     def _wire_signals(self):
         self._viewer.search_triggered.connect(self._on_search_triggered)
@@ -129,11 +151,11 @@ class NodeGraph(QtCore.QObject):
         """
         return self._model
 
-    def show(self):
-        """
-        Show node graph viewer widget.
-        """
-        self._viewer.show()
+    # def show(self):
+    #     """
+    #     Show node graph viewer widget.
+    #     """
+    #     self._viewer.show()
 
     def hide(self):
         """
