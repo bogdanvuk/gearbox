@@ -47,13 +47,13 @@ def _find_rec(path, root):
         raise Exception()
 
     if len(parts) == 1:
-        return node
+        return [node]
     else:
         path_rest = "/".join(parts[1:])
         if path_rest:
-            return _find_rec("/".join(parts[1:]), node)
+            return [node] + _find_rec("/".join(parts[1:]), node)
         else:
-            return node
+            return [node]
 
 
 def find_node_by_path(root, path):
@@ -118,17 +118,20 @@ class NodeGraph(QtWidgets.QMainWindow):
                 node.collapse()
 
     def _minibuffer_completed(self, text):
-        print(text)
+        try:
+            node_path = find_node_by_path(self.top, text)
+            for node in node_path[:-1]:
+                node.expand()
+        except:
+            for node in self.selected_nodes():
+                node.setSelected(False)
+            return
+
         for node in self.selected_nodes():
             node.setSelected(False)
 
-        try:
-            node = find_node_by_path(self.top, text)
-        except:
-            print('Not found')
-
-        node.setSelected(True)
-        self._viewer.ensureVisible(node)
+        node_path[-1].setSelected(True)
+        self._viewer.ensureVisible(node_path[-1])
 
     def _toggle_tab_search(self):
         """

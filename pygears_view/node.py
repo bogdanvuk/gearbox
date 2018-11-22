@@ -204,7 +204,7 @@ class NodeItem(AbstractNodeItem):
             self.size_expander = hier_expand
             self.painter = hier_painter
         else:
-            self.size_expander = lambda x, y: None
+            self.size_expander = lambda x: None
             self.painter = node_painter
 
         if not model.root() == model:
@@ -217,6 +217,9 @@ class NodeItem(AbstractNodeItem):
 
         if not model.root() == model:
             self.graph.viewer().add_node(self, self.pos)
+
+            for node in self._nodes:
+                node.hide()
 
     def mouseDoubleClickEvent(self, event):
         self.auto_resize()
@@ -275,6 +278,10 @@ class NodeItem(AbstractNodeItem):
                 pipe.show()
 
     def collapse(self):
+        if self.collapsed or not self.hierarchical:
+            return
+
+        print("Collapse")
         for node in self._nodes:
             node.hide()
 
@@ -286,13 +293,16 @@ class NodeItem(AbstractNodeItem):
             self.parent.layout()
 
     def expand(self):
+        if not self.collapsed or not self.hierarchical:
+            return None
+
         for node in self._nodes:
             node.show()
 
         self.show()
         self.size_expander(self)
 
-        [n.setSelected(True) for n in node._nodes]
+        [n.setSelected(True) for n in self._nodes]
         self.setSelected(True)
 
     def set_pos(self, x=0.0, y=0.0):
