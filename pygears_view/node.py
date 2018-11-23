@@ -204,6 +204,7 @@ class NodeItem(AbstractNodeItem):
 
         self.collapsed = False if parent is None else True
         self.collapsed_size = self.calc_size()
+        self.layers = []
 
         # First add node to the scene, so that all pipes can be rendered in the
         # inst_children() procedure
@@ -663,6 +664,10 @@ class NodeItem(AbstractNodeItem):
         sug.yspace = 50
 
         sug.draw()
+
+        self.layers = []
+        for layer in sug.layers:
+            self.layers.append([v.data for v in layer])
 
         padding = 40
         x_min = min(

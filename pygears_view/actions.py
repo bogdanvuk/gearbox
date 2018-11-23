@@ -35,8 +35,68 @@ def node_up_level(node, graph):
 def node_down_level(node, graph):
     if node.collapsed:
         node.expand()
+
+    graph.select(node.layers[0][0])
+
+
+def get_node_layer(node):
+    for i, layer in enumerate(node.parent.layers):
+        if node in layer:
+            return i, layer, layer.index(node)
     else:
-        graph.select(node._nodes[0])
+        return None
+
+
+@shortcut(Qt.Key_K)
+@reg_inject
+def node_up(graph=Inject('graph/graph')):
+    nodes = graph.selected_nodes()
+    if len(nodes) > 1:
+        return
+
+    if len(nodes) == 0:
+        graph.select(graph.top.layers[-1][-1])
+        return
+
+    node = nodes[0]
+    layer_id, layer, node_id = get_node_layer(node)
+    if node_id == 0:
+        if layer_id == 0:
+            layer_id = len(node.parent.layers) - 1
+        else:
+            layer_id -= 1
+
+        node = node.parent.layers[layer_id][-1]
+    else:
+        node = node.parent.layers[layer_id][node_id - 1]
+
+    graph.select(node)
+
+
+@shortcut(Qt.Key_J)
+@reg_inject
+def node_down(graph=Inject('graph/graph')):
+    nodes = graph.selected_nodes()
+    if len(nodes) > 1:
+        return
+
+    if len(nodes) == 0:
+        graph.select(graph.top.layers[0][0])
+        return
+
+    node = nodes[0]
+    layer_id, layer, node_id = get_node_layer(node)
+    if node_id == len(layer) - 1:
+        if layer_id == len(node.parent.layers) - 1:
+            layer_id = 0
+        else:
+            layer_id += 1
+
+        node = node.parent.layers[layer_id][0]
+    else:
+        node = node.parent.layers[layer_id][node_id + 1]
+
+    graph.select(node)
 
 
 def setup_actions(graph):
