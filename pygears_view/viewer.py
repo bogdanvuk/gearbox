@@ -295,6 +295,7 @@ class NodeViewer(QtWidgets.QGraphicsView):
         establish a new pipe connection.
         """
         pipe = Pipe()
+        print(f'Add pipe: {start_port} -> {end_port}')
         self.scene().addItem(pipe)
         pipe.set_connections(start_port, end_port)
         pipe.draw_path(pipe.input_port, pipe.output_port)
@@ -534,6 +535,7 @@ class NodeViewer(QtWidgets.QGraphicsView):
         return nodes
 
     def add_node(self, node, pos=None):
+        print(f'Adding: {node.name}')
         pos = pos or (self._previous_pos.x(), self._previous_pos.y())
         node.pre_init(self, pos)
         self.scene().addItem(node)

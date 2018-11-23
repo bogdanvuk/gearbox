@@ -182,7 +182,7 @@ def node_painter(self, painter, option, widget):
 
 class NodeItem(AbstractNodeItem):
     def __init__(self, model, graph, parent=None):
-        super().__init__(model.basename, parent)
+        super().__init__(model.basename)
 
         self.parent = parent
         self.graph = graph
@@ -212,13 +212,10 @@ class NodeItem(AbstractNodeItem):
 
         # First add node to the scene, so that all pipes can be rendered in the
         # inst_children() procedure
-        if not model.root() == model:
-            self.graph.viewer().add_node(self, self.pos)
-
-        self.child_node_map = inst_children(self, graph)
-
         if self.parent is not None:
             self.parent.add_node(self)
+
+        self.child_node_map = inst_children(self, graph)
 
         if not model.root() == model:
             for node in self._nodes:
@@ -310,7 +307,7 @@ class NodeItem(AbstractNodeItem):
 
     def set_pos(self, x=0.0, y=0.0):
         self.pos = (x, y)
-        print(self.pos)
+        print(f'Pos {self.model.name}: {self.pos}')
         if not self.hierarchical:
             return
 
@@ -322,8 +319,8 @@ class NodeItem(AbstractNodeItem):
             v.view.xy[0] - v.view.w / 2 for v in self.layout_vertices.values())
 
         for n, v in self.layout_vertices.items():
-            n.pos = (x + v.view.xy[1] - x_min - v.view.h / 2 + padding,
-                     y + v.view.xy[0] - y_min - v.view.w / 2 + padding)
+            n.set_pos(x + v.view.xy[1] - x_min - v.view.h / 2 + padding,
+                      y + v.view.xy[0] - y_min - v.view.w / 2 + padding)
 
     def _add_port(self, port, display_name=True):
         port_item = PortItem(self)
@@ -606,8 +603,9 @@ class NodeItem(AbstractNodeItem):
         self.offset_ports(0.0, 15.0)
 
     def add_node(self, node):
+        self.graph.viewer().add_node(node, node.pos)
+
         node.update()
-        node.parent = self
 
         self._nodes.append(node)
         v = Vertex(node)
