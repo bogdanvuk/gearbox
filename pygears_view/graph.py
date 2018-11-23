@@ -307,7 +307,7 @@ class NodeGraph(QtWidgets.QMainWindow):
         nodes = self.selected_nodes() or self.all_nodes()
         if not nodes:
             return
-        self._viewer.zoom_to_nodes([n.view for n in nodes])
+        self._viewer.zoom_to_nodes([n for n in nodes])
 
     def reset_zoom(self):
         """
@@ -332,6 +332,9 @@ class NodeGraph(QtWidgets.QMainWindow):
             float: the current zoom level.
         """
         return self._viewer.get_zoom()
+
+    def fit_all(self):
+        self._viewer.zoom_to_nodes(self.top._nodes)
 
     def center_on(self, nodes=None):
         """
