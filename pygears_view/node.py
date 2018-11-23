@@ -60,17 +60,10 @@ def inst_children(node, graph):
 
 
 def hier_expand(node, padding=40):
-    def _combined_rect(node):
-        group = node.scene().createItemGroup(node._nodes)
-        rect = group.boundingRect()
-        node.scene().destroyItemGroup(group)
-        return rect
+    bound = node.node_bounding_rect
 
-    node._prev_size = (node.width, node.height)
+    width, height = bound.width(), bound.height()
 
-    nodes_rect = _combined_rect(node)
-
-    width, height = nodes_rect.width(), nodes_rect.height()
     if width < node.minimum_size[0]:
         width = node.minimum_size[0]
 
@@ -81,7 +74,7 @@ def hier_expand(node, padding=40):
     node._height = height + padding * 2
     node.post_init()
 
-    node.parent.layout()
+    # node.parent.layout()
 
 
 def hier_painter(self, painter, option, widget):
@@ -192,7 +185,6 @@ class NodeItem(AbstractNodeItem):
         self._nodes = []
         self.model = model
         self.minimum_size = (80, 80)
-        self._prev_size = None
 
         self.layout_vertices = {}
         self.layout_root_vertices = []
@@ -206,9 +198,12 @@ class NodeItem(AbstractNodeItem):
             self.size_expander = lambda x: None
             self.painter = node_painter
 
-        if not model.root() == model:
+        if parent is not None:
             for port in model.in_ports + model.out_ports:
                 self._add_port(port)
+
+        self.collapsed = False if parent is None else True
+        self.collapsed_size = self.calc_size()
 
         # First add node to the scene, so that all pipes can be rendered in the
         # inst_children() procedure
@@ -217,7 +212,7 @@ class NodeItem(AbstractNodeItem):
 
         self.child_node_map = inst_children(self, graph)
 
-        if not model.root() == model:
+        if parent is not None:
             for node in self._nodes:
                 node.hide()
 
@@ -236,28 +231,22 @@ class NodeItem(AbstractNodeItem):
             # if self.selected:
             #     return
 
-            [n.setSelected(True) for n in self._nodes]
-            self.setSelected(True)
+            self.selected = True
 
     def mouseReleaseEvent(self, event):
         super().mouseReleaseEvent(event)
         self.setFlag(self.ItemIsMovable, True)
-        [n.setSelected(True) for n in self._nodes]
-        self.setSelected(True)
+        self.selected = True
 
     @property
     def hierarchical(self):
         return bool(self.model.child)
 
-    @property
-    def collapsed(self):
-        return not bool(self._prev_size)
-
     def auto_resize(self, nodes=None):
-        if self._prev_size:
-            self.collapse()
-        else:
+        if self.collapsed:
             self.expand()
+        else:
+            self.collapse()
 
     def paint(self, painter, option, widget):
         self.painter(self, painter, option, widget)
@@ -268,6 +257,9 @@ class NodeItem(AbstractNodeItem):
             for pipe in port.connected_pipes:
                 pipe.hide()
 
+        for node in self._nodes:
+            node.hide()
+
         super().hide()
 
     def show(self):
@@ -275,52 +267,55 @@ class NodeItem(AbstractNodeItem):
         ports = self.inputs + self.outputs
         for port in ports:
             for pipe in port.connected_pipes:
-                pipe.show()
+                if pipe.input_port.isVisible() and pipe.output_port.isVisible(
+                ):
+                    pipe.show()
 
     def collapse(self):
         if self.collapsed or not self.hierarchical:
             return
 
-        print("Collapse")
+        print(f'Collapsing: {self.model.name}')
         for node in self._nodes:
             node.hide()
 
-        if self._prev_size:
-            self._width = self._prev_size[0]
-            self._height = self._prev_size[1]
-            self.post_init()
-            self._prev_size = None
-            self.parent.layout()
+        self.collapsed = True
+        self.graph.top.layout()
 
     def expand(self):
         if not self.collapsed or not self.hierarchical:
             return None
 
+        print(f'Expanding: {self.model.name}')
+
         for node in self._nodes:
             node.show()
 
+        self.collapsed = False
         self.show()
-        self.size_expander(self)
-
-        [n.setSelected(True) for n in self._nodes]
-        self.setSelected(True)
+        self.graph.top.layout()
+        self.selected = True
 
     def set_pos(self, x=0.0, y=0.0):
         self.pos = (x, y)
-        print(f'Pos {self.model.name}: {self.pos}')
-        if not self.hierarchical:
-            return
+        # print(f'Pos {self.model.name}: {self.pos}')
+        # if not self.hierarchical:
+        #     return
 
-        padding = 40
-        x_min = min(
-            v.view.xy[1] - v.view.h / 2 for v in self.layout_vertices.values())
+        # padding = 40
+        # x_min = min(
+        #     v.view.xy[1] - v.view.h / 2 for v in self.layout_vertices.values())
 
-        y_min = min(
-            v.view.xy[0] - v.view.w / 2 for v in self.layout_vertices.values())
+        # y_min = min(
+        #     v.view.xy[0] - v.view.w / 2 for v in self.layout_vertices.values())
 
-        for n, v in self.layout_vertices.items():
-            n.set_pos(x + v.view.xy[1] - x_min - v.view.h / 2 + padding,
-                      y + v.view.xy[0] - y_min - v.view.w / 2 + padding)
+        # for n, v in self.layout_vertices.items():
+        #     # n.set_pos(x + v.view.xy[1] - x_min - v.view.h / 2 + padding,
+        #     #           y + v.view.xy[0] - y_min - v.view.w / 2 + padding)
+        #     # n.set_pos(v.view.xy[1] - x_min - v.view.h / 2 + padding,
+        #     #           v.view.xy[0] - y_min - v.view.w / 2 + padding)
+        #     n.set_pos(v.view.xy[1] - x_min - v.view.h / 2 + padding,
+        #               v.view.xy[0] - y_min - v.view.w / 2 + padding)
 
     def _add_port(self, port, display_name=True):
         port_item = PortItem(self)
@@ -342,6 +337,9 @@ class NodeItem(AbstractNodeItem):
     @AbstractNodeItem.selected.setter
     def selected(self, selected=False):
         AbstractNodeItem.selected.fset(self, selected)
+        # for n in self._nodes:
+        #     n.selected = selected
+
         if selected:
             self.hightlight_pipes()
 
@@ -603,7 +601,14 @@ class NodeItem(AbstractNodeItem):
         self.offset_ports(0.0, 15.0)
 
     def add_node(self, node):
-        self.graph.viewer().add_node(node, node.pos)
+        if self.parent is not None:
+            print(
+                f'Setting parent for: {node.model.name} to {self.model.name}')
+            node.setParentItem(self)
+            node.post_init(node, node.pos)
+        else:
+            print(f'Drawing node: {node.model.name}')
+            self.graph.viewer().add_node(node, node.pos)
 
         node.update()
 
@@ -621,8 +626,23 @@ class NodeItem(AbstractNodeItem):
             self.layout_edges.append(
                 Edge(self.layout_vertices[node1], self.layout_vertices[node2]))
 
+    @property
+    def node_bounding_rect(self):
+        bound = QtCore.QRectF()
+        for n in self._nodes:
+            br = n.boundingRect()
+            br.translate(*n.pos)
+            bound = bound.united(br)
+
+        return bound
+
     def layout(self):
         if not self.hierarchical:
+            return
+
+        if self.collapsed:
+            self._width, self._height = self.collapsed_size
+            self.post_init()
             return
 
         class defaultview:
@@ -644,5 +664,15 @@ class NodeItem(AbstractNodeItem):
 
         sug.draw()
 
+        padding = 40
+        x_min = min(
+            v.view.xy[1] - v.view.h / 2 for v in self.layout_vertices.values())
+
+        y_min = min(
+            v.view.xy[0] - v.view.w / 2 for v in self.layout_vertices.values())
+
         for n, v in self.layout_vertices.items():
-            n.set_pos(v.view.xy[1] - v.view.h / 2, v.view.xy[0] - v.view.w / 2)
+            n.set_pos(v.view.xy[1] - x_min - v.view.h / 2 + padding,
+                      v.view.xy[0] - y_min - v.view.w / 2 + padding)
+
+        self.size_expander(self)

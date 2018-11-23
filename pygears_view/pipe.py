@@ -36,8 +36,9 @@ class Pipe(QtWidgets.QGraphicsPathItem):
     def __str__(self):
         in_name = self._input_port.name if self._input_port else ''
         out_name = self._output_port.name if self._output_port else ''
-        return '{}.Pipe(\'{}\', \'{}\')'.format(
-            self.__module__, in_name, out_name)
+        return (f'{self._input_port.node.model.name}.{in_name}'
+                f' -> {self._output_port.node.model.name}.{out_name}'
+                )
 
     def __repr__(self):
         in_name = self._input_port.name if self._input_port else ''

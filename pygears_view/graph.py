@@ -107,7 +107,7 @@ class NodeGraph(QtWidgets.QMainWindow):
         self._viewer.addAction(tab)
         setup_actions(self)
 
-        QShortcut(QKeySequence(QtCore.Qt.Key_Tab),
+        QShortcut(QKeySequence(QtCore.Qt.Key_Return),
                   self._viewer).activated.connect(self._expand_selected)
 
     def _expand_selected(self):
