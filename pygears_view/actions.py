@@ -1,5 +1,42 @@
 #!/usr/bin/python
 from PySide2 import QtGui
+from PySide2.QtCore import Qt
+from pygears.conf import Inject, reg_inject, registry
+
+
+def shortcut(shortcut):
+    def wrapper(func):
+        registry('graph/shortcuts').append((shortcut, func))
+
+    return wrapper
+
+
+def single_select_action(func):
+    @reg_inject
+    def wrapper(graph=Inject('graph/graph')):
+        nodes = graph.selected_nodes()
+        if len(nodes) == 1:
+            func(nodes[0], graph)
+
+    return wrapper
+
+
+@shortcut(Qt.SHIFT + Qt.Key_K)
+@single_select_action
+def node_up_level(node, graph):
+    if node.collapsed:
+        graph.select(node.parent)
+    else:
+        node.collapse()
+
+
+@shortcut(Qt.SHIFT + Qt.Key_J)
+@single_select_action
+def node_down_level(node, graph):
+    if node.collapsed:
+        node.expand()
+    else:
+        graph.select(node._nodes[0])
 
 
 def setup_actions(graph):
@@ -14,14 +51,11 @@ def setup_actions(graph):
     edit_menu = root_menu.add_menu('&Edit')
 
     # File menu.
-    file_menu.add_command('Open...',
-                          lambda: open_session(graph),
+    file_menu.add_command('Open...', lambda: open_session(graph),
                           QtGui.QKeySequence.Open)
-    file_menu.add_command('Save...',
-                          lambda: save_session(graph),
+    file_menu.add_command('Save...', lambda: save_session(graph),
                           QtGui.QKeySequence.Save)
-    file_menu.add_command('Save As...',
-                          lambda: save_session_as(graph),
+    file_menu.add_command('Save As...', lambda: save_session_as(graph),
                           'Ctrl+Shift+s')
     file_menu.add_command('Clear', lambda: clear_session(graph))
 
@@ -53,17 +87,16 @@ def setup_actions(graph):
     edit_menu.add_separator()
 
     edit_menu.add_command('Select all', graph.select_all, 'Ctrl+A')
-    edit_menu.add_command('Deselect all', graph.clear_selection, 'Ctrl+Shift+A')
+    edit_menu.add_command('Deselect all', graph.clear_selection,
+                          'Ctrl+Shift+A')
     edit_menu.add_command('Enable/Disable',
                           lambda: graph.disable_nodes(graph.selected_nodes()),
                           'd')
 
-    edit_menu.add_command('Duplicate',
-                          lambda: graph.duplicate_nodes(graph.selected_nodes()),
-                          'Alt+c')
-    edit_menu.add_command('Center Selection',
-                          graph.fit_to_selection,
-                          'f')
+    edit_menu.add_command(
+        'Duplicate', lambda: graph.duplicate_nodes(graph.selected_nodes()),
+        'Alt+c')
+    edit_menu.add_command('Center Selection', graph.fit_to_selection, 'f')
 
     edit_menu.add_separator()
 

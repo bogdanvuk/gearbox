@@ -1,7 +1,7 @@
 #!/usr/bin/python
 import sys
 
-from PySide2 import QtWidgets
+from PySide2 import QtWidgets, QtCore
 
 from pygears_view.graph import NodeGraph
 from pygears import bind
@@ -31,9 +31,6 @@ def main(root=Inject('gear/hier_root')):
     graph.top = top
     top.layout()
     top.graph.fit_all()
-
-    # node = find_node_by_path(graph.top, 'shred')
-    # print(node)
 
     graph.show()
     app.exec_()

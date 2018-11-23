@@ -7,7 +7,7 @@ from PySide2 import QtCore, QtWidgets
 from PySide2.QtGui import QClipboard, QKeySequence
 from PySide2.QtWidgets import QAction, QUndoStack, QShortcut
 
-from .actions import setup_actions
+# from .actions import setup_actions
 from .commands import (NodeAddedCmd, NodeRemovedCmd, NodeMovedCmd,
                        PortConnectedCmd)
 from .node import NodeItem
@@ -18,6 +18,8 @@ from grandalf.graphs import Vertex, Edge, Graph
 
 from .minibuffer import Minibuffer
 from .node_search import node_search_completer
+
+from pygears.conf import PluginBase, registry, safe_bind
 
 
 class defaultview:
@@ -94,6 +96,13 @@ class NodeGraph(QtWidgets.QMainWindow):
         self.layout_root_vertices = []
         self.layout_edges = []
         self.layout_layers = None
+        safe_bind('graph/graph', self)
+        for shortcut, callback in registry('graph/shortcuts'):
+            self.register_shortcut(shortcut, callback)
+
+    def register_shortcut(self, shortcut, callback):
+        QShortcut(QKeySequence(shortcut),
+                  self._viewer).activated.connect(callback)
 
     def _wire_signals(self):
         self._viewer.connection_changed.connect(self._on_connection_changed)
@@ -105,7 +114,7 @@ class NodeGraph(QtWidgets.QMainWindow):
         tab.setShortcut('/')
         tab.triggered.connect(self._toggle_tab_search)
         self._viewer.addAction(tab)
-        setup_actions(self)
+        # setup_actions(self)
 
         QShortcut(QKeySequence(QtCore.Qt.Key_Return),
                   self._viewer).activated.connect(self._expand_selected)
@@ -435,6 +444,13 @@ class NodeGraph(QtWidgets.QMainWindow):
             list[NodeGraphQt.Node]: list of nodes.
         """
         return list(self._model.nodes.values())
+
+    def select(self, node):
+
+        for n in self._viewer.selected_nodes():
+            n.selected = False
+
+        node.selected = True
 
     def selected_nodes(self):
         """
@@ -773,3 +789,9 @@ class NodeGraph(QtWidgets.QMainWindow):
             self._undo_stack.endMacro()
             return
         nodes[0].set_disabled(mode)
+
+
+class GearGraphPlugin(PluginBase):
+    @classmethod
+    def bind(cls):
+        safe_bind('graph/shortcuts', [])
