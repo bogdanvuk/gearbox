@@ -7,7 +7,7 @@ class Minibuffer(QtWidgets.QLineEdit):
 
     completed = QtCore.Signal(str)
 
-    def __init__(self, parent=None, node_dict=None):
+    def __init__(self, parent=None):
         super().__init__(parent)
         self.setAttribute(QtCore.Qt.WA_MacShowFocusRect, 0)
         self.setStyleSheet(STYLE_MINIBUFFER)

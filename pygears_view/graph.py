@@ -5,7 +5,7 @@ import re
 
 from PySide2 import QtCore, QtWidgets
 from PySide2.QtGui import QClipboard, QKeySequence
-from PySide2.QtWidgets import QAction, QUndoStack, QShortcut
+from PySide2.QtWidgets import QAction, QUndoStack, QShortcut, QLabel
 
 # from .actions import setup_actions
 from .commands import (NodeAddedCmd, NodeRemovedCmd, NodeMovedCmd,
@@ -17,6 +17,7 @@ from grandalf.layouts import SugiyamaLayout
 from grandalf.graphs import Vertex, Edge, Graph
 
 from .minibuffer import Minibuffer
+from .which_key import WhichKey
 from .node_search import node_search_completer
 
 from pygears.conf import PluginBase, registry, safe_bind
@@ -65,9 +66,11 @@ def find_node_by_path(root, path):
 class NodeGraph(QtWidgets.QMainWindow):
 
     node_selected = QtCore.Signal(NodeItem)
+    key_cancel = QtCore.Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        safe_bind('graph/graph', self)
 
         self._model = NodeGraphModel()
         self._viewer = NodeViewer()
@@ -83,10 +86,14 @@ class NodeGraph(QtWidgets.QMainWindow):
         mainWidget.setLayout(hbox)
         mainWidget.setContentsMargins(0, 0, 0, 0)
 
+        self.which_key = WhichKey()
+        hbox.addWidget(self.which_key)
+
         self.minibuffer = Minibuffer()
         self.minibuffer.completed.connect(self._minibuffer_completed)
 
         hbox.addWidget(self.minibuffer)
+
         self.setCentralWidget(mainWidget)
 
         self._init_actions()
@@ -96,7 +103,6 @@ class NodeGraph(QtWidgets.QMainWindow):
         self.layout_root_vertices = []
         self.layout_edges = []
         self.layout_layers = None
-        safe_bind('graph/graph', self)
         for shortcut, callback in registry('graph/shortcuts'):
             self.register_shortcut(shortcut, callback)
 
@@ -114,17 +120,13 @@ class NodeGraph(QtWidgets.QMainWindow):
         tab.setShortcut('/')
         tab.triggered.connect(self._toggle_tab_search)
         self._viewer.addAction(tab)
-        # setup_actions(self)
 
-        QShortcut(QKeySequence(QtCore.Qt.Key_Return),
-                  self._viewer).activated.connect(self._expand_selected)
+        QShortcut(
+            QKeySequence(QtCore.Qt.CTRL + QtCore.Qt.Key_G),
+            self._viewer).activated.connect(self._key_cancel_event)
 
-    def _expand_selected(self):
-        for node in self.selected_nodes():
-            if node.collapsed:
-                node.expand()
-            else:
-                node.collapse()
+    def _key_cancel_event(self):
+        self.key_cancel.emit()
 
     def _minibuffer_completed(self, text):
         try:
@@ -361,69 +363,8 @@ class NodeGraph(QtWidgets.QMainWindow):
         nodes = self._viewer.selected_nodes()
         self._viewer.center_selection(nodes)
 
-    def add_node(self, node):
-        """
-        Add a node into the node graph.
-
-        Args:
-            node (NodeGraphQt.Node): node object.
-        """
-
-        assert isinstance(node, NodeObject), 'node must be a Node instance.'
-        node._graph = self
-        # node.NODE_NAME = self.get_unique_name(node.NODE_NAME)
-        # node.model.name = node.NODE_NAME
-        node.update()
-        self._nodes.append(node)
-        node.view.parent = self
-
-        v = Vertex(node)
-        self.layout_vertices[node] = v
-
-        self._undo_stack.push(NodeAddedCmd(self, node))
-
-    def layout(self):
-        g = Graph(list(self.layout_vertices.values()), self.layout_edges)
-
-        for node, v in self.layout_vertices.items():
-            node.layout()
-            v.view = defaultview(node.view.width, node.view.height)
-
-        sug = SugiyamaLayout(g.C[0])
-        sug.init_all(roots=self.layout_root_vertices)
-        sug.xspace = 20
-        sug.yspace = 50
-
-        sug.draw()
-
-        for n, v in self.layout_vertices.items():
-            n.set_pos(v.view.xy[1] - v.view.h / 2, v.view.xy[0] - v.view.w / 2)
-
-    def connect(self, port1, port2):
-        node1 = port1.model.node
-        node2 = port2.model.node
-
-        port1.connect_to(port2)
-
-        if (node2 is not self) and (node1 is not self):
-            self.layout_edges.append(
-                Edge(self.layout_vertices[node1], self.layout_vertices[node2]))
-        elif node1 is self:
-            self.layout_root_vertices.append(node1)
-
     def get_nodes(self, node):
         return self._nodes
-
-    def delete_node(self, node):
-        """
-        Remove the node from the node graph.
-
-        Args:
-            node (NodeGraphQt.Node): node object.
-        """
-        assert isinstance(node, NodeObject), \
-            'node must be a instance of a NodeObject.'
-        self._undo_stack.push(NodeRemovedCmd(self, node))
 
     def delete_nodes(self, nodes):
         """

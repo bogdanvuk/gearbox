@@ -1,7 +1,7 @@
 #!/usr/bin/python
 import sys
 
-from PySide2 import QtWidgets, QtCore
+from PySide2 import QtWidgets, QtCore, QtGui
 
 from pygears_view.graph import NodeGraph
 from pygears import bind
@@ -15,6 +15,7 @@ from pygears_view.node import NodeItem
 @reg_inject
 def main(root=Inject('gear/hier_root')):
     app = QtWidgets.QApplication(sys.argv)
+    app.setFont(QtGui.QFont("Source Code Pro", 13))
 
     # create node graph.
     graph = NodeGraph()

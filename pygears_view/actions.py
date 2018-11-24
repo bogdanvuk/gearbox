@@ -2,6 +2,7 @@
 from PySide2 import QtGui
 from PySide2.QtCore import Qt
 from pygears.conf import Inject, reg_inject, registry
+from functools import wraps
 
 
 def shortcut(shortcut):
@@ -12,6 +13,7 @@ def shortcut(shortcut):
 
 
 def single_select_action(func):
+    @wraps(func)
     @reg_inject
     def wrapper(graph=Inject('graph/graph')):
         nodes = graph.selected_nodes()
@@ -36,7 +38,8 @@ def node_down_level(node, graph):
     if node.collapsed:
         node.expand()
 
-    graph.select(node.layers[0][0])
+    if node.layers:
+        graph.select(node.layers[0][0])
 
 
 def get_node_layer(node):
@@ -97,6 +100,21 @@ def node_down(graph=Inject('graph/graph')):
         node = node.parent.layers[layer_id][node_id + 1]
 
     graph.select(node)
+
+
+@shortcut(Qt.CTRL + Qt.Key_H)
+@reg_inject
+def show_help(graph=Inject('graph/graph')):
+    graph.which_key.show()
+
+
+@shortcut(Qt.Key_Return)
+@single_select_action
+def toggle_expand(node, graph):
+    if node.collapsed:
+        node.expand()
+    else:
+        node.collapse()
 
 
 def setup_actions(graph):
