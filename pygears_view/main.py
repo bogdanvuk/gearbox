@@ -11,9 +11,35 @@ from pygears.util.print_hier import print_hier
 from pygears.conf import Inject, reg_inject
 from pygears_view.node import NodeItem
 
+# class App(QtWidgets.QApplication):
+#     @reg_inject
+#     def eventFilter(self, obj, event, shortcuts=Inject('graph/shortcuts')):
+#         print(f"{event.type()}: {obj}")
+#         if event.type() == QtCore.QEvent.Type.MetaCall:
+#             if hasattr(self, 'prebac'):
+#                 print(f"    {dir(event)}")
+
+#         if type(obj) == QtGui.QWindow:
+#             if event.type() == QtCore.QEvent.KeyPress:
+#                 print(f"{event.key()}: {obj}")
+#                 for shortcut, callback in shortcuts:
+#                     if shortcut == event.key():
+#                         self.prebac = True
+#                         # if event.matches(shortcut):
+#                         callback()
+#                         # return True
+
+#                 # print("Ate key press", event.key())
+#                 # return True
+#             # else:
+#             # standard event processing
+#             return super().eventFilter(obj, event)
+
 
 @reg_inject
 def main(root=Inject('gear/hier_root')):
+    # app = App(sys.argv)
+    # app.installEventFilter(app)
     app = QtWidgets.QApplication(sys.argv)
     app.setFont(QtGui.QFont("Source Code Pro", 13))
 

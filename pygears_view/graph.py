@@ -3,7 +3,7 @@ import json
 import os
 import re
 
-from PySide2 import QtCore, QtWidgets
+from PySide2 import QtCore, QtWidgets, QtGui
 from PySide2.QtGui import QClipboard, QKeySequence
 from PySide2.QtWidgets import QAction, QUndoStack, QShortcut, QLabel
 
@@ -17,6 +17,7 @@ from grandalf.layouts import SugiyamaLayout
 from grandalf.graphs import Vertex, Edge, Graph
 
 from .minibuffer import Minibuffer
+from .gtkwave import GtkWave, GtkWaveProc
 from .which_key import WhichKey
 from .node_search import node_search_completer
 
@@ -63,6 +64,34 @@ def find_node_by_path(root, path):
     return _find_rec(path, root)
 
 
+class BufferStack(QtWidgets.QStackedLayout):
+    def __init__(self, graph, parent=None):
+        super().__init__(parent)
+        self.setMargin(0)
+        self.graph = graph
+        self.setContentsMargins(0, 0, 0, 0)
+        self._buffers = {}
+
+    def __setitem__(self, key, value):
+        self._buffers[key] = value
+        self.addWidget(value)
+        # value.installEventFilter(self.graph)
+
+    def __getitem__(self, key):
+        return self._buffers[key]
+
+    @property
+    def current_name(self):
+        return list(self._buffers.keys())[self.currentIndex()]
+
+    def next_buffer(self):
+        next_id = self.currentIndex() + 1
+        if next_id >= len(self._buffers):
+            self.setCurrentIndex(0)
+        else:
+            self.setCurrentIndex(next_id)
+
+
 class NodeGraph(QtWidgets.QMainWindow):
 
     node_selected = QtCore.Signal(NodeItem)
@@ -75,24 +104,31 @@ class NodeGraph(QtWidgets.QMainWindow):
         self._model = NodeGraphModel()
         self._viewer = NodeViewer()
         self._undo_stack = QUndoStack(self)
+        self.buffers = {}
 
-        hbox = QtWidgets.QVBoxLayout()
-        hbox.setSpacing(0)
-        hbox.addWidget(self._viewer)
+        vbox = QtWidgets.QVBoxLayout()
+        vbox.setSpacing(0)
+        vbox.setMargin(0)
+        vbox.setContentsMargins(0, 0, 0, 0)
 
-        hbox.setMargin(0)
-        hbox.setContentsMargins(0, 0, 0, 0)
+        self.buffers = BufferStack(graph=self)
+        vbox.addLayout(self.buffers)
+
+        self.gtkwave = GtkWave()
+
+        self.buffers['graph'] = self._viewer
+
         mainWidget = QtWidgets.QWidget()
-        mainWidget.setLayout(hbox)
+        mainWidget.setLayout(vbox)
         mainWidget.setContentsMargins(0, 0, 0, 0)
 
         self.which_key = WhichKey()
-        hbox.addWidget(self.which_key)
+        vbox.addWidget(self.which_key)
 
         self.minibuffer = Minibuffer()
         self.minibuffer.completed.connect(self._minibuffer_completed)
 
-        hbox.addWidget(self.minibuffer)
+        vbox.addWidget(self.minibuffer)
 
         self.setCentralWidget(mainWidget)
 
@@ -103,12 +139,40 @@ class NodeGraph(QtWidgets.QMainWindow):
         self.layout_root_vertices = []
         self.layout_edges = []
         self.layout_layers = None
+
         for shortcut, callback in registry('graph/shortcuts'):
             self.register_shortcut(shortcut, callback)
 
+    # def eventFilter(self, obj, event):
+    #     # print(f"Graph: {event.type()}")
+    #     if (event.type() == QtCore.QEvent.KeyPress) or (
+    #             event.type() == QtCore.QEvent.ShortcutOverride):
+    #     # if event.type() == QtCore.QEvent.KeyPress:
+    #         key = QtGui.QKeySequence(event.key() + int(event.modifiers())).toString()
+
+    #         print(f"Graph: {event.type()}")
+    #         print(f"   {key} = {event.key()} + {int(event.modifiers())}")
+    #         for shortcut, callback in registry('graph/shortcuts'):
+    #             if shortcut == event.key() + int(event.modifiers()):
+    #                 callback()
+    #                 print("Accept in main")
+    #                 if event.type() == QtCore.QEvent.ShortcutOverride:
+    #                     event.accept()
+    #                     return super().eventFilter(obj, event)
+    #                 else:
+    #                     return True
+
+    #         # if self.buffers.current_name == 'gtkwave':
+    #         #     print("Dispatch to gtkwave")
+    #         #     self.gtkwave.keyPressEvent(event)
+    #         #     return True
+
+    #     return super().eventFilter(obj, event)
+
     def register_shortcut(self, shortcut, callback):
-        QShortcut(QKeySequence(shortcut),
-                  self._viewer).activated.connect(callback)
+        s = QShortcut(QKeySequence(shortcut), self)
+        s.activated.connect(callback)
+        s.setContext(QtCore.Qt.WidgetWithChildrenShortcut)
 
     def _wire_signals(self):
         self._viewer.connection_changed.connect(self._on_connection_changed)

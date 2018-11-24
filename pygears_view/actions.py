@@ -108,6 +108,13 @@ def show_help(graph=Inject('graph/graph')):
     graph.which_key.show()
 
 
+@shortcut(Qt.Key_B)
+@reg_inject
+def next_buffer(graph=Inject('graph/graph')):
+    print("Next buffer?")
+    graph.buffers.next_buffer()
+
+
 @shortcut(Qt.Key_Return)
 @single_select_action
 def toggle_expand(node, graph):
