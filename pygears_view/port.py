@@ -1,13 +1,9 @@
 #!/usr/bin/python
 from PySide2 import QtGui, QtCore, QtWidgets
 
-from .constants import (
-    IN_PORT, OUT_PORT,
-    PORT_HOVER_COLOR,
-    PORT_HOVER_BORDER_COLOR,
-    PORT_ACTIVE_COLOR,
-    PORT_ACTIVE_BORDER_COLOR,
-    Z_VAL_PORT)
+from .constants import (IN_PORT, OUT_PORT, PORT_HOVER_COLOR,
+                        PORT_HOVER_BORDER_COLOR, PORT_ACTIVE_COLOR,
+                        PORT_ACTIVE_BORDER_COLOR, Z_VAL_PORT)
 
 
 class PortItem(QtWidgets.QGraphicsItem):
@@ -45,12 +41,12 @@ class PortItem(QtWidgets.QGraphicsItem):
     def paint(self, painter, option, widget):
         painter.save()
 
-        rect = QtCore.QRectF(0.0, 0.8, self._width, self._height)
-        painter.setBrush(QtGui.QColor(0, 0, 0, 200))
-        painter.setPen(QtGui.QPen(QtGui.QColor(0, 0, 0, 255), 1.8))
-        path = QtGui.QPainterPath()
-        path.addEllipse(rect)
-        painter.drawPath(path)
+        # rect = QtCore.QRectF(0.0, 0.8, self._width, self._height)
+        # painter.setBrush(QtGui.QColor(0, 0, 0, 200))
+        # painter.setPen(QtGui.QPen(QtGui.QColor(0, 0, 0, 255), 1.8))
+        # path = QtGui.QPainterPath()
+        # path.addEllipse(rect)
+        # painter.drawPath(path)
 
         if self._hovered:
             color = QtGui.QColor(*PORT_HOVER_COLOR)
@@ -65,7 +61,18 @@ class PortItem(QtWidgets.QGraphicsItem):
         painter.setBrush(color)
         pen = QtGui.QPen(border_color, 1.5)
         painter.setPen(pen)
-        painter.drawEllipse(self.boundingRect())
+
+        if self.port_type == IN_PORT:
+            # painter.drawRect(self.boundingRect())
+            painter.drawEllipse(self.boundingRect())
+        elif self.port_type == OUT_PORT:
+            br = self.boundingRect()
+            triangle = QtGui.QPolygonF()
+            triangle.push_back(br.topLeft())
+            triangle.push_back(br.bottomLeft())
+            triangle.push_back(
+                QtCore.QPointF(br.topRight() + br.bottomRight()) / 2)
+            painter.drawPolygon(triangle)
 
         painter.restore()
 
@@ -78,14 +85,14 @@ class PortItem(QtWidgets.QGraphicsItem):
         if event.modifiers() != QtCore.Qt.AltModifier:
             self.viewer_start_connection()
         super(PortItem, self).mousePressEvent(event)
-        
+
     def mouseReleaseEvent(self, event):
         super(PortItem, self).mouseReleaseEvent(event)
-        
+
     def hoverEnterEvent(self, event):
         self._hovered = True
         super(PortItem, self).hoverEnterEvent(event)
-        
+
     def hoverLeaveEvent(self, event):
         self._hovered = False
         super(PortItem, self).hoverLeaveEvent(event)

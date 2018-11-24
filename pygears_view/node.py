@@ -202,8 +202,14 @@ class NodeItem(AbstractNodeItem):
             for port in model.in_ports + model.out_ports:
                 self._add_port(port)
 
+        self._hide_single_port_labels()
+
         self.collapsed = False if parent is None else True
         self.collapsed_size = self.calc_size()
+        self._width, self._height = self.collapsed_size
+
+        self.post_init()
+
         self.layers = []
 
         # First add node to the scene, so that all pipes can be rendered in the
@@ -318,6 +324,15 @@ class NodeItem(AbstractNodeItem):
         #     n.set_pos(v.view.xy[1] - x_min - v.view.h / 2 + padding,
         #               v.view.xy[0] - y_min - v.view.w / 2 + padding)
 
+    def _hide_single_port_labels(self):
+        for port, text in self._input_items.items():
+            if len(self._input_items) == 1:
+                text.setVisible(False)
+
+        for port, text in self._output_items.items():
+            if len(self._output_items) == 1:
+                text.setVisible(False)
+
     def _add_port(self, port, display_name=True):
         port_item = PortItem(self)
         port_item.name = port.basename
@@ -326,8 +341,8 @@ class NodeItem(AbstractNodeItem):
         port_item.display_name = display_name
         text = QGraphicsTextItem(port_item.name, self)
         text.font().setPointSize(8)
-        text.setFont(text.font())
-        text.setVisible(display_name)
+        # text.setFont(text.font())
+        # text.setVisible(display_name)
         if isinstance(port, InPort):
             self._input_items[port_item] = text
         else:
@@ -399,16 +414,6 @@ class NodeItem(AbstractNodeItem):
             tooltip += ' <font color="red"><b>(DISABLED)</b></font>'
         tooltip += '<br/>{}<br/>'.format(self._properties['type'])
         self.setToolTip(tooltip)
-
-    def _set_base_size(self):
-        """
-        setup initial base size.
-        """
-        width, height = self.calc_size()
-        if width > self._width:
-            self._width = width
-        if height > self._height:
-            self._height = height
 
     def _set_text_color(self, color):
         """
@@ -484,6 +489,7 @@ class NodeItem(AbstractNodeItem):
         height = port_height * (max([len(self.inputs), len(self.outputs)]) + 2)
         height += 10
 
+        print(f'Size {self.model.name}: {width}, {height}')
         return width, height
 
     def arrange_label(self):
@@ -492,7 +498,7 @@ class NodeItem(AbstractNodeItem):
         """
         text_rect = self._text_item.boundingRect()
         text_x = (self._width / 2) - (text_rect.width() / 2)
-        self._text_item.setPos(text_x, 1.0)
+        self._text_item.setPos(text_x, -3.0)
 
     def arrange_ports(self, padding_x=0.0, padding_y=0.0):
         """
@@ -521,6 +527,7 @@ class NodeItem(AbstractNodeItem):
             txt_x = port.x() + port.boundingRect().width()
             txt_y = port.y() - (txt_height / 2)
             text.setPos(txt_x + 3.0, txt_y)
+
         # adjust output position
         if self.outputs:
             port_width = self.outputs[0].boundingRect().width()
@@ -583,8 +590,6 @@ class NodeItem(AbstractNodeItem):
         if pos:
             self.setPos(pos[0], pos[1])
 
-        # setup initial base size.
-        self._set_base_size()
         # set text color when node is initialized.
         self._set_text_color(self.text_color)
         # set the tooltip
@@ -606,7 +611,6 @@ class NodeItem(AbstractNodeItem):
             print(
                 f'Setting parent for: {node.model.name} to {self.model.name}')
             node.setParentItem(self)
-            node.post_init(node, node.pos)
         else:
             print(f'Drawing node: {node.model.name}')
             self.graph.viewer().add_node(node, node.pos)

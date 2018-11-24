@@ -539,7 +539,6 @@ class NodeViewer(QtWidgets.QGraphicsView):
         pos = pos or (self._previous_pos.x(), self._previous_pos.y())
         node.pre_init(self, pos)
         self.scene().addItem(node)
-        node.post_init(self, pos)
 
     def remove_node(self, node):
         if isinstance(node, AbstractNodeItem):
