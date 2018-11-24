@@ -6,18 +6,22 @@ from PySide2.QtGui import QKeySequence
 
 class WhichKey(QLabel):
     @reg_inject
-    def __init__(self,
-                 parent=None,
-                 graph=Inject('graph/graph'),
-                 shortcuts=Inject('graph/shortcuts')):
+    def __init__(self, parent=None, graph=Inject('graph/graph')):
         super().__init__(parent)
         self.setStyleSheet(STYLE_WHICH_KEY)
         self.setMargin(2)
         self.hide()
 
+        graph.key_cancel.connect(self.cancel)
+
+    @reg_inject
+    def show(self, graph=Inject('graph/graph')):
         which_key_string = []
-        for shortcut, callback in registry('graph/shortcuts'):
-            keys = QKeySequence(shortcut).toString().split('+')
+        for s in graph.shortcuts:
+            if not s.enabled:
+                continue
+
+            keys = QKeySequence(s.key).toString().split('+')
 
             try:
                 shift_id = keys.index('Shift')
@@ -39,13 +43,12 @@ class WhichKey(QLabel):
 
             shortut_string = (f'<font color=\"DeepPink\"><b>'
                               f'{"-".join(keys)}'
-                              f'</b></font> &#8594; {callback.__name__}')
+                              f'</b></font> &#8594; {s.callback.__name__}')
 
             which_key_string.append(shortut_string)
 
         self.setText('&nbsp;&nbsp;'.join(which_key_string))
-
-        graph.key_cancel.connect(self.cancel)
+        super().show()
 
     def cancel(self):
         self.hide()

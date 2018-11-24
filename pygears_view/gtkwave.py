@@ -75,7 +75,7 @@ class GtkWave(QtCore.QObject):
     def eventFilter(self, obj, event):
         print(f"Gtkwave: {event.type()}")
         if not self.cmd:
-            if event.type() == QtCore.QEvent.ShortcutOverride:
+            if event.type() == QtCore.QEvent.KeyPress:
                 if event.key() < 200:
                     key = QtGui.QKeySequence(
                         event.key() + int(event.modifiers())).toString()

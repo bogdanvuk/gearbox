@@ -5,9 +5,9 @@ from pygears.conf import Inject, reg_inject, registry
 from functools import wraps
 
 
-def shortcut(shortcut):
+def shortcut(domain, shortcut):
     def wrapper(func):
-        registry('graph/shortcuts').append((shortcut, func))
+        registry('graph/shortcuts').append((domain, shortcut, func))
 
     return wrapper
 
@@ -23,7 +23,7 @@ def single_select_action(func):
     return wrapper
 
 
-@shortcut(Qt.SHIFT + Qt.Key_K)
+@shortcut('graph', Qt.SHIFT + Qt.Key_K)
 @single_select_action
 def node_up_level(node, graph):
     if node.collapsed:
@@ -32,7 +32,7 @@ def node_up_level(node, graph):
         node.collapse()
 
 
-@shortcut(Qt.SHIFT + Qt.Key_J)
+@shortcut('graph', Qt.SHIFT + Qt.Key_J)
 @single_select_action
 def node_down_level(node, graph):
     if node.collapsed:
@@ -50,7 +50,7 @@ def get_node_layer(node):
         return None
 
 
-@shortcut(Qt.Key_K)
+@shortcut('graph', Qt.Key_K)
 @reg_inject
 def node_up(graph=Inject('graph/graph')):
     nodes = graph.selected_nodes()
@@ -76,7 +76,7 @@ def node_up(graph=Inject('graph/graph')):
     graph.select(node)
 
 
-@shortcut(Qt.Key_J)
+@shortcut('graph', Qt.Key_J)
 @reg_inject
 def node_down(graph=Inject('graph/graph')):
     nodes = graph.selected_nodes()
@@ -102,20 +102,22 @@ def node_down(graph=Inject('graph/graph')):
     graph.select(node)
 
 
-@shortcut(Qt.CTRL + Qt.Key_H)
+@shortcut(None, Qt.CTRL + Qt.Key_H)
 @reg_inject
-def show_help(graph=Inject('graph/graph')):
-    graph.which_key.show()
+def toggle_help(graph=Inject('graph/graph')):
+    if graph.which_key.isVisible():
+        graph.which_key.hide()
+    else:
+        graph.which_key.show()
 
 
-@shortcut(Qt.Key_B)
+@shortcut(None, Qt.Key_B)
 @reg_inject
 def next_buffer(graph=Inject('graph/graph')):
-    print("Next buffer?")
     graph.buffers.next_buffer()
 
 
-@shortcut(Qt.Key_Return)
+@shortcut('graph', Qt.Key_Return)
 @single_select_action
 def toggle_expand(node, graph):
     if node.collapsed:

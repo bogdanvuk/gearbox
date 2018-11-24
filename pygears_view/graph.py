@@ -91,11 +91,38 @@ class BufferStack(QtWidgets.QStackedLayout):
         else:
             self.setCurrentIndex(next_id)
 
+        self.graph.domain_changed.emit(self.current_name)
+
+
+class Shortcut(QtCore.QObject):
+    def __init__(self, graph, domain, key, callback):
+        self._qshortcut = QShortcut(QKeySequence(key), graph)
+        self._qshortcut.activated.connect(callback)
+        self._qshortcut.setContext(QtCore.Qt.WidgetWithChildrenShortcut)
+        self._qshortcut.setWhatsThis(callback.__name__)
+        self.domain = domain
+        self.key = key
+        self.callback = callback
+        graph.domain_changed.connect(self.domain_changed)
+
+    @property
+    def enabled(self):
+        return self._qshortcut.isEnabled()
+
+    def domain_changed(self, domain):
+        print(f'{domain} ?= {self.domain}')
+        if (self.domain is None) or (self.domain == domain):
+            self._qshortcut.setEnabled(True)
+        else:
+            print('Shortcut disabled')
+            self._qshortcut.setEnabled(False)
+
 
 class NodeGraph(QtWidgets.QMainWindow):
 
     node_selected = QtCore.Signal(NodeItem)
     key_cancel = QtCore.Signal()
+    domain_changed = QtCore.Signal(str)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -135,13 +162,11 @@ class NodeGraph(QtWidgets.QMainWindow):
         self._init_actions()
         self._wire_signals()
         self._nodes = []
-        self.layout_vertices = {}
-        self.layout_root_vertices = []
-        self.layout_edges = []
-        self.layout_layers = None
 
-        for shortcut, callback in registry('graph/shortcuts'):
-            self.register_shortcut(shortcut, callback)
+        self.shortcuts = [
+            Shortcut(self, domain, key, callback)
+            for domain, key, callback in registry('graph/shortcuts')
+        ]
 
     # def eventFilter(self, obj, event):
     #     # print(f"Graph: {event.type()}")
@@ -168,11 +193,6 @@ class NodeGraph(QtWidgets.QMainWindow):
     #         #     return True
 
     #     return super().eventFilter(obj, event)
-
-    def register_shortcut(self, shortcut, callback):
-        s = QShortcut(QKeySequence(shortcut), self)
-        s.activated.connect(callback)
-        s.setContext(QtCore.Qt.WidgetWithChildrenShortcut)
 
     def _wire_signals(self):
         self._viewer.connection_changed.connect(self._on_connection_changed)
