@@ -49,18 +49,18 @@ class GtkWave(QtCore.QObject):
         self.cmd = None
 
     def closeEvent(self, event):
-        print('close event')
+        # print('close event')
         self.proc.quit()
 
     def reclick(self):
-        print(f"Sending: xdotool {self.cmd}")
+        # print(f"Sending: xdotool {self.cmd}")
         # os.system(f"xdotool getactivewindow {self.cmd}")
         os.system(f"xdotool {self.cmd}")
         QtCore.QTimer.singleShot(10, self.reload)
 
     def reload(self):
         self.cmd = None
-        print("Reverting input block")
+        # print("Reverting input block")
         self.gtkwave_win.setFlag(QtCore.Qt.WindowTransparentForInput, True)
 
     def send_input(self, cmd):
@@ -73,7 +73,7 @@ class GtkWave(QtCore.QObject):
             QtCore.QTimer.singleShot(10, self.reclick)
 
     def eventFilter(self, obj, event):
-        print(f"Gtkwave: {event.type()}")
+        # print(f"Gtkwave: {event.type()}")
         if not self.cmd:
             if event.type() == QtCore.QEvent.KeyPress:
                 if event.key() < 200:
@@ -92,7 +92,7 @@ class GtkWave(QtCore.QObject):
 
     @reg_inject
     def window_up(self, version, pid, win_id, graph=Inject('graph/graph')):
-        print(f'GtkWave started: {version}, {pid}, {win_id}')
+        # print(f'GtkWave started: {version}, {pid}, {win_id}')
         self.win_id = win_id
         self.gtkwave_win = QtGui.QWindow.fromWinId(win_id)
         self.gtkwave_win.setFlag(QtCore.Qt.WindowTransparentForInput, True)

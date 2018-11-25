@@ -141,7 +141,7 @@ class NodeGraph(QtWidgets.QMainWindow):
         self.buffers = BufferStack(graph=self)
         vbox.addLayout(self.buffers)
 
-        self.gtkwave = GtkWave()
+        # self.gtkwave = GtkWave()
 
         self.buffers['graph'] = self._viewer
 
@@ -199,12 +199,6 @@ class NodeGraph(QtWidgets.QMainWindow):
         self._viewer.node_selected.connect(self._on_node_selected)
 
     def _init_actions(self):
-        # setup tab search shortcut.
-        tab = QAction('Search Nodes', self)
-        tab.setShortcut('/')
-        tab.triggered.connect(self._toggle_tab_search)
-        self._viewer.addAction(tab)
-
         QShortcut(
             QKeySequence(QtCore.Qt.CTRL + QtCore.Qt.Key_G),
             self._viewer).activated.connect(self._key_cancel_event)

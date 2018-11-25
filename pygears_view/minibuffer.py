@@ -1,6 +1,7 @@
 import os
 from PySide2 import QtWidgets, QtCore
 from .stylesheet import STYLE_MINIBUFFER, STYLE_TABSEARCH_LIST
+from pygears.conf import Inject, reg_inject
 
 
 class Minibuffer(QtWidgets.QLineEdit):
@@ -15,7 +16,10 @@ class Minibuffer(QtWidgets.QLineEdit):
         self.setDisabled(True)
         # self.hide()
 
-    def complete(self, completer):
+    @reg_inject
+    def complete(self, completer, graph=Inject('graph/graph')):
+        self.previous_domain = graph.buffers.current_name
+        graph.domain_changed.emit('minibuffer')
         self.setDisabled(False)
 
         self._completer = completer
@@ -64,10 +68,11 @@ class Minibuffer(QtWidgets.QLineEdit):
             return False
         return super().event(event)
 
-    def _on_search_submitted(self, index=0):
+    @reg_inject
+    def _on_search_submitted(self, index=0, graph=Inject('graph/graph')):
         if self.text():
-            print("Done!")
             self.completed.emit(self.text())
+            graph.domain_changed.emit(self.previous_domain)
             self.setText('')
             self.setDisabled(True)
             self.parentWidget().clearFocus()
