@@ -198,9 +198,8 @@ class NodeItem(AbstractNodeItem):
         self.layout_vertices = {}
         self.layout_root_vertices = []
         self.layout_edges = []
-        self.layout_dummy_vertices = [Vertex(), Vertex()]
-        for v in self.layout_dummy_vertices:
-            v.view = defaultview(10, 10)
+        self.layout_inport_vertices = {}
+        self.layout_outport_vertices = {}
 
         if self.hierarchical:
             self.setZValue(Z_VAL_PIPE - 1)
@@ -355,9 +354,15 @@ class NodeItem(AbstractNodeItem):
         text.font().setPointSize(8)
         # text.setFont(text.font())
         # text.setVisible(display_name)
+
+        v = Vertex(port_item)
+        v.view = defaultview(10, 10)
+
         if isinstance(port, InPort):
+            self.layout_inport_vertices[port_item] = v
             self._input_items[port_item] = text
         else:
+            self.layout_outport_vertices[port_item] = v
             self._output_items[port_item] = text
 
         return port_item
@@ -530,8 +535,12 @@ class NodeItem(AbstractNodeItem):
             chunk = (height / len(self.inputs))
             port_x = (port_width / 2) * -1
             port_y = (chunk / 2) - (port_height / 2)
-            for port in self.inputs:
-                port.setPos(port_x + padding_x, port_y + (padding_y / 2))
+            # for port in self.inputs:
+            for port, v in self.layout_inport_vertices.items():
+                if hasattr(v.view, 'xy'):
+                    port.setPos(port_x + padding_x, v.view.xy[1])
+                else:
+                    port.setPos(port_x + padding_x, port_y + (padding_y / 2))
                 port_y += chunk
         # adjust input text position
         for port, text in self._input_items.items():
@@ -547,8 +556,13 @@ class NodeItem(AbstractNodeItem):
             chunk = height / len(self.outputs)
             port_x = width - (port_width / 2)
             port_y = (chunk / 2) - (port_height / 2)
-            for port in self.outputs:
-                port.setPos(port_x, port_y + (padding_y / 2))
+            # for port in self.outputs:
+            for port, v in self.layout_outport_vertices.items():
+                if hasattr(v.view, 'xy'):
+                    port.setPos(port_x + padding_x, v.view.xy[1])
+                else:
+                    port.setPos(port_x, port_y + (padding_y / 2))
+
                 port_y += chunk
         # adjust output text position
         for port, text in self._output_items.items():
@@ -648,7 +662,8 @@ class NodeItem(AbstractNodeItem):
 
         pipe.set_connections(port1, port2)
         if str(pipe) == '/echo.dout  -> /echo/cast_dout.dout':
-            import pdb; pdb.set_trace()
+            import pdb
+            pdb.set_trace()
 
         print(pipe)
 
@@ -668,10 +683,10 @@ class NodeItem(AbstractNodeItem):
         elif (node2 is self):
             self.layout_edges.append(
                 Edge(self.layout_vertices[node1],
-                     self.layout_dummy_vertices[1]))
+                     self.layout_outport_vertices[port2]))
         else:
             self.layout_edges.append(
-                Edge(self.layout_dummy_vertices[0],
+                Edge(self.layout_inport_vertices[port1],
                      self.layout_vertices[node2]))
 
     @property
@@ -688,14 +703,24 @@ class NodeItem(AbstractNodeItem):
         if not self.hierarchical:
             return
 
+        all_port_vertices = {
+            **self.layout_inport_vertices,
+            **self.layout_outport_vertices
+        }
+
         if self.collapsed:
             self._width, self._height = self.collapsed_size
-            self.post_init()
+
+            for n, v in all_port_vertices.items():
+                if hasattr(v.view, 'xy'):
+                    del v.view.xy
             return
 
-        g = Graph(
-            list(self.layout_vertices.values()) + self.layout_dummy_vertices,
-            self.layout_edges)
+        all_vertices = {
+            **self.layout_vertices,
+            **all_port_vertices
+        }
+        g = Graph(list(all_vertices.values()), self.layout_edges)
 
         for node, v in self.layout_vertices.items():
             if hasattr(node, 'layout'):
@@ -714,9 +739,17 @@ class NodeItem(AbstractNodeItem):
         sug.draw(5)
         sug.draw_edges()
 
+        # for v in self.layout_dummy_vertices:
+        #     print(vars(v.view))
+
         self.layers = []
         for layer in sug.layers:
-            self.layers.append([v.data for v in layer if hasattr(v, 'data')])
+            layer = [
+                v.data for v in layer if getattr(v, 'data', None) and (
+                    not isinstance(v.data, PortItem))
+            ]
+            if layer:
+                self.layers.append(layer)
 
         padding = 40
         x_min = min(
@@ -729,13 +762,13 @@ class NodeItem(AbstractNodeItem):
             n.set_pos(v.view.xy[1] - x_min - v.view.h / 2 + padding,
                       v.view.xy[0] - y_min - v.view.w / 2 + padding)
 
+        for n, v in all_port_vertices.items():
+            v.view.xy = (v.view.xy[1] - x_min + padding,
+                         v.view.xy[0] - y_min + padding)
+
         for edge in self.layout_edges:
             if not hasattr(edge, 'view'):
                 continue
-
-            # path = QtGui.QPainterPath()
-            # if len(edge.view._pts) > 2:
-            # import pdb; pdb.set_trace()
 
             pipe = edge.data
 
@@ -743,18 +776,5 @@ class NodeItem(AbstractNodeItem):
                 QtCore.QPointF(p[1] - x_min + padding, p[0] - y_min + padding)
                 for p in reversed(edge.view._pts[1:-1])
             ]
-
-            # layout_path = edge.view._pts[::-1]
-            # path.moveTo(pipe.input_port.plug_pos(IN_PORT))
-
-            # # for p in layout_path[1:-1]:
-            # #     path.lineTo(p[1] - x_min + padding, p[0] - y_min + padding)
-
-            # for p in pipe.layout_path:
-            #     path.lineTo(p)
-
-            # path.lineTo(pipe.output_port.plug_pos(OUT_PORT))
-
-            # edge.data.setPath(path)
 
         self.size_expander(self)
