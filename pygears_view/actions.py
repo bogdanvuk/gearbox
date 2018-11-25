@@ -3,6 +3,7 @@ from PySide2 import QtGui
 from PySide2.QtCore import Qt
 from pygears.conf import Inject, reg_inject, registry
 from functools import wraps
+from .node_search import node_search_completer
 
 
 def shortcut(domain, shortcut):
@@ -124,6 +125,12 @@ def toggle_expand(node, graph):
         node.expand()
     else:
         node.collapse()
+
+
+@shortcut('graph', Qt.Key_Slash)
+@reg_inject
+def node_search(graph=Inject('graph/graph')):
+    graph.minibuffer.complete(node_search_completer(graph.top))
 
 
 def setup_actions(graph):
