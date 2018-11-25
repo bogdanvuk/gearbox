@@ -38,6 +38,22 @@ class PortItem(QtWidgets.QGraphicsItem):
     def boundingRect(self):
         return QtCore.QRectF(0.0, 0.0, self._width, self._height)
 
+    def plug_pos(self, context, direction):
+        if self.port_type == IN_PORT:
+            rel_pos = self.pos() + QtCore.QPointF(self._width / 2,
+                                                  self._height / 2)
+        elif self.port_type == OUT_PORT:
+            if direction == OUT_PORT:
+                rel_pos = self.pos() + QtCore.QPointF(self._width,
+                                                      self._height / 2)
+            else:
+                rel_pos = self.pos() + QtCore.QPointF(0, self._height / 2)
+
+        if context is self.parentItem():
+            return rel_pos
+        else:
+            return self.parentItem().mapToParent(rel_pos)
+
     def paint(self, painter, option, widget):
         painter.save()
 
@@ -104,11 +120,11 @@ class PortItem(QtWidgets.QGraphicsItem):
     def redraw_connected_pipes(self):
         if not self.connected_pipes:
             return
-        for pipe in self.connected_pipes:
-            if self.port_type == IN_PORT:
-                pipe.draw_path(self, pipe.output_port)
-            elif self.port_type == OUT_PORT:
-                pipe.draw_path(pipe.input_port, self)
+        # for pipe in self.connected_pipes:
+        #     if self.port_type == IN_PORT:
+        #         pipe.draw_path(self, pipe.output_port)
+        #     elif self.port_type == OUT_PORT:
+        #         pipe.draw_path(pipe.input_port, self)
 
     def add_pipe(self, pipe):
         self._pipes.append(pipe)
@@ -201,7 +217,7 @@ class PortItem(QtWidgets.QGraphicsItem):
             return
         if self.scene():
             viewer = self.scene().viewer()
-            viewer.establish_connection(self, port)
+            return viewer.establish_connection(self, port)
 
     def disconnect_from(self, port):
         port_types = {IN_PORT: 'output_port', OUT_PORT: 'input_port'}

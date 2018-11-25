@@ -72,7 +72,7 @@ class NodeViewer(QtWidgets.QGraphicsView):
         self.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         self.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         self.setViewportUpdateMode(QtWidgets.QGraphicsView.FullViewportUpdate)
-        self._pipe_layout = PIPE_LAYOUT_CURVED
+        self._pipe_layout = PIPE_LAYOUT_STRAIGHT
         self._live_pipe = None
         self._detached_port = None
         self._start_port = None
@@ -298,7 +298,8 @@ class NodeViewer(QtWidgets.QGraphicsView):
         print(f'Add pipe: {start_port} -> {end_port}')
         self.scene().addItem(pipe)
         pipe.set_connections(start_port, end_port)
-        pipe.draw_path(pipe.input_port, pipe.output_port)
+        # pipe.draw_path(pipe.input_port, pipe.output_port)
+        return pipe
 
     def acyclic_check(self, start_port, end_port):
         """
@@ -601,8 +602,8 @@ class NodeViewer(QtWidgets.QGraphicsView):
             'straight': PIPE_LAYOUT_STRAIGHT
         }
         self._pipe_layout = layout_types.get(layout, 'curved')
-        for pipe in self.all_pipes():
-            pipe.draw_path(pipe.input_port, pipe.output_port)
+        # for pipe in self.all_pipes():
+        #     pipe.draw_path(pipe.input_port, pipe.output_port)
 
     def reset_zoom(self):
         self.scale(1.0, 1.0)

@@ -6,8 +6,7 @@ from PySide2 import QtCore, QtGui, QtWidgets
 from .constants import (
     PIPE_DEFAULT_COLOR, PIPE_ACTIVE_COLOR, PIPE_HIGHLIGHT_COLOR,
     PIPE_STYLE_DASHED, PIPE_STYLE_DEFAULT, PIPE_STYLE_DOTTED,
-    PIPE_LAYOUT_STRAIGHT, PIPE_WIDTH, IN_PORT, OUT_PORT, Z_VAL_PIPE
-)
+    PIPE_LAYOUT_STRAIGHT, PIPE_WIDTH, IN_PORT, OUT_PORT, Z_VAL_PIPE)
 from .port import PortItem
 
 PIPE_STYLES = {
@@ -32,19 +31,19 @@ class Pipe(QtWidgets.QGraphicsPathItem):
         self._highlight = False
         self._input_port = input_port
         self._output_port = output_port
+        self.layout_path = []
 
     def __str__(self):
         in_name = self._input_port.name if self._input_port else ''
         out_name = self._output_port.name if self._output_port else ''
-        return (f'{self._input_port.node.model.name}.{in_name}'
-                f' -> {self._output_port.node.model.name}.{out_name}'
-                )
+        return (f'{self._output_port.node.model.name}.{out_name} '
+                f' -> {self._input_port.node.model.name}.{in_name}')
 
     def __repr__(self):
         in_name = self._input_port.name if self._input_port else ''
         out_name = self._output_port.name if self._output_port else ''
-        return '{}.Pipe(\'{}\', \'{}\')'.format(
-            self.__module__, in_name, out_name)
+        return '{}.Pipe(\'{}\', \'{}\')'.format(self.__module__, in_name,
+                                                out_name)
 
     def hoverEnterEvent(self, event):
         self.activate()
@@ -82,50 +81,160 @@ class Pipe(QtWidgets.QGraphicsPathItem):
         painter.setRenderHint(painter.Antialiasing, True)
         painter.drawPath(self.path())
 
-    def draw_path(self, start_port, end_port, cursor_pos=None):
-        if not start_port:
-            return
-        offset = (start_port.boundingRect().width() / 2)
-        pos1 = start_port.scenePos()
-        pos1.setX(pos1.x() + offset)
-        pos1.setY(pos1.y() + offset)
-        if cursor_pos:
-            pos2 = cursor_pos
-        elif end_port:
-            offset = start_port.boundingRect().width() / 2
-            pos2 = end_port.scenePos()
-            pos2.setX(pos2.x() + offset)
-            pos2.setY(pos2.y() + offset)
-        else:
-            return
+        # path = QtGui.QPainterPath()
 
-        line = QtCore.QLineF(pos1, pos2)
-        path = QtGui.QPainterPath()
-        path.moveTo(line.x1(), line.y1())
+        # path.moveTo(self.input_port.plug_pos(IN_PORT))
 
-        if self.viewer_pipe_layout() == PIPE_LAYOUT_STRAIGHT:
-            path.lineTo(pos2)
-            self.setPath(path)
-            return
+        # for p in self.layout_path[1:-1]:
+        #     path.lineTo(p)
 
+        # path.lineTo(self.output_port.plug_pos(OUT_PORT))
+
+        painter.drawPath(self.path())
+
+    def spline(self, pos1, pos2, start=True):
         ctr_offset_x1, ctr_offset_x2 = pos1.x(), pos2.x()
         tangent = ctr_offset_x1 - ctr_offset_x2
         tangent = (tangent * -1) if tangent < 0 else tangent
 
-        max_width = start_port.node.boundingRect().width() / 2
-        tangent = max_width if tangent > max_width else tangent
+        # max_width = start_port.node.boundingRect().width() / 2
+        # tangent = max_width if tangent > max_width else tangent
 
-        if start_port.port_type == IN_PORT:
+        if start:
             ctr_offset_x1 -= tangent
+        else:
             ctr_offset_x2 += tangent
-        elif start_port.port_type == OUT_PORT:
-            ctr_offset_x1 += tangent
-            ctr_offset_x2 -= tangent
+
+        # ctr_offset_x1 -= tangent
+        # ctr_offset_x2 += tangent
 
         ctr_point1 = QtCore.QPointF(ctr_offset_x1, pos1.y())
         ctr_point2 = QtCore.QPointF(ctr_offset_x2, pos2.y())
-        path.cubicTo(ctr_point1, ctr_point2, pos2)
+
+        return ctr_point1, ctr_point2
+
+    def draw_path(self):
+        path = QtGui.QPainterPath()
+
+        qp_points = ([self.input_port.plug_pos(self.parentItem(), OUT_PORT)
+                      ] + self.layout_path +
+                     [self.output_port.plug_pos(self.parentItem(), IN_PORT)])
+
+        points = [(p.x(), p.y()) for p in qp_points]
+
+        from grandalf.utils.geometry import setcurve
+        splines = setcurve(None, points)
+
+        from itertools import tee
+
+        def pairwise(iterable):
+            "s -> (s0,s1), (s1,s2), (s2, s3), ..."
+            a, b = tee(iterable)
+            next(b, None)
+            return zip(a, b)
+
+        # if len(splines) > 2:
+        #     import pdb; pdb.set_trace()
+
+        start_spline = self.spline(qp_points[0], qp_points[1], start=True)[0]
+        splines[0][1] = (start_spline.x(), start_spline.y())
+
+        end_spline = self.spline(qp_points[-2], qp_points[-1], start=False)[1]
+        splines[-1][2] = (end_spline.x(), end_spline.y())
+
+        path.moveTo(qp_points[0])
+
+        # for p1, p2 in pairwise(qp_points):
+        #     ctr1, ctr2 = self.spline(p1, p2)
+        #     path.cubicTo(ctr1, ctr2, p2)
+
+        for s in splines:
+            path.cubicTo(*[QtCore.QPointF(*pt) for pt in s[1:]])
+
+        # for p in self.layout_path:
+        #     path.lineTo(p)
+
+        # path.lineTo(self.output_port.plug_pos(OUT_PORT))
+
         self.setPath(path)
+
+    #     pass
+    # color = QtGui.QColor(*self._color)
+    # pen_style = PIPE_STYLES.get(self.style)
+    # pen_width = PIPE_WIDTH
+    # if self._active:
+    #     color = QtGui.QColor(*PIPE_ACTIVE_COLOR)
+    # elif self._highlight:
+    #     color = QtGui.QColor(*PIPE_HIGHLIGHT_COLOR)
+    #     pen_style = PIPE_STYLES.get(PIPE_STYLE_DEFAULT)
+
+    # if self.input_port and self.output_port:
+    #     in_node = self.input_port.node
+    #     out_node = self.output_port.node
+    #     if in_node.disabled or out_node.disabled:
+    #         color.setAlpha(200)
+    #         pen_width += 0.2
+    #         pen_style = PIPE_STYLES.get(PIPE_STYLE_DOTTED)
+
+    # pen = QtGui.QPen(color, pen_width)
+    # pen.setStyle(pen_style)
+    # pen.setCapStyle(QtCore.Qt.RoundCap)
+
+    # painter.setPen(pen)
+    # painter.setRenderHint(painter.Antialiasing, True)
+    # print(self)
+    # print(self.path())
+    # painter.drawPath(self.path())
+
+    # def setPath(self, path):
+    #     super().setPath(path)
+    #     import pdb; pdb.set_trace()
+    #     print(f"Setting path for {self}")
+
+    # def draw_path(self, start_port, end_port, cursor_pos=None):
+    #     if not start_port:
+    #         return
+    #     offset = (start_port.boundingRect().width() / 2)
+    #     pos1 = start_port.scenePos()
+    #     pos1.setX(pos1.x() + offset)
+    #     pos1.setY(pos1.y() + offset)
+    #     if cursor_pos:
+    #         pos2 = cursor_pos
+    #     elif end_port:
+    #         offset = start_port.boundingRect().width() / 2
+    #         pos2 = end_port.scenePos()
+    #         pos2.setX(pos2.x() + offset)
+    #         pos2.setY(pos2.y() + offset)
+    #     else:
+    #         return
+
+    #     line = QtCore.QLineF(pos1, pos2)
+    #     path = QtGui.QPainterPath()
+    #     path.moveTo(line.x1(), line.y1())
+
+    #     if self.viewer_pipe_layout() == PIPE_LAYOUT_STRAIGHT:
+    #         path.lineTo(pos2)
+    #         self.setPath(path)
+    #         return
+
+    #     ctr_offset_x1, ctr_offset_x2 = pos1.x(), pos2.x()
+    #     tangent = ctr_offset_x1 - ctr_offset_x2
+    #     tangent = (tangent * -1) if tangent < 0 else tangent
+
+    #     max_width = start_port.node.boundingRect().width() / 2
+    #     tangent = max_width if tangent > max_width else tangent
+
+    #     if start_port.port_type == IN_PORT:
+    #         ctr_offset_x1 -= tangent
+    #         ctr_offset_x2 += tangent
+    #     elif start_port.port_type == OUT_PORT:
+    #         ctr_offset_x1 += tangent
+    #         ctr_offset_x2 -= tangent
+
+    #     ctr_point1 = QtCore.QPointF(ctr_offset_x1, pos1.y())
+    #     ctr_point2 = QtCore.QPointF(ctr_offset_x2, pos2.y())
+    #     path.cubicTo(ctr_point1, ctr_point2, pos2)
+    #     self.setPath(path)
 
     def calc_distance(self, p1, p2):
         x = math.pow((p2.x() - p1.x()), 2)
@@ -234,4 +343,3 @@ class Pipe(QtWidgets.QGraphicsPathItem):
             self.scene().removeItem(self)
         # TODO: not sure if we need this...?
         del self
-

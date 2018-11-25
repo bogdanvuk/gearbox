@@ -2,6 +2,7 @@ from PySide2 import QtGui, QtCore
 from .node_abstract import AbstractNodeItem
 from .port import PortItem
 
+from .pipe import Pipe
 from .constants import (IN_PORT, OUT_PORT, NODE_ICON_SIZE, ICON_NODE_BASE,
                         NODE_SEL_COLOR, NODE_SEL_BORDER_COLOR, Z_VAL_NODE,
                         Z_VAL_NODE_WIDGET, Z_VAL_PIPE)
@@ -11,8 +12,15 @@ from PySide2.QtWidgets import (QGraphicsItem, QGraphicsPixmapItem,
 
 from pygears.core.port import InPort
 
-from grandalf.layouts import SugiyamaLayout
+from grandalf.layouts import SugiyamaLayout, DigcoLayout
 from grandalf.graphs import Vertex, Edge, Graph
+from grandalf.routing import EdgeViewer, route_with_splines, route_with_rounded_corners
+
+
+class defaultview:
+    def __init__(self, w, h):
+        self.w = h
+        self.h = w
 
 
 def inst_children(node, graph):
@@ -47,12 +55,12 @@ def inst_children(node, graph):
                     consumer_graph_node = child_node_map.get(consumer.gear)
 
                 if consumer_graph_node:
+                    src_port = graph_node.outputs[port.index]
+
                     if isinstance(consumer, InPort):
-                        src_port = graph_node.outputs[port.index]
                         dest_port = consumer_graph_node.inputs[consumer.index]
                     else:
-                        src_port = consumer_graph_node.outputs[consumer.index]
-                        dest_port = graph_node.outputs[port.index]
+                        dest_port = consumer_graph_node.outputs[consumer.index]
 
                     node.connect(src_port, dest_port)
 
@@ -113,9 +121,9 @@ def hier_painter(self, painter, option, widget):
     painter.setPen(QtGui.QPen(QtGui.QColor(*border_color), 1))
     painter.drawPath(path)
 
-    for port in self.inputs + self.outputs:
-        for pipe in port.connected_pipes:
-            pipe.draw_path(pipe._input_port, pipe._output_port)
+    # for port in self.inputs + self.outputs:
+    #     for pipe in port.connected_pipes:
+    #         pipe.draw_path()
 
     painter.restore()
 
@@ -166,9 +174,9 @@ def node_painter(self, painter, option, widget):
     painter.setPen(QtGui.QPen(border_color, border_width))
     painter.drawPath(path)
 
-    for port in self.inputs + self.outputs:
-        for pipe in port.connected_pipes:
-            pipe.draw_path(pipe._input_port, pipe._output_port)
+    # for port in self.inputs + self.outputs:
+    #     for pipe in port.connected_pipes:
+    #         pipe.draw_path(pipe._input_port, pipe._output_port)
 
     painter.restore()
 
@@ -183,12 +191,16 @@ class NodeItem(AbstractNodeItem):
         self._input_items = {}
         self._output_items = {}
         self._nodes = []
+        self.pipes = []
         self.model = model
         self.minimum_size = (80, 80)
 
         self.layout_vertices = {}
         self.layout_root_vertices = []
         self.layout_edges = []
+        self.layout_dummy_vertices = [Vertex(), Vertex()]
+        for v in self.layout_dummy_vertices:
+            v.view = defaultview(10, 10)
 
         if self.hierarchical:
             self.setZValue(Z_VAL_PIPE - 1)
@@ -606,13 +618,14 @@ class NodeItem(AbstractNodeItem):
         self.arrange_ports(padding_y=35.0)
         self.offset_ports(0.0, 15.0)
 
+        for p in self.pipes:
+            if not self.collapsed:
+                p.draw_path()
+
     def add_node(self, node):
         if self.parent is not None:
-            print(
-                f'Setting parent for: {node.model.name} to {self.model.name}')
             node.setParentItem(self)
         else:
-            print(f'Drawing node: {node.model.name}')
             self.graph.viewer().add_node(node, node.pos)
 
         node.update()
@@ -625,11 +638,41 @@ class NodeItem(AbstractNodeItem):
         node1 = port1.node
         node2 = port2.node
 
-        port1.connect_to(port2)
+        pipe = Pipe(self)
+        if self.parent is not None:
+            pipe.setParentItem(self)
+        else:
+            self.graph.viewer().scene().addItem(pipe)
+
+        self.pipes.append(pipe)
+
+        pipe.set_connections(port1, port2)
+        if str(pipe) == '/echo.dout  -> /echo/cast_dout.dout':
+            import pdb; pdb.set_trace()
+
+        print(pipe)
+
+        # pipe = port1.connect_to(port2)
+        # pipe.parent = self
 
         if (node2 is not self) and (node1 is not self):
             self.layout_edges.append(
-                Edge(self.layout_vertices[node1], self.layout_vertices[node2]))
+                Edge(
+                    self.layout_vertices[node1],
+                    self.layout_vertices[node2],
+                    data=pipe))
+
+            pipe.view = EdgeViewer()
+            self.layout_edges[-1].view = pipe.view
+
+        elif (node2 is self):
+            self.layout_edges.append(
+                Edge(self.layout_vertices[node1],
+                     self.layout_dummy_vertices[1]))
+        else:
+            self.layout_edges.append(
+                Edge(self.layout_dummy_vertices[0],
+                     self.layout_vertices[node2]))
 
     @property
     def node_bounding_rect(self):
@@ -650,28 +693,30 @@ class NodeItem(AbstractNodeItem):
             self.post_init()
             return
 
-        class defaultview:
-            def __init__(self, w, h):
-                self.w = h
-                self.h = w
-
-        g = Graph(list(self.layout_vertices.values()), self.layout_edges)
+        g = Graph(
+            list(self.layout_vertices.values()) + self.layout_dummy_vertices,
+            self.layout_edges)
 
         for node, v in self.layout_vertices.items():
             if hasattr(node, 'layout'):
                 node.layout()
             v.view = defaultview(node.width, node.height)
 
+        # sug = DigcoLayout(g.C[0])
         sug = SugiyamaLayout(g.C[0])
-        sug.init_all(roots=self.layout_root_vertices)
-        sug.xspace = 20
+
+        # sug.init_all(roots=self.layout_dummy_vertices[0:1])
+        sug.init_all(optimize=True)
+        # sug.xspace = 20
         sug.yspace = 50
 
-        sug.draw()
+        # sug.route_edge = route_with_rounded_corners
+        sug.draw(5)
+        sug.draw_edges()
 
         self.layers = []
         for layer in sug.layers:
-            self.layers.append([v.data for v in layer])
+            self.layers.append([v.data for v in layer if hasattr(v, 'data')])
 
         padding = 40
         x_min = min(
@@ -683,5 +728,33 @@ class NodeItem(AbstractNodeItem):
         for n, v in self.layout_vertices.items():
             n.set_pos(v.view.xy[1] - x_min - v.view.h / 2 + padding,
                       v.view.xy[0] - y_min - v.view.w / 2 + padding)
+
+        for edge in self.layout_edges:
+            if not hasattr(edge, 'view'):
+                continue
+
+            # path = QtGui.QPainterPath()
+            # if len(edge.view._pts) > 2:
+            # import pdb; pdb.set_trace()
+
+            pipe = edge.data
+
+            pipe.layout_path = [
+                QtCore.QPointF(p[1] - x_min + padding, p[0] - y_min + padding)
+                for p in reversed(edge.view._pts[1:-1])
+            ]
+
+            # layout_path = edge.view._pts[::-1]
+            # path.moveTo(pipe.input_port.plug_pos(IN_PORT))
+
+            # # for p in layout_path[1:-1]:
+            # #     path.lineTo(p[1] - x_min + padding, p[0] - y_min + padding)
+
+            # for p in pipe.layout_path:
+            #     path.lineTo(p)
+
+            # path.lineTo(pipe.output_port.plug_pos(OUT_PORT))
+
+            # edge.data.setPath(path)
 
         self.size_expander(self)
