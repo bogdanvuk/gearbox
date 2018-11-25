@@ -714,6 +714,7 @@ class NodeItem(AbstractNodeItem):
             for n, v in all_port_vertices.items():
                 if hasattr(v.view, 'xy'):
                     del v.view.xy
+            self.post_init()
             return
 
         all_vertices = {

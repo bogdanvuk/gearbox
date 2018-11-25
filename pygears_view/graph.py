@@ -141,7 +141,7 @@ class NodeGraph(QtWidgets.QMainWindow):
         self.buffers = BufferStack(graph=self)
         vbox.addLayout(self.buffers)
 
-        # self.gtkwave = GtkWave()
+        self.gtkwave = GtkWave()
 
         self.buffers['graph'] = self._viewer
 
