@@ -1,23 +1,30 @@
 from PySide2.QtWidgets import QLabel
 from .stylesheet import STYLE_WHICH_KEY
-from pygears.conf import Inject, reg_inject, registry
+from pygears.conf import Inject, bind, reg_inject
 from PySide2.QtGui import QKeySequence
+
+
+@reg_inject
+def which_key(main=Inject('viewer/main')):
+    w = WhichKey(main)
+    main.vbox.insertWidget(1, w)
+    bind('viewer/which_key', w)
 
 
 class WhichKey(QLabel):
     @reg_inject
-    def __init__(self, parent=None, graph=Inject('graph/graph')):
+    def __init__(self, parent=None, main=Inject('viewer/main')):
         super().__init__(parent)
         self.setStyleSheet(STYLE_WHICH_KEY)
         self.setMargin(2)
         self.hide()
 
-        graph.key_cancel.connect(self.cancel)
+        main.key_cancel.connect(self.cancel)
 
     @reg_inject
-    def show(self, graph=Inject('graph/graph')):
+    def show(self, main=Inject('viewer/main')):
         which_key_string = []
-        for s in graph.shortcuts:
+        for s in main.shortcuts:
             if not s.enabled:
                 continue
 

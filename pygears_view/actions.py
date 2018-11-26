@@ -8,7 +8,7 @@ from .node_search import node_search_completer
 
 def shortcut(domain, shortcut):
     def wrapper(func):
-        registry('graph/shortcuts').append((domain, shortcut, func))
+        registry('viewer/shortcuts').append((domain, shortcut, func))
 
     return wrapper
 
@@ -16,7 +16,7 @@ def shortcut(domain, shortcut):
 def single_select_action(func):
     @wraps(func)
     @reg_inject
-    def wrapper(graph=Inject('graph/graph')):
+    def wrapper(graph=Inject('viewer/graph')):
         nodes = graph.selected_nodes()
         if len(nodes) == 1:
             func(nodes[0], graph)
@@ -53,7 +53,7 @@ def get_node_layer(node):
 
 @shortcut('graph', Qt.Key_K)
 @reg_inject
-def node_up(graph=Inject('graph/graph')):
+def node_up(graph=Inject('viewer/graph')):
     nodes = graph.selected_nodes()
     if len(nodes) > 1:
         return
@@ -79,7 +79,7 @@ def node_up(graph=Inject('graph/graph')):
 
 @shortcut('graph', Qt.Key_J)
 @reg_inject
-def node_down(graph=Inject('graph/graph')):
+def node_down(graph=Inject('viewer/graph')):
     nodes = graph.selected_nodes()
     if len(nodes) > 1:
         return
@@ -105,16 +105,16 @@ def node_down(graph=Inject('graph/graph')):
 
 @shortcut(None, Qt.CTRL + Qt.Key_H)
 @reg_inject
-def toggle_help(graph=Inject('graph/graph')):
-    if graph.which_key.isVisible():
-        graph.which_key.hide()
+def toggle_help(which_key=Inject('viewer/which_key')):
+    if which_key.isVisible():
+        which_key.hide()
     else:
-        graph.which_key.show()
+        which_key.show()
 
 
 @shortcut(None, Qt.Key_B)
 @reg_inject
-def next_buffer(graph=Inject('graph/graph')):
+def next_buffer(graph=Inject('viewer/graph')):
     graph.buffers.next_buffer()
 
 
@@ -138,70 +138,9 @@ def send_to_wave(node, graph):
 
 @shortcut('graph', Qt.Key_Slash)
 @reg_inject
-def node_search(graph=Inject('graph/graph')):
-    graph.minibuffer.complete(node_search_completer(graph.top))
-
-
-def setup_actions(graph):
-    """
-    build the base node graph menu commands.
-
-    Args:
-        graph (NodeGraphQt.NodeGraph):
-    """
-    root_menu = graph.context_menu()
-    file_menu = root_menu.add_menu('&File')
-    edit_menu = root_menu.add_menu('&Edit')
-
-    # File menu.
-    file_menu.add_command('Open...', lambda: open_session(graph),
-                          QtGui.QKeySequence.Open)
-    file_menu.add_command('Save...', lambda: save_session(graph),
-                          QtGui.QKeySequence.Save)
-    file_menu.add_command('Save As...', lambda: save_session_as(graph),
-                          'Ctrl+Shift+s')
-    file_menu.add_command('Clear', lambda: clear_session(graph))
-
-    file_menu.add_separator()
-
-    file_menu.add_command('Zoom In', lambda: zoom_in(graph), '=')
-    file_menu.add_command('Zoom Out', lambda: zoom_out(graph), '-')
-    file_menu.add_command('Reset Zoom', graph.reset_zoom, 'h')
-
-    # Edit menu.
-    undo_actn = graph.undo_stack().createUndoAction(graph.viewer(), '&Undo')
-    undo_actn.setShortcuts(QtGui.QKeySequence.Undo)
-    edit_menu.add_action(undo_actn)
-
-    redo_actn = graph.undo_stack().createRedoAction(graph.viewer(), '&Redo')
-    redo_actn.setShortcuts(QtGui.QKeySequence.Redo)
-    edit_menu.add_action(redo_actn)
-
-    edit_menu.add_separator()
-    edit_menu.add_command('Clear Undo History', lambda: clear_undo(graph))
-    edit_menu.add_separator()
-
-    edit_menu.add_command('Copy', graph.copy_nodes, QtGui.QKeySequence.Copy)
-    edit_menu.add_command('Paste', graph.paste_nodes, QtGui.QKeySequence.Paste)
-    edit_menu.add_command('Delete',
-                          lambda: graph.delete_nodes(graph.selected_nodes()),
-                          QtGui.QKeySequence.Delete)
-
-    edit_menu.add_separator()
-
-    edit_menu.add_command('Select all', graph.select_all, 'Ctrl+A')
-    edit_menu.add_command('Deselect all', graph.clear_selection,
-                          'Ctrl+Shift+A')
-    edit_menu.add_command('Enable/Disable',
-                          lambda: graph.disable_nodes(graph.selected_nodes()),
-                          'd')
-
-    edit_menu.add_command(
-        'Duplicate', lambda: graph.duplicate_nodes(graph.selected_nodes()),
-        'Alt+c')
-    edit_menu.add_command('Center Selection', graph.fit_to_selection, 'f')
-
-    edit_menu.add_separator()
+def node_search(
+        minibuffer=Inject('viewer/minibuffer'), graph=Inject('viewer/graph')):
+    minibuffer.complete(node_search_completer(graph.top))
 
 
 def zoom_in(graph):

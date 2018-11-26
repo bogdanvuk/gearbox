@@ -4,7 +4,7 @@ import os
 
 
 @reg_inject
-def list_signal_names(graph=Inject('graph/graph')):
+def list_signal_names(graph=Inject('viewer/graph')):
     resp = graph.gtkwave.command('gtkwave::getNumFacs')
     resp = graph.gtkwave.command('gtkwave::getFacName 1')
     print(f"gtkwave::getNumFacs -> {resp}")
@@ -12,7 +12,7 @@ def list_signal_names(graph=Inject('graph/graph')):
 
 @reg_inject
 def add_gear_to_wave(gear,
-                     graph=Inject('graph/graph'),
+                     graph=Inject('viewer/graph'),
                      vcd=Inject('VCD'),
                      outdir=Inject('sim/artifact_dir')):
     # for i in range(40):

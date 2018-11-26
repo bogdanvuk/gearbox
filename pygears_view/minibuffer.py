@@ -17,7 +17,7 @@ class Minibuffer(QtWidgets.QLineEdit):
         # self.hide()
 
     @reg_inject
-    def complete(self, completer, graph=Inject('graph/graph')):
+    def complete(self, completer, graph=Inject('viewer/graph')):
         self.previous_domain = graph.buffers.current_name
         graph.domain_changed.emit('minibuffer')
         self.setDisabled(False)
@@ -69,7 +69,7 @@ class Minibuffer(QtWidgets.QLineEdit):
         return super().event(event)
 
     @reg_inject
-    def _on_search_submitted(self, index=0, graph=Inject('graph/graph')):
+    def _on_search_submitted(self, index=0, graph=Inject('viewer/graph')):
         if self.text():
             self.completed.emit(self.text())
             graph.domain_changed.emit(self.previous_domain)

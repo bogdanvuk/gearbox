@@ -2,19 +2,20 @@
 import sys
 import os
 
-from PySide2 import QtWidgets, QtCore, QtGui
+from PySide2 import QtGui, QtWidgets
 
-from pygears_view.graph import NodeGraph
-from pygears import bind
-from pygears.conf.log import INFO
-from pygears.common import add, shred
-from pygears.util.print_hier import print_hier
-from pygears.conf import Inject, reg_inject
-from pygears_view.node import NodeItem
+from pygears_view.main_window import MainWindow
+from pygears_view.graph import graph
+from pygears_view.which_key import which_key
+from pygears.conf import Inject, reg_inject, safe_bind, PluginBase
 from pygears.sim.extens.sim_extend import SimExtend
 
 
 class PyGearsView(SimExtend):
+    @reg_inject
+    def __init__(self, layers=Inject('viewer/layers')):
+        pass
+
     @reg_inject
     def after_run(self, sim, outdir=Inject('sim/artifact_dir')):
         print(f"Here: {outdir}")
@@ -23,27 +24,20 @@ class PyGearsView(SimExtend):
 
 
 @reg_inject
-def main(root=Inject('gear/hier_root')):
-    # app = App(sys.argv)
-    # app.installEventFilter(app)
+def main(layers=Inject('viewer/layers')):
     app = QtWidgets.QApplication(sys.argv)
     app.setFont(QtGui.QFont("Source Code Pro", 13))
 
-    # create node graph.
-    graph = NodeGraph()
+    main_window = MainWindow()
 
-    viewer = graph.viewer()
-    viewer.setWindowTitle('My Node Graph')
-    viewer.resize(800, 500)
-    viewer.setGeometry(500, viewer.y(), 800, 500)
+    for l in layers:
+        l()
 
-    bind('logger/util/level', INFO)
-    print_hier()
-
-    top = NodeItem(root, graph)
-    graph.top = top
-    top.layout()
-    top.graph.fit_all()
-
-    graph.show()
+    main_window.show()
     app.exec_()
+
+
+class SimPlugin(PluginBase):
+    @classmethod
+    def bind(cls):
+        safe_bind('viewer/layers', [graph, which_key])

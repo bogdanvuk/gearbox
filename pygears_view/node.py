@@ -1,20 +1,17 @@
-from PySide2 import QtGui, QtCore
+from PySide2 import QtGui, QtCore, QtWidgets
 from .node_abstract import AbstractNodeItem
 from .port import PortItem
 
 from .pipe import Pipe
-from .constants import (IN_PORT, OUT_PORT, NODE_ICON_SIZE, ICON_NODE_BASE,
-                        NODE_SEL_COLOR, NODE_SEL_BORDER_COLOR, Z_VAL_NODE,
-                        Z_VAL_NODE_WIDGET, Z_VAL_PIPE)
-
-from PySide2.QtWidgets import (QGraphicsItem, QGraphicsPixmapItem,
-                               QGraphicsTextItem)
+from .constants import (IN_PORT, OUT_PORT, NODE_SEL_COLOR,
+                        NODE_SEL_BORDER_COLOR, Z_VAL_NODE, Z_VAL_PIPE)
 
 from pygears.core.port import InPort
+from pygears.conf import reg_inject, Inject
 
-from grandalf.layouts import SugiyamaLayout, DigcoLayout
+from grandalf.layouts import SugiyamaLayout
 from grandalf.graphs import Vertex, Edge, Graph
-from grandalf.routing import EdgeViewer, route_with_splines, route_with_rounded_corners
+from grandalf.routing import EdgeViewer
 
 
 class defaultview:
@@ -23,12 +20,12 @@ class defaultview:
         self.h = w
 
 
-def inst_children(node, graph):
+def inst_children(node):
     child_node_map = {}
 
     for child in node.model.child:
 
-        graph_node = NodeItem(child, graph, node)
+        graph_node = NodeItem(child, node)
 
         child_node_map[child] = graph_node
 
@@ -182,12 +179,13 @@ def node_painter(self, painter, option, widget):
 
 
 class NodeItem(AbstractNodeItem):
-    def __init__(self, model, graph, parent=None):
+    @reg_inject
+    def __init__(self, model, parent=None, graph=Inject('viewer/graph')):
         super().__init__(model.basename)
 
         self.parent = parent
         self.graph = graph
-        self._text_item = QGraphicsTextItem(self.name, self)
+        self._text_item = QtWidgets.QGraphicsTextItem(self.name, self)
         self._input_items = {}
         self._output_items = {}
         self._nodes = []
@@ -228,7 +226,7 @@ class NodeItem(AbstractNodeItem):
         if self.parent is not None:
             self.parent.add_node(self)
 
-        self.child_node_map = inst_children(self, graph)
+        self.child_node_map = inst_children(self)
 
         if parent is not None:
             for node in self._nodes:
@@ -350,7 +348,7 @@ class NodeItem(AbstractNodeItem):
         port_item.port_type = IN_PORT if isinstance(port, InPort) else OUT_PORT
         port_item.multi_connection = True
         port_item.display_name = display_name
-        text = QGraphicsTextItem(port_item.name, self)
+        text = QtWidgets.QGraphicsTextItem(port_item.name, self)
         text.font().setPointSize(8)
         # text.setFont(text.font())
         # text.setVisible(display_name)
@@ -640,7 +638,7 @@ class NodeItem(AbstractNodeItem):
         if self.parent is not None:
             node.setParentItem(self)
         else:
-            self.graph.viewer().add_node(node, node.pos)
+            self.graph.add_node(node, node.pos)
 
         node.update()
 
@@ -656,7 +654,7 @@ class NodeItem(AbstractNodeItem):
         if self.parent is not None:
             pipe.setParentItem(self)
         else:
-            self.graph.viewer().scene().addItem(pipe)
+            self.graph.scene().addItem(pipe)
 
         self.pipes.append(pipe)
 
@@ -717,10 +715,7 @@ class NodeItem(AbstractNodeItem):
             self.post_init()
             return
 
-        all_vertices = {
-            **self.layout_vertices,
-            **all_port_vertices
-        }
+        all_vertices = {**self.layout_vertices, **all_port_vertices}
         g = Graph(list(all_vertices.values()), self.layout_edges)
 
         for node, v in self.layout_vertices.items():

@@ -33,10 +33,10 @@ class GtkWaveProc(QtCore.QObject):
         out = subprocess.check_output(
             'xwininfo -name "GTKWave - [no file loaded]"', shell=True)
 
-        win_id = re.search(r"Window id: 0x([0-9a-fA-F]+)",
+        window_id = re.search(r"Window id: 0x([0-9a-fA-F]+)",
                            out.decode()).group(1)
 
-        self.window_up.emit(version, self.p.pid, int(win_id, 16))
+        self.window_up.emit(version, self.p.pid, int(window_id, 16))
 
     def command(self, cmd):
         self.p.send(cmd + '\n')
@@ -122,15 +122,7 @@ class GtkWave(QtCore.QObject):
         self.proc = GtkWaveProc()
         self.proc.window_up.connect(self.window_up)
         self.send_command.connect(self.proc.command)
-        # self.proc.setTerminationEnabled(True)
-        # self.proc.start()
         QtWidgets.QApplication.instance().aboutToQuit.connect(self.proc.quit)
-        self.cmd = None
-        self.cond = QtCore.QWaitCondition()
-
-    def closeEvent(self, event):
-        # print('close event')
-        self.proc.quit()
 
     def command_nb(self, cmd):
         self.send_command.emit(cmd)
@@ -142,7 +134,7 @@ class GtkWave(QtCore.QObject):
         return resp
 
     @reg_inject
-    def key_press(self, key, modifiers, graph=Inject('graph/graph')):
+    def key_press(self, key, modifiers, graph=Inject('viewer/graph')):
         print(modifiers, key)
         app = QtWidgets.QApplication.instance()
         app.postEvent(
@@ -152,20 +144,21 @@ class GtkWave(QtCore.QObject):
     def window_up(self,
                   version,
                   pid,
-                  win_id,
-                  graph=Inject('graph/graph'),
+                  window_id,
+                  graph=Inject('viewer/graph'),
                   outdir=MayInject('sim/artifact_dir')):
-        print(f'GtkWave started: {version}, {pid}, {win_id}')
-        self.win_id = win_id
-        self.gtkwave_win = QtGui.QWindow.fromWinId(win_id)
-        # self.gtkwave_win.setFlag(QtCore.Qt.WindowTransparentForInput, True)
+        print(f'GtkWave started: {version}, {pid}, {window_id}')
+        self.window_id = window_id
+        self.gtkwave_win = QtGui.QWindow.fromWinId(window_id)
         self.gtkwave_widget = QtWidgets.QWidget.createWindowContainer(
             self.gtkwave_win)
 
         graph.buffers['gtkwave'] = self.gtkwave_widget
         # self.gtkwave_widget.installEventFilter(self)
 
-        self.xev_proc = GtkWaveXevProc(win_id)
+        self.xev_proc = GtkWaveXevProc(window_id)
+        QtWidgets.QApplication.instance().aboutToQuit.connect(
+            self.xev_proc.quit)
         self.xev_proc.key_press.connect(self.key_press)
 
         if outdir:
