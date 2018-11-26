@@ -8,13 +8,19 @@ import sys
 from pygears.conf import Inject, reg_inject, registry
 
 
-class GtkWaveProc(QtCore.QThread):
+class GtkWaveProc(QtCore.QObject):
 
     window_up = QtCore.Signal(str, int, int)
+    response = QtCore.Signal(str)
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.gtkwave_thread = QtCore.QThread()
+        self.moveToThread(self.gtkwave_thread)
         self.exiting = False
+        self.gtkwave_thread.started.connect(self.run)
+        self.gtkwave_thread.finished.connect(self.quit)
+        self.gtkwave_thread.start()
 
     def run(self):
         self.p = pexpect.spawnu('gtkwave -W -N')
@@ -31,22 +37,46 @@ class GtkWaveProc(QtCore.QThread):
 
         self.window_up.emit(version, self.p.pid, int(win_id, 16))
 
-        self.exec_()
+    def command(self, cmd, mutex=None):
+        print(f'Pexpect: {cmd}')
+        print(f'Pexpect thread: {self.thread()}')
+        self.p.send(cmd + '\n')
+        self.p.expect('%')
+        print(f'Response: {self.p.before}')
+        self.response.emit(self.p.before)
+        if mutex:
+            mutex.unlock()
 
     def quit(self):
         self.p.close()
         super().quit()
 
 
+class GtkWaveCmdBlock(QtCore.QEventLoop):
+    def command(self, cmd, gtk_wave):
+        gtk_wave.send_command.emit(cmd)
+        gtk_wave.proc.response.connect(self.response)
+        self.exec_()
+        return self.resp
+
+    def response(self, resp):
+        self.resp = resp
+        self.quit()
+
+
 class GtkWave(QtCore.QObject):
+    send_command = QtCore.Signal(str)
+
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.proc = GtkWaveProc(self)
+        self.proc = GtkWaveProc()
         self.proc.window_up.connect(self.window_up)
-        self.proc.setTerminationEnabled(True)
-        self.proc.start()
+        self.send_command.connect(self.proc.command)
+        # self.proc.setTerminationEnabled(True)
+        # self.proc.start()
         QtWidgets.QApplication.instance().aboutToQuit.connect(self.proc.quit)
         self.cmd = None
+        self.cond = QtCore.QWaitCondition()
 
     def closeEvent(self, event):
         # print('close event')
@@ -83,15 +113,26 @@ class GtkWave(QtCore.QObject):
                         f"key --window {self.win_id} {key.lower()}")
                     return True
             elif event.type() == QtCore.QEvent.MouseButtonPress:
-                self.send_input(
-                    f'click --window {self.win_id} 1'
-                )
+                self.send_input(f'click --window {self.win_id} 1')
                 return True
 
         return super().eventFilter(obj, event)
 
+    def command_nb(self, cmd):
+        self.send_command.emit(cmd)
+
+    def command(self, cmd):
+        cmd_block = GtkWaveCmdBlock()
+        resp = cmd_block.command(cmd, self)
+        return resp
+
     @reg_inject
-    def window_up(self, version, pid, win_id, graph=Inject('graph/graph')):
+    def window_up(self,
+                  version,
+                  pid,
+                  win_id,
+                  graph=Inject('graph/graph'),
+                  outdir=Inject('sim/artifact_dir')):
         # print(f'GtkWave started: {version}, {pid}, {win_id}')
         self.win_id = win_id
         self.gtkwave_win = QtGui.QWindow.fromWinId(win_id)
@@ -101,3 +142,9 @@ class GtkWave(QtCore.QObject):
 
         graph.buffers['gtkwave'] = self.gtkwave_widget
         self.gtkwave_widget.installEventFilter(self)
+
+        print(f'Gtkwave thread: {self.thread()}')
+        pyvcd = os.path.abspath(os.path.join(outdir, 'pygears.vcd'))
+        print(f"Sending cmd: gtkwave::loadFile {pyvcd}")
+        # self.send_command.emit(f'gtkwave::loadFile {pyvcd}')
+        self.command(f'gtkwave::loadFile {pyvcd}')
