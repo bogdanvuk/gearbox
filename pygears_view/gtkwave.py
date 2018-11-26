@@ -5,7 +5,7 @@ import re
 import os
 import sys
 
-from pygears.conf import Inject, reg_inject, registry
+from pygears.conf import MayInject, Inject, reg_inject, registry
 
 
 class GtkWaveProc(QtCore.QObject):
@@ -15,12 +15,12 @@ class GtkWaveProc(QtCore.QObject):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.gtkwave_thread = QtCore.QThread()
-        self.moveToThread(self.gtkwave_thread)
+        self.xev_thread = QtCore.QThread()
+        self.moveToThread(self.xev_thread)
         self.exiting = False
-        self.gtkwave_thread.started.connect(self.run)
-        self.gtkwave_thread.finished.connect(self.quit)
-        self.gtkwave_thread.start()
+        self.xev_thread.started.connect(self.run)
+        self.xev_thread.finished.connect(self.quit)
+        self.xev_thread.start()
 
     def run(self):
         self.p = pexpect.spawnu('gtkwave -W -N')
@@ -60,6 +60,60 @@ class GtkWaveCmdBlock(QtCore.QEventLoop):
         self.quit()
 
 
+class GtkWaveXevProc(QtCore.QObject):
+
+    key_press = QtCore.Signal(int, int)
+
+    def __init__(self, window_id, parent=None):
+        super().__init__(parent)
+        self.window_id = window_id
+        self.xev_thread = QtCore.QThread()
+        self.moveToThread(self.xev_thread)
+        self.xev_thread.started.connect(self.run)
+        self.xev_thread.start()
+
+    def run(self):
+        # cmd = ['xev', '-id', str(self.window_id), '-event', 'keyboard']
+        cmd = f'xev -id {self.window_id} -event keyboard'
+        # print(f"Running xev with: {' '.join(cmd)}")
+        # print(f"Running xev with: {cmd}")
+        import subprocess
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True)
+        key_press = False
+        for line in proc.stdout:
+            line = line.decode()
+            # print(line, end='')
+            if line.startswith("KeyPress"):
+                key_press = True
+            elif key_press and line.strip().startswith("state"):
+                # print(line)
+
+                res = re.search(
+                    r"state 0x([0-9a-fA-F]+).*keysym 0x([0-9a-fA-F]+).*",
+                    line.strip())
+                # print(res)
+                # print(res.group(1), res.group(2))
+                native_modifiers, native_key = int(res.group(1), 16), int(
+                    res.group(2), 16)
+
+                modifiers = 0
+                key = native_key
+                if chr(key).islower():
+                    key = ord(chr(key).upper())
+
+                if native_modifiers & 0x4:
+                    modifiers += QtCore.Qt.CTRL
+
+                if native_modifiers & 0x1:
+                    modifiers += QtCore.Qt.SHIFT
+
+                if native_modifiers & 0x8:
+                    modifiers += QtCore.Qt.ALT
+
+                self.key_press.emit(key, modifiers)
+                key_press = False
+
+
 class GtkWave(QtCore.QObject):
     send_command = QtCore.Signal(str)
 
@@ -78,42 +132,6 @@ class GtkWave(QtCore.QObject):
         # print('close event')
         self.proc.quit()
 
-    def reclick(self):
-        # print(f"Sending: xdotool {self.cmd}")
-        # os.system(f"xdotool getactivewindow {self.cmd}")
-        os.system(f"xdotool {self.cmd}")
-        QtCore.QTimer.singleShot(10, self.reload)
-
-    def reload(self):
-        self.cmd = None
-        # print("Reverting input block")
-        self.gtkwave_win.setFlag(QtCore.Qt.WindowTransparentForInput, True)
-
-    def send_input(self, cmd):
-        self.cmd = cmd
-        self.gtkwave_win.setFlag(QtCore.Qt.WindowTransparentForInput, False)
-
-        if self.cmd.startswith('click'):
-            QtCore.QTimer.singleShot(200, self.reclick)
-        else:
-            QtCore.QTimer.singleShot(10, self.reclick)
-
-    def eventFilter(self, obj, event):
-        # print(f"Gtkwave: {event.type()}")
-        if not self.cmd:
-            if event.type() == QtCore.QEvent.KeyPress:
-                if event.key() < 200:
-                    key = QtGui.QKeySequence(
-                        event.key() + int(event.modifiers())).toString()
-                    self.send_input(
-                        f"key --window {self.win_id} {key.lower()}")
-                    return True
-            elif event.type() == QtCore.QEvent.MouseButtonPress:
-                self.send_input(f'click --window {self.win_id} 1')
-                return True
-
-        return super().eventFilter(obj, event)
-
     def command_nb(self, cmd):
         self.send_command.emit(cmd)
 
@@ -124,24 +142,35 @@ class GtkWave(QtCore.QObject):
         return resp
 
     @reg_inject
+    def key_press(self, key, modifiers, graph=Inject('graph/graph')):
+        print(modifiers, key)
+        app = QtWidgets.QApplication.instance()
+        app.postEvent(
+            graph, QtGui.QKeyEvent(QtGui.QKeyEvent.KeyPress, key, modifiers))
+
+    @reg_inject
     def window_up(self,
                   version,
                   pid,
                   win_id,
                   graph=Inject('graph/graph'),
-                  outdir=Inject('sim/artifact_dir')):
-        # print(f'GtkWave started: {version}, {pid}, {win_id}')
+                  outdir=MayInject('sim/artifact_dir')):
+        print(f'GtkWave started: {version}, {pid}, {win_id}')
         self.win_id = win_id
         self.gtkwave_win = QtGui.QWindow.fromWinId(win_id)
-        self.gtkwave_win.setFlag(QtCore.Qt.WindowTransparentForInput, True)
+        # self.gtkwave_win.setFlag(QtCore.Qt.WindowTransparentForInput, True)
         self.gtkwave_widget = QtWidgets.QWidget.createWindowContainer(
             self.gtkwave_win)
 
         graph.buffers['gtkwave'] = self.gtkwave_widget
-        self.gtkwave_widget.installEventFilter(self)
+        # self.gtkwave_widget.installEventFilter(self)
 
-        print(f'Gtkwave thread: {self.thread()}')
-        pyvcd = os.path.abspath(os.path.join(outdir, 'pygears.vcd'))
-        print(f"Sending cmd: gtkwave::loadFile {pyvcd}")
-        # self.send_command.emit(f'gtkwave::loadFile {pyvcd}')
-        self.command(f'gtkwave::loadFile {pyvcd}')
+        self.xev_proc = GtkWaveXevProc(win_id)
+        self.xev_proc.key_press.connect(self.key_press)
+
+        if outdir:
+            print(f'Gtkwave thread: {self.thread()}')
+            pyvcd = os.path.abspath(os.path.join(outdir, 'pygears.vcd'))
+            print(f"Sending cmd: gtkwave::loadFile {pyvcd}")
+            # self.send_command.emit(f'gtkwave::loadFile {pyvcd}')
+            self.command(f'gtkwave::loadFile {pyvcd}')
