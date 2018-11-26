@@ -127,6 +127,15 @@ def toggle_expand(node, graph):
         node.collapse()
 
 
+from pygears_view.gtkwave_cmds import add_gear_to_wave
+
+
+@shortcut('graph', Qt.Key_W)
+@single_select_action
+def send_to_wave(node, graph):
+    add_gear_to_wave(node.model)
+
+
 @shortcut('graph', Qt.Key_Slash)
 @reg_inject
 def node_search(graph=Inject('graph/graph')):

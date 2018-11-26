@@ -24,6 +24,7 @@ class GtkWaveProc(QtCore.QObject):
 
     def run(self):
         self.p = pexpect.spawnu('gtkwave -W -N')
+        self.p.setecho(False)
         self.p.expect('%')
         version = re.search(r"GTKWave Analyzer v(\d{1}\.\d{1}.\d{2})",
                             self.p.before).group(0)
@@ -37,15 +38,10 @@ class GtkWaveProc(QtCore.QObject):
 
         self.window_up.emit(version, self.p.pid, int(win_id, 16))
 
-    def command(self, cmd, mutex=None):
-        print(f'Pexpect: {cmd}')
-        print(f'Pexpect thread: {self.thread()}')
+    def command(self, cmd):
         self.p.send(cmd + '\n')
         self.p.expect('%')
-        print(f'Response: {self.p.before}')
         self.response.emit(self.p.before)
-        if mutex:
-            mutex.unlock()
 
     def quit(self):
         self.p.close()
@@ -122,6 +118,7 @@ class GtkWave(QtCore.QObject):
         self.send_command.emit(cmd)
 
     def command(self, cmd):
+        print(f"Gtkwave: {cmd}")
         cmd_block = GtkWaveCmdBlock()
         resp = cmd_block.command(cmd, self)
         return resp
