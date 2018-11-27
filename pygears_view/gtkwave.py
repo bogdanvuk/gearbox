@@ -5,7 +5,25 @@ import re
 import os
 import sys
 
-from pygears.conf import MayInject, Inject, reg_inject, registry
+from pygears.conf import MayInject, Inject, reg_inject, registry, bind
+
+
+@reg_inject
+def load(
+        main=Inject('viewer/main'),
+        outdir=MayInject('sim/artifact_dir'),
+        viewer=Inject('viewer/gtkwave')):
+    print("Loading...")
+    main.buffers['gtkwave'] = viewer.gtkwave_widget
+    if outdir:
+        pyvcd = os.path.abspath(os.path.join(outdir, 'pygears.vcd'))
+        viewer.command(f'gtkwave::loadFile {pyvcd}')
+
+
+def gtkwave():
+    viewer = GtkWave()
+    bind('viewer/gtkwave', viewer)
+    viewer.initialized.connect(load)
 
 
 class GtkWaveProc(QtCore.QObject):
@@ -15,12 +33,12 @@ class GtkWaveProc(QtCore.QObject):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.xev_thread = QtCore.QThread()
-        self.moveToThread(self.xev_thread)
+        self.gtkwave_thread = QtCore.QThread()
+        self.moveToThread(self.gtkwave_thread)
         self.exiting = False
-        self.xev_thread.started.connect(self.run)
-        self.xev_thread.finished.connect(self.quit)
-        self.xev_thread.start()
+        self.gtkwave_thread.started.connect(self.run)
+        self.gtkwave_thread.finished.connect(self.quit)
+        self.gtkwave_thread.start()
 
     def run(self):
         self.p = pexpect.spawnu('gtkwave -W -N')
@@ -34,7 +52,7 @@ class GtkWaveProc(QtCore.QObject):
             'xwininfo -name "GTKWave - [no file loaded]"', shell=True)
 
         window_id = re.search(r"Window id: 0x([0-9a-fA-F]+)",
-                           out.decode()).group(1)
+                              out.decode()).group(1)
 
         self.window_up.emit(version, self.p.pid, int(window_id, 16))
 
@@ -45,7 +63,7 @@ class GtkWaveProc(QtCore.QObject):
 
     def quit(self):
         self.p.close()
-        super().quit()
+        self.gtkwave_thread.quit()
 
 
 class GtkWaveCmdBlock(QtCore.QEventLoop):
@@ -113,9 +131,13 @@ class GtkWaveXevProc(QtCore.QObject):
                 self.key_press.emit(key, modifiers)
                 key_press = False
 
+    def quit(self):
+        self.xev_thread.quit()
+
 
 class GtkWave(QtCore.QObject):
     send_command = QtCore.Signal(str)
+    initialized = QtCore.Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -141,29 +163,16 @@ class GtkWave(QtCore.QObject):
             graph, QtGui.QKeyEvent(QtGui.QKeyEvent.KeyPress, key, modifiers))
 
     @reg_inject
-    def window_up(self,
-                  version,
-                  pid,
-                  window_id,
-                  graph=Inject('viewer/graph'),
-                  outdir=MayInject('sim/artifact_dir')):
+    def window_up(self, version, pid, window_id, graph=Inject('viewer/graph')):
         print(f'GtkWave started: {version}, {pid}, {window_id}')
         self.window_id = window_id
         self.gtkwave_win = QtGui.QWindow.fromWinId(window_id)
         self.gtkwave_widget = QtWidgets.QWidget.createWindowContainer(
             self.gtkwave_win)
 
-        graph.buffers['gtkwave'] = self.gtkwave_widget
-        # self.gtkwave_widget.installEventFilter(self)
-
         self.xev_proc = GtkWaveXevProc(window_id)
         QtWidgets.QApplication.instance().aboutToQuit.connect(
             self.xev_proc.quit)
         self.xev_proc.key_press.connect(self.key_press)
 
-        if outdir:
-            print(f'Gtkwave thread: {self.thread()}')
-            pyvcd = os.path.abspath(os.path.join(outdir, 'pygears.vcd'))
-            print(f"Sending cmd: gtkwave::loadFile {pyvcd}")
-            # self.send_command.emit(f'gtkwave::loadFile {pyvcd}')
-            self.command(f'gtkwave::loadFile {pyvcd}')
+        self.initialized.emit()

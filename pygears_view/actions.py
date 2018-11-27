@@ -114,8 +114,8 @@ def toggle_help(which_key=Inject('viewer/which_key')):
 
 @shortcut(None, Qt.Key_B)
 @reg_inject
-def next_buffer(graph=Inject('viewer/graph')):
-    graph.buffers.next_buffer()
+def next_buffer(main=Inject('viewer/main')):
+    main.buffers.next_buffer()
 
 
 @shortcut('graph', Qt.Key_Return)
