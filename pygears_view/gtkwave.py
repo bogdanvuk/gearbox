@@ -1,11 +1,30 @@
-from PySide2 import QtWidgets, QtGui, QtCore
-import subprocess
-import pexpect
-import re
+from pygears.core.hier_node import HierVisitorBase
+from pygears.conf import reg_inject, Inject, MayInject, bind
+from .gtkwave_intf import GtkWave
+from pygears.sim.modules.verilator import SimVerilated
 import os
-import sys
+import re
 
-from pygears.conf import MayInject, Inject, reg_inject, registry, bind
+signal_names = {}
+verilated_modules = []
+
+
+@reg_inject
+def find_verilated_modules(top=Inject('gear/hier_root')):
+    class VerilatedVisitor(HierVisitorBase):
+        @reg_inject
+        def __init__(self, sim_map=Inject('sim/map')):
+            self.sim_map = sim_map
+            self.verilated_modules = []
+
+        def Gear(self, module):
+            if isinstance(self.sim_map.get(module, None), SimVerilated):
+                self.verilated_modules.append(self.sim_map[module])
+                return True
+
+    v = VerilatedVisitor()
+    v.visit(top)
+    return v.verilated_modules
 
 
 @reg_inject
@@ -16,8 +35,26 @@ def load(
     print("Loading...")
     main.buffers['gtkwave'] = viewer.gtkwave_widget
     if outdir:
-        pyvcd = os.path.abspath(os.path.join(outdir, 'pygears.vcd'))
-        viewer.command(f'gtkwave::loadFile {pyvcd}')
+        verilated_modules.extend(find_verilated_modules())
+        # pyvcd = os.path.abspath(os.path.join(outdir, 'pygears.vcd'))
+        verilator_vcd = verilated_modules[0].trace_fn
+        # viewer.command(f'gtkwave::loadFile {pyvcd}')
+        viewer.command(f'gtkwave::loadFile {verilator_vcd}')
+
+        prefix = '.'.join([
+            'TOP', verilated_modules[0].wrap_name,
+            verilated_modules[0].svmod.sv_inst_name
+        ])
+
+        sig_list = viewer.command('list_signals')
+        for sig_name in sig_list.split('\n'):
+            sig_name = sig_name.strip()
+
+            basename = re.search(prefix + "\." + r"(.*)", sig_name)
+            if basename:
+                signal_names[basename.group(1)] = sig_name
+
+        print(signal_names)
 
 
 def gtkwave():
@@ -26,153 +63,43 @@ def gtkwave():
     viewer.initialized.connect(load)
 
 
-class GtkWaveProc(QtCore.QObject):
+@reg_inject
+def list_signal_names(gtkwave=Inject('viewer/gtkwave')):
+    resp = gtkwave.command('test_proc')
+    signal_names.extend()
+    print("Response:   ")
+    print(resp)
 
-    window_up = QtCore.Signal(str, int, int)
-    response = QtCore.Signal(str)
+    # resp = gtkwave.command('gtkwave::getNumFacs')
 
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.gtkwave_thread = QtCore.QThread()
-        self.moveToThread(self.gtkwave_thread)
-        self.exiting = False
-        self.gtkwave_thread.started.connect(self.run)
-        self.gtkwave_thread.finished.connect(self.quit)
-        self.gtkwave_thread.start()
-
-    def run(self):
-        self.p = pexpect.spawnu('gtkwave -W -N')
-        self.p.setecho(False)
-        self.p.expect('%')
-        version = re.search(r"GTKWave Analyzer v(\d{1}\.\d{1}.\d{2})",
-                            self.p.before).group(0)
-        print(f"GtkWave {version} window")
-
-        out = subprocess.check_output(
-            'xwininfo -name "GTKWave - [no file loaded]"', shell=True)
-
-        window_id = re.search(r"Window id: 0x([0-9a-fA-F]+)",
-                              out.decode()).group(1)
-
-        self.window_up.emit(version, self.p.pid, int(window_id, 16))
-
-    def command(self, cmd):
-        self.p.send(cmd + '\n')
-        self.p.expect('%')
-        self.response.emit(self.p.before)
-
-    def quit(self):
-        self.p.close()
-        self.gtkwave_thread.quit()
+    # for i in range(int(resp)):
+    #     resp = gtkwave.command(f'gtkwave::getFacName {i}')
+    #     print(resp)
 
 
-class GtkWaveCmdBlock(QtCore.QEventLoop):
-    def command(self, cmd, gtk_wave):
-        gtk_wave.send_command.emit(cmd)
-        gtk_wave.proc.response.connect(self.response)
-        self.exec_()
-        return self.resp
+@reg_inject
+def add_gear_to_wave(gear,
+                     gtkwave=Inject('viewer/gtkwave'),
+                     vcd=Inject('VCD'),
+                     outdir=Inject('sim/artifact_dir')):
+    # for i in range(40):
+    #     resp = graph.gtkwave.command(f'gtkwave::getFacName {i}')
+    #     print(f"gtkwave::getNumFacs -> {resp}")
 
-    def response(self, resp):
-        self.resp = resp
-        self.quit()
+    gear_fn = gear.name.replace('/', '_')
+    gtkw = os.path.join(outdir, f'{gear_fn}.gtkw')
+    resp = gtkwave.command(f'gtkwave::loadFile {gtkw}')
+    print(f"gtkwave::loadFile -> {resp}")
 
+    # siglist = []
+    # gear_vcd_scope = gear.name[1:].replace('/', '.')
+    # for p in itertools.chain(gear.out_ports, gear.in_ports):
 
-class GtkWaveXevProc(QtCore.QObject):
+    #     scope = '.'.join([gear_vcd_scope, p.basename])
+    #     siglist.extend([f'{scope}.valid', f'{scope}.ready', f'{scope}.data/*'])
 
-    key_press = QtCore.Signal(int, int)
+    # print(siglist)
+    # resp = graph.gtkwave.command(
+    #     f'gtkwave::addSignalsFromList {{ {" ".join(siglist)} }}')
 
-    def __init__(self, window_id, parent=None):
-        super().__init__(parent)
-        self.window_id = window_id
-        self.xev_thread = QtCore.QThread()
-        self.moveToThread(self.xev_thread)
-        self.xev_thread.started.connect(self.run)
-        self.xev_thread.start()
-
-    def run(self):
-        # cmd = ['xev', '-id', str(self.window_id), '-event', 'keyboard']
-        cmd = f'xev -id {self.window_id} -event keyboard'
-        # print(f"Running xev with: {' '.join(cmd)}")
-        # print(f"Running xev with: {cmd}")
-        import subprocess
-        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True)
-        key_press = False
-        for line in proc.stdout:
-            line = line.decode()
-            # print(line, end='')
-            if line.startswith("KeyPress"):
-                key_press = True
-            elif key_press and line.strip().startswith("state"):
-                # print(line)
-
-                res = re.search(
-                    r"state 0x([0-9a-fA-F]+).*keysym 0x([0-9a-fA-F]+).*",
-                    line.strip())
-                # print(res)
-                # print(res.group(1), res.group(2))
-                native_modifiers, native_key = int(res.group(1), 16), int(
-                    res.group(2), 16)
-
-                modifiers = 0
-                key = native_key
-                if chr(key).islower():
-                    key = ord(chr(key).upper())
-
-                if native_modifiers & 0x4:
-                    modifiers += QtCore.Qt.CTRL
-
-                if native_modifiers & 0x1:
-                    modifiers += QtCore.Qt.SHIFT
-
-                if native_modifiers & 0x8:
-                    modifiers += QtCore.Qt.ALT
-
-                self.key_press.emit(key, modifiers)
-                key_press = False
-
-    def quit(self):
-        self.xev_thread.quit()
-
-
-class GtkWave(QtCore.QObject):
-    send_command = QtCore.Signal(str)
-    initialized = QtCore.Signal()
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.proc = GtkWaveProc()
-        self.proc.window_up.connect(self.window_up)
-        self.send_command.connect(self.proc.command)
-        QtWidgets.QApplication.instance().aboutToQuit.connect(self.proc.quit)
-
-    def command_nb(self, cmd):
-        self.send_command.emit(cmd)
-
-    def command(self, cmd):
-        print(f"Gtkwave: {cmd}")
-        cmd_block = GtkWaveCmdBlock()
-        resp = cmd_block.command(cmd, self)
-        return resp
-
-    @reg_inject
-    def key_press(self, key, modifiers, graph=Inject('viewer/graph')):
-        print(modifiers, key)
-        app = QtWidgets.QApplication.instance()
-        app.postEvent(
-            graph, QtGui.QKeyEvent(QtGui.QKeyEvent.KeyPress, key, modifiers))
-
-    @reg_inject
-    def window_up(self, version, pid, window_id, graph=Inject('viewer/graph')):
-        print(f'GtkWave started: {version}, {pid}, {window_id}')
-        self.window_id = window_id
-        self.gtkwave_win = QtGui.QWindow.fromWinId(window_id)
-        self.gtkwave_widget = QtWidgets.QWidget.createWindowContainer(
-            self.gtkwave_win)
-
-        self.xev_proc = GtkWaveXevProc(window_id)
-        QtWidgets.QApplication.instance().aboutToQuit.connect(
-            self.xev_proc.quit)
-        self.xev_proc.key_press.connect(self.key_press)
-
-        self.initialized.emit()
+    # print(f"gtkwave::addSignalsFromList -> {resp}")

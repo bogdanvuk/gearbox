@@ -127,13 +127,18 @@ def toggle_expand(node, graph):
         node.collapse()
 
 
-from pygears_view.gtkwave_cmds import add_gear_to_wave
+from pygears_view.gtkwave import add_gear_to_wave, list_signal_names
 
 
 @shortcut('graph', Qt.Key_W)
 @single_select_action
 def send_to_wave(node, graph):
     add_gear_to_wave(node.model)
+
+
+@shortcut('graph', Qt.Key_L)
+def list_waves():
+    list_signal_names()
 
 
 @shortcut('graph', Qt.Key_Slash)

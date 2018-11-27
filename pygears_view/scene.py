@@ -79,15 +79,15 @@ class NodeScene(QtWidgets.QGraphicsScene):
             for node in selected_nodes:
                 node.setSelected(True)
 
-    def mouseMoveEvent(self, event):
-        if self.viewer():
-            self.viewer().sceneMouseMoveEvent(event)
-        super(NodeScene, self).mouseMoveEvent(event)
+    # def mouseMoveEvent(self, event):
+    #     if self.viewer():
+    #         self.viewer().sceneMouseMoveEvent(event)
+    #     super(NodeScene, self).mouseMoveEvent(event)
 
-    def mouseReleaseEvent(self, event):
-        if self.viewer():
-            self.viewer().sceneMouseReleaseEvent(event)
-        super(NodeScene, self).mouseReleaseEvent(event)
+    # def mouseReleaseEvent(self, event):
+    #     if self.viewer():
+    #         self.viewer().sceneMouseReleaseEvent(event)
+    #     super(NodeScene, self).mouseReleaseEvent(event)
 
     def viewer(self):
         return self.views()[0] if self.views() else None

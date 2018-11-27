@@ -136,19 +136,19 @@ class MainWindow(QtWidgets.QMainWindow):
     @reg_inject
     def _minibuffer_completed(self, text, graph=Inject('viewer/graph')):
         try:
-            node_path = find_node_by_path(self.top, text)
+            node_path = find_node_by_path(graph.top, text)
             for node in node_path[:-1]:
                 node.expand()
         except:
-            for node in self.selected_nodes():
+            for node in graph.selected_nodes():
                 node.setSelected(False)
             return
 
-        for node in self.selected_nodes():
+        for node in graph.selected_nodes():
             node.setSelected(False)
 
         node_path[-1].setSelected(True)
-        self._viewer.ensureVisible(node_path[-1])
+        graph.ensureVisible(node_path[-1])
 
 
 class MainWindowPlugin(PluginBase):

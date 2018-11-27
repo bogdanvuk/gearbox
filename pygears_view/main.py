@@ -13,13 +13,13 @@ from pygears.sim.extens.sim_extend import SimExtend
 
 
 class PyGearsView(SimExtend):
-    @reg_inject
-    def __init__(self, layers=Inject('viewer/layers')):
-        pass
+    # @reg_inject
+    # def __init__(self, layers=Inject('viewer/layers')):
+    #     super().__init__()
+        # self.layers = layers
 
     @reg_inject
     def after_run(self, sim, outdir=Inject('sim/artifact_dir')):
-        print(f"Here: {outdir}")
         os.path.join(outdir, 'pygears.vcd')
         main()
 
