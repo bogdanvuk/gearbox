@@ -1,6 +1,7 @@
 #!/usr/bin/python
 from PySide2 import QtGui, QtCore, QtWidgets
 
+from pygears.core.port import InPort
 from .constants import (IN_PORT, OUT_PORT, PORT_HOVER_COLOR,
                         PORT_HOVER_BORDER_COLOR, PORT_ACTIVE_COLOR,
                         PORT_ACTIVE_BORDER_COLOR, Z_VAL_PORT)
@@ -11,8 +12,13 @@ class PortItem(QtWidgets.QGraphicsItem):
     Base Port Item.
     """
 
-    def __init__(self, parent=None):
-        super(PortItem, self).__init__(parent)
+    def __init__(self, model, parent=None):
+        super().__init__(parent)
+
+        self.model = model
+        self._name = model.basename
+        self._port_type = IN_PORT if isinstance(model, InPort) else OUT_PORT
+        self._multi_connection = True
         self.setAcceptHoverEvents(True)
         self.setFlag(self.ItemIsSelectable, False)
         self.setFlag(self.ItemSendsScenePositionChanges, True)
@@ -21,13 +27,10 @@ class PortItem(QtWidgets.QGraphicsItem):
         self._width = 10.0
         self._height = 10.0
         self._hovered = False
-        self._name = 'port'
         self._display_name = True
         self._color = (49, 115, 100, 255)
         self._border_color = (29, 202, 151, 255)
         self._border_size = 1
-        self._port_type = None
-        self._multi_connection = False
 
     def __str__(self):
         return '{}.PortItem("{}")'.format(self.__module__, self.name)

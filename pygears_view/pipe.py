@@ -21,10 +21,12 @@ class Pipe(QtWidgets.QGraphicsPathItem):
     Base Pipe Item.
     """
 
-    def __init__(self, input_port=None, output_port=None):
-        super(Pipe, self).__init__()
+    def __init__(self, output_port, input_port, parent=None):
+        super().__init__(parent)
+        self.model = input_port.model.consumer
         self.setZValue(Z_VAL_PIPE)
         self.setAcceptHoverEvents(True)
+        self.setFlags(self.ItemIsSelectable)
         self._color = PIPE_DEFAULT_COLOR
         self._style = PIPE_STYLE_DEFAULT
         self._active = False
@@ -45,14 +47,18 @@ class Pipe(QtWidgets.QGraphicsPathItem):
         return '{}.Pipe(\'{}\', \'{}\')'.format(self.__module__, in_name,
                                                 out_name)
 
+    def mouseReleaseEvent(self, event):
+        super().mouseReleaseEvent(event)
+        # self.setFlag(self.ItemIsMovable, True)
+        self.setSelected(True)
+
     def hoverEnterEvent(self, event):
         self.activate()
 
     def hoverLeaveEvent(self, event):
         self.reset()
-        if self.input_port.node.selected:
-            self.highlight()
-        elif self.output_port.node.selected:
+        if (self.isSelected() or self.input_port.node.isSelected()
+                or self.output_port.node.isSelected()):
             self.highlight()
 
     def paint(self, painter, option, widget):
@@ -61,7 +67,7 @@ class Pipe(QtWidgets.QGraphicsPathItem):
         pen_width = PIPE_WIDTH
         if self._active:
             color = QtGui.QColor(*PIPE_ACTIVE_COLOR)
-        elif self._highlight:
+        elif self.isSelected():
             color = QtGui.QColor(*PIPE_HIGHLIGHT_COLOR)
             pen_style = PIPE_STYLES.get(PIPE_STYLE_DEFAULT)
 
@@ -267,13 +273,15 @@ class Pipe(QtWidgets.QGraphicsPathItem):
         return self._active
 
     def highlight(self):
-        self._highlight = True
-        pen = QtGui.QPen(QtGui.QColor(*PIPE_HIGHLIGHT_COLOR), 2)
-        pen.setStyle(PIPE_STYLES.get(PIPE_STYLE_DEFAULT))
-        self.setPen(pen)
+        self.setSelected(True)
+        # self._highlight = True
+        # pen = QtGui.QPen(QtGui.QColor(*PIPE_HIGHLIGHT_COLOR), 2)
+        # pen.setStyle(PIPE_STYLES.get(PIPE_STYLE_DEFAULT))
+        # self.setPen(pen)
 
     def highlighted(self):
-        return self._highlight
+        return self.isSelected()
+        # return self._highlight
 
     def reset(self):
         self._active = False

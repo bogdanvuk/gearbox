@@ -236,15 +236,15 @@ class Graph(QtWidgets.QGraphicsView):
 
         if not alt_modifier:
             pos = event.scenePos()
-            port_items = self._items_near(pos, PortItem, 5, 5)
-            if port_items:
-                port = port_items[0]
-                if not port.multi_connection and port.connected_ports:
-                    self._detached_port = port.connected_ports[0]
-                self.start_live_connection(port)
-                if not port.multi_connection:
-                    [p.delete() for p in port.connected_pipes]
-                return
+            # port_items = self._items_near(pos, PortItem, 5, 5)
+            # if port_items:
+            #     port = port_items[0]
+            #     if not port.multi_connection and port.connected_ports:
+            #         self._detached_port = port.connected_ports[0]
+            #     self.start_live_connection(port)
+            #     if not port.multi_connection:
+            #         [p.delete() for p in port.connected_pipes]
+            #     return
 
             node_items = self._items_near(pos, AbstractNodeItem, 3, 3)
             if node_items:
@@ -261,20 +261,20 @@ class Graph(QtWidgets.QGraphicsView):
                 if not node.model.child:
                     return
 
-            pipe_items = self._items_near(pos, Pipe, 3, 3)
-            if pipe_items:
-                pipe = pipe_items[0]
-                attr = {IN_PORT: 'output_port', OUT_PORT: 'input_port'}
-                from_port = pipe.port_from_pos(pos, True)
-                to_port = getattr(pipe, attr[from_port.port_type])
-                if not from_port.multi_connection and from_port.connected_ports:
-                    self._detached_port = from_port.connected_ports[0]
-                elif not to_port.multi_connection:
-                    self._detached_port = to_port
+            # pipe_items = self._items_near(pos, Pipe, 3, 3)
+            # if pipe_items:
+            #     pipe = pipe_items[0]
+            #     attr = {IN_PORT: 'output_port', OUT_PORT: 'input_port'}
+            #     from_port = pipe.port_from_pos(pos, True)
+            #     to_port = getattr(pipe, attr[from_port.port_type])
+            #     if not from_port.multi_connection and from_port.connected_ports:
+            #         self._detached_port = from_port.connected_ports[0]
+            #     elif not to_port.multi_connection:
+            #         self._detached_port = to_port
 
-                self.start_live_connection(from_port)
-                self._live_pipe.draw_path(self._start_port, None, pos)
-                pipe.delete()
+            #     self.start_live_connection(from_port)
+            #     self._live_pipe.draw_path(self._start_port, None, pos)
+            #     pipe.delete()
 
     def all_pipes(self):
         pipes = []
@@ -321,6 +321,13 @@ class Graph(QtWidgets.QGraphicsView):
             if isinstance(item, AbstractNodeItem):
                 nodes.append(item)
         return nodes
+
+    def selected_pipes(self):
+        pipes = []
+        for item in self.scene().selectedItems():
+            if isinstance(item, Pipe):
+                pipes.append(item)
+        return pipes
 
     def add_node(self, node, pos=None):
         print(f'Adding: {node.name}')

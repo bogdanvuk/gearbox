@@ -22,8 +22,9 @@ class GtkWaveProc(QtCore.QObject):
         self.gtkwave_thread.start()
 
     def run(self):
-        self.p = pexpect.spawnu(
-            'gtkwave -W -T /home/bvukobratovic/gtkwave.tcl')
+        local_dir = os.path.abspath(os.path.dirname(__file__))
+        script_fn = os.path.join(local_dir, "gtkwave.tcl")
+        self.p = pexpect.spawnu(f'gtkwave -W -N -T {script_fn}')
         self.p.setecho(False)
         self.p.expect('%')
         version = re.search(r"GTKWave Analyzer v(\d{1}\.\d{1}.\d{2})",

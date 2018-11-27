@@ -128,12 +128,16 @@ def toggle_expand(node, graph):
 
 
 from pygears_view.gtkwave import add_gear_to_wave, list_signal_names
+from pygears.rtl.gear import rtl_from_gear_port
 
 
 @shortcut('graph', Qt.Key_W)
-@single_select_action
-def send_to_wave(node, graph):
-    add_gear_to_wave(node.model)
+@reg_inject
+def send_to_wave(graph=Inject('viewer/graph')):
+    for pipe in graph.selected_pipes():
+        rtl_intf = rtl_from_gear_port(pipe.output_port.model).consumer
+        import pdb; pdb.set_trace()
+        print(pipe)
 
 
 @shortcut('graph', Qt.Key_L)

@@ -5,8 +5,34 @@ from pygears.sim.modules.verilator import SimVerilated
 import os
 import re
 
-signal_names = {}
-verilated_modules = []
+verilator_waves = []
+
+
+class VerilatorWave:
+    def __init__(self, sim_module, verilator_intf):
+        self.signal_names = {}
+        self.sim_module = sim_module
+        self.path_prefix = '.'.join(
+            ['TOP', sim_module.wrap_name, sim_module.svmod.sv_inst_name])
+        self.verilator_intf = verilator_intf
+
+        verilator_vcd = sim_module.trace_fn
+        verilator_intf.command(f'gtkwave::loadFile {verilator_vcd}')
+        self.signal_name_map = self.make_relative_signal_name_map(
+            self.path_prefix, verilator_intf.command('list_signals'))
+
+        print(self.signal_name_map)
+
+    def make_relative_signal_name_map(self, path_prefix, signal_list):
+        signal_name_map = {}
+        for sig_name in signal_list.split('\n'):
+            sig_name = sig_name.strip()
+
+            basename = re.search(path_prefix + "\." + r"(.*)", sig_name)
+            if basename:
+                signal_name_map[basename.group(1)] = sig_name
+
+        return signal_name_map
 
 
 @reg_inject
@@ -34,27 +60,12 @@ def load(
         viewer=Inject('viewer/gtkwave')):
     print("Loading...")
     main.buffers['gtkwave'] = viewer.gtkwave_widget
-    if outdir:
-        verilated_modules.extend(find_verilated_modules())
-        # pyvcd = os.path.abspath(os.path.join(outdir, 'pygears.vcd'))
-        verilator_vcd = verilated_modules[0].trace_fn
-        # viewer.command(f'gtkwave::loadFile {pyvcd}')
-        viewer.command(f'gtkwave::loadFile {verilator_vcd}')
+    verilator_waves.extend(
+        [VerilatorWave(m, viewer) for m in find_verilated_modules()])
 
-        prefix = '.'.join([
-            'TOP', verilated_modules[0].wrap_name,
-            verilated_modules[0].svmod.sv_inst_name
-        ])
-
-        sig_list = viewer.command('list_signals')
-        for sig_name in sig_list.split('\n'):
-            sig_name = sig_name.strip()
-
-            basename = re.search(prefix + "\." + r"(.*)", sig_name)
-            if basename:
-                signal_names[basename.group(1)] = sig_name
-
-        print(signal_names)
+    # if outdir:
+    #     pyvcd = os.path.abspath(os.path.join(outdir, 'pygears.vcd'))
+    #     viewer.command(f'gtkwave::loadFile {pyvcd}')
 
 
 def gtkwave():

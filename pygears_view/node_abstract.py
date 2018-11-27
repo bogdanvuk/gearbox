@@ -15,7 +15,8 @@ class AbstractNodeItem(QGraphicsItem):
             parent = None
 
         super(AbstractNodeItem, self).__init__(parent)
-        self.setFlags(self.ItemIsSelectable | self.ItemIsMovable)
+        # self.setFlags(self.ItemIsSelectable | self.ItemIsMovable)
+        self.setFlags(self.ItemIsSelectable)
         self.setZValue(Z_VAL_NODE)
         self._properties = {
             'id': None,

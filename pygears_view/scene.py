@@ -69,7 +69,7 @@ class NodeScene(QtWidgets.QGraphicsScene):
         selected_nodes = self.viewer().selected_nodes()
         if self.viewer():
             self.viewer().sceneMousePressEvent(event)
-        super(NodeScene, self).mousePressEvent(event)
+        super().mousePressEvent(event)
         keep_selection = any([
             event.button() == QtCore.Qt.MiddleButton,
             event.button() == QtCore.Qt.RightButton,

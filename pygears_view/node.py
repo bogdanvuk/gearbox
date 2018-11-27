@@ -235,23 +235,23 @@ class NodeItem(AbstractNodeItem):
     def mouseDoubleClickEvent(self, event):
         self.auto_resize()
 
-    def mousePressEvent(self, event):
-        if event.button() == QtCore.Qt.MouseButton.LeftButton:
-            pos = event.scenePos()
-            rect = QtCore.QRectF(pos.x() - 5, pos.y() - 5, 10, 10)
-            item = self.scene().items(rect)[0]
+    # def mousePressEvent(self, event):
+    #     if event.button() == QtCore.Qt.MouseButton.LeftButton:
+    #         pos = event.scenePos()
+    #         rect = QtCore.QRectF(pos.x() - 5, pos.y() - 5, 10, 10)
+    #         item = self.scene().items(rect)[0]
 
-            # if isinstance(item, (PortItem, Pipe)):
-            #     self.setFlag(self.ItemIsMovable, False)
-            #     return
-            # if self.selected:
-            #     return
+    #         # if isinstance(item, (PortItem, Pipe)):
+    #         #     self.setFlag(self.ItemIsMovable, False)
+    #         #     return
+    #         # if self.selected:
+    #         #     return
 
-            self.selected = True
+    #         self.selected = True
 
     def mouseReleaseEvent(self, event):
         super().mouseReleaseEvent(event)
-        self.setFlag(self.ItemIsMovable, True)
+        # self.setFlag(self.ItemIsMovable, True)
         self.selected = True
 
     @property
@@ -343,10 +343,7 @@ class NodeItem(AbstractNodeItem):
                 text.setVisible(False)
 
     def _add_port(self, port, display_name=True):
-        port_item = PortItem(self)
-        port_item.name = port.basename
-        port_item.port_type = IN_PORT if isinstance(port, InPort) else OUT_PORT
-        port_item.multi_connection = True
+        port_item = PortItem(port, self)
         port_item.display_name = display_name
         text = QtWidgets.QGraphicsTextItem(port_item.name, self)
         text.font().setPointSize(8)
@@ -650,20 +647,13 @@ class NodeItem(AbstractNodeItem):
         node1 = port1.node
         node2 = port2.node
 
-        pipe = Pipe(self)
+        pipe = Pipe(port1, port2)
         if self.parent is not None:
             pipe.setParentItem(self)
         else:
             self.graph.scene().addItem(pipe)
 
         self.pipes.append(pipe)
-
-        pipe.set_connections(port1, port2)
-        if str(pipe) == '/echo.dout  -> /echo/cast_dout.dout':
-            import pdb
-            pdb.set_trace()
-
-        print(pipe)
 
         # pipe = port1.connect_to(port2)
         # pipe.parent = self

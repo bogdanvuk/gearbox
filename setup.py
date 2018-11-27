@@ -16,6 +16,9 @@ setup(
     # Choose your license
     license='MIT',
 
+    python_requires='>=3.6.0',
+    install_requires=['pygears', 'pexpect', 'PySide2'],
+
     packages=find_packages(exclude=['examples*', 'docs']),
     package_data={'': ['*.json', '.spacemacs']},
     include_package_data=True,
