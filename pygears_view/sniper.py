@@ -50,7 +50,6 @@ class Sniper:
     def snipe_cancel(self):
         for text, s in snipe_shortcuts:
             s.setParent(None)
-            # s.deleteLater()
             self.graph.scene().removeItem(text)
 
         self.main.change_domain('graph')
@@ -59,6 +58,19 @@ class Sniper:
     def snipe_shot(self, pipe):
         self.graph.select(pipe)
         self.snipe_cancel()
+
+    def snipe_shot_prefix(self, prefix):
+        import pdb
+        pdb.set_trace()
+        for text, s in snipe_shortcuts:
+            if text.toPlainText().startswith(prefix):
+                continue
+
+            s.setParent(None)
+            self.graph.scene().removeItem(text)
+
+    def snipe_shot_prefix_test(self):
+        print("Ambiguous")
 
     def get_visible_objs(self, node, objtype):
         if (objtype is None) or (objtype is NodeItem):
@@ -82,10 +94,17 @@ class Sniper:
         if not nodes:
             nodes = [self.graph.top]
 
+        keys = [2]
+
         for n in nodes:
+            if n.collapsed:
+                continue
+
             for i, obj in enumerate(self.get_visible_objs(n, objtype=objtype)):
-                key = ord('A') + i
-                text = SnipeCodeItem(chr(key).upper())
+                key_codes = [key + ord('A') for key in reversed(keys)]
+                snipe_text = ''.join([chr(key).upper() for key in key_codes])
+                text = SnipeCodeItem(snipe_text)
+
                 text.setZValue(100)
                 self.graph.scene().addItem(text)
 
@@ -103,6 +122,27 @@ class Sniper:
 
                 self.main.change_domain('_snipe')
                 shortcut = QtWidgets.QShortcut(
-                    QtGui.QKeySequence(key), self.main)
+                    QtGui.QKeySequence(*key_codes), self.main)
+
                 shortcut.activated.connect(partial(self.snipe_shot, obj))
+
+                # if len(keys) > 0:
+                #     shortcut.activatedAmbiguously.connect(
+                #         self.snipe_shot_prefix_test)
+                # shortcut.activatedAmbiguously.connect(
+                #     partial(
+                #         self.snipe_shot_prefix, prefix=snipe_text[:-1]))
+
                 snipe_shortcuts.append((text, shortcut))
+
+                for pos in range(len(keys) + 1):
+                    if pos == len(keys):
+                        keys.insert(0, 0)
+                        break
+
+                    keys[pos] += 1
+
+                    if keys[pos] < 25:
+                        break
+                    else:
+                        keys[pos] = 0

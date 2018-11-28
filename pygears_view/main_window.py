@@ -37,7 +37,7 @@ class Shortcut(QtCore.QObject):
         self._qshortcut = QtWidgets.QShortcut(QtGui.QKeySequence(key), main)
         self._qshortcut.activated.connect(callback)
         self._qshortcut.setContext(QtCore.Qt.WidgetWithChildrenShortcut)
-        self._qshortcut.setWhatsThis(callback.__name__)
+        # self._qshortcut.setWhatsThis(callback.__name__)
         main.shortcuts.append(self)
         self.domain = domain
         self.key = key
