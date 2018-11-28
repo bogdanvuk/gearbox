@@ -13,7 +13,7 @@ class VerilatorWave:
         self.signal_names = {}
         self.sim_module = sim_module
         self.path_prefix = '.'.join(
-            ['TOP', sim_module.wrap_name, sim_module.svmod.sv_inst_name])
+            ['TOP', sim_module.wrap_name, ])
         self.verilator_intf = verilator_intf
 
         verilator_vcd = sim_module.trace_fn
@@ -28,7 +28,7 @@ class VerilatorWave:
         for sig_name in signal_list.split('\n'):
             sig_name = sig_name.strip()
 
-            basename = re.search(path_prefix + "\." + r"(.*)", sig_name)
+            basename = re.search(fr"{path_prefix}\.({self.sim_module.svmod.sv_inst_name}\..*)", sig_name)
             if basename:
                 signal_name_map[basename.group(1)] = sig_name
 
