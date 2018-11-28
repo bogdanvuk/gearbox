@@ -2,6 +2,7 @@ from pygears.core.hier_node import HierVisitorBase
 from pygears.conf import reg_inject, Inject, MayInject, bind
 from .gtkwave_intf import GtkWave
 from pygears.sim.modules.verilator import SimVerilated
+import fnmatch
 import os
 import re
 
@@ -10,10 +11,10 @@ verilator_waves = []
 
 class VerilatorWave:
     def __init__(self, sim_module, verilator_intf):
-        self.signal_names = {}
+        self.signal_name_map = {}
         self.sim_module = sim_module
         self.path_prefix = '.'.join(
-            ['TOP', sim_module.wrap_name, ])
+            ['TOP', sim_module.wrap_name])
         self.verilator_intf = verilator_intf
 
         verilator_vcd = sim_module.trace_fn
@@ -28,11 +29,18 @@ class VerilatorWave:
         for sig_name in signal_list.split('\n'):
             sig_name = sig_name.strip()
 
-            basename = re.search(fr"{path_prefix}\.({self.sim_module.svmod.sv_inst_name}\..*)", sig_name)
+            basename = re.search(
+                fr"{path_prefix}\.({self.sim_module.svmod.sv_inst_name}\..*)",
+                sig_name)
+
             if basename:
                 signal_name_map[basename.group(1)] = sig_name
 
         return signal_name_map
+
+    def get_signals_for_intf(self, rtl_intf):
+        signals = fnmatch.filter(self.signal_name_map.keys(), rtl_intf.name + '*')
+        return [self.signal_name_map[s] for s in signals]
 
 
 @reg_inject
@@ -75,9 +83,9 @@ def gtkwave():
 
 
 @reg_inject
-def list_signal_names(gtkwave=Inject('viewer/gtkwave')):
+def list_signal_name_map(gtkwave=Inject('viewer/gtkwave')):
     resp = gtkwave.command('test_proc')
-    signal_names.extend()
+    signal_name_map.extend()
     print("Response:   ")
     print(resp)
 

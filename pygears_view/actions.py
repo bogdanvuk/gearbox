@@ -1,9 +1,11 @@
 #!/usr/bin/python
-from PySide2 import QtGui
 from PySide2.QtCore import Qt
 from pygears.conf import Inject, reg_inject, registry
 from functools import wraps
 from .node_search import node_search_completer
+from vcd.gtkw import GTKWSave
+import tempfile
+import os
 
 
 def shortcut(domain, shortcut):
@@ -127,22 +129,31 @@ def toggle_expand(node, graph):
         node.collapse()
 
 
-from pygears_view.gtkwave import add_gear_to_wave, list_signal_names
+from pygears_view.gtkwave import verilator_waves
 from pygears.rtl.gear import rtl_from_gear_port
 
 
 @shortcut('graph', Qt.Key_W)
 @reg_inject
-def send_to_wave(graph=Inject('viewer/graph')):
+def send_to_wave(
+        graph=Inject('viewer/graph'), gtkwave=Inject('viewer/gtkwave')):
+
     for pipe in graph.selected_pipes():
         rtl_intf = rtl_from_gear_port(pipe.output_port.model).consumer
-        import pdb; pdb.set_trace()
-        print(pipe)
+        sigs = verilator_waves[0].get_signals_for_intf(rtl_intf)
+        gtkw_fn = os.path.join(tempfile.gettempdir(), 'pygears.gtkw')
+        with open(gtkw_fn, 'w') as f:
+            gtkw = GTKWSave(f)
+            with gtkw.group("    " + rtl_intf.basename):
+                for s in sigs:
+                    gtkw.trace(s)
+
+        gtkwave.command_nb(f'gtkwave::loadFile {gtkw_fn}')
 
 
-@shortcut('graph', Qt.Key_L)
-def list_waves():
-    list_signal_names()
+# @shortcut('graph', Qt.Key_L)
+# def list_waves():
+#     list_signal_names()
 
 
 @shortcut('graph', Qt.Key_Slash)
