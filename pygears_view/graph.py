@@ -283,12 +283,15 @@ class Graph(QtWidgets.QGraphicsView):
                 pipes.append(item)
         return pipes
 
-    def select(self, node):
+    def select(self, obj):
 
         for n in self.selected_nodes():
             n.selected = False
 
-        node.selected = True
+        for p in self.selected_pipes():
+            p.setSelected(False)
+
+        obj.setSelected(True)
 
     def select_all(self):
         """

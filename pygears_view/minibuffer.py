@@ -19,7 +19,7 @@ class Minibuffer(QtWidgets.QLineEdit):
     @reg_inject
     def complete(self, completer, main=Inject('viewer/main')):
         self.previous_domain = main.buffers.current_name
-        main.domain_changed.emit('minibuffer')
+        main.change_domain('minibuffer')
         self.setDisabled(False)
 
         self._completer = completer
@@ -72,7 +72,7 @@ class Minibuffer(QtWidgets.QLineEdit):
     def _on_search_submitted(self, index=0, main=Inject('viewer/main')):
         if self.text():
             self.completed.emit(self.text())
-            main.domain_changed.emit(self.previous_domain)
+            main.change_domain(self.previous_domain)
             self.setText('')
             self.setDisabled(True)
             self.parentWidget().clearFocus()

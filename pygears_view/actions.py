@@ -1,7 +1,9 @@
 #!/usr/bin/python
 from PySide2.QtCore import Qt
+from PySide2 import QtWidgets, QtGui, QtCore
 from pygears.conf import Inject, reg_inject, registry
-from functools import wraps
+from .main_window import Shortcut
+from functools import wraps, partial
 from .node_search import node_search_completer
 from vcd.gtkw import GTKWSave
 import tempfile
@@ -139,7 +141,11 @@ def send_to_wave(
         graph=Inject('viewer/graph'), gtkwave=Inject('viewer/gtkwave')):
 
     for pipe in graph.selected_pipes():
-        rtl_intf = rtl_from_gear_port(pipe.output_port.model).consumer
+        rtl_port = rtl_from_gear_port(pipe.output_port.model)
+        if rtl_port is None:
+            return
+
+        rtl_intf = rtl_port.consumer
         sigs = verilator_waves[0].get_signals_for_intf(rtl_intf)
         gtkw_fn = os.path.join(tempfile.gettempdir(), 'pygears.gtkw')
         with open(gtkw_fn, 'w') as f:

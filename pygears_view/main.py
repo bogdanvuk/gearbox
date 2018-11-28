@@ -8,6 +8,7 @@ from pygears_view.main_window import MainWindow
 from pygears_view.graph import graph
 from pygears_view.which_key import which_key
 from pygears_view.gtkwave import gtkwave
+from pygears_view.sniper import sniper
 from pygears.conf import Inject, reg_inject, safe_bind, PluginBase
 from pygears.sim.extens.sim_extend import SimExtend
 
@@ -41,4 +42,4 @@ def main(layers=Inject('viewer/layers')):
 class SimPlugin(PluginBase):
     @classmethod
     def bind(cls):
-        safe_bind('viewer/layers', [graph, which_key, gtkwave])
+        safe_bind('viewer/layers', [graph, which_key, gtkwave, sniper])

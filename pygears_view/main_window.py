@@ -32,26 +32,27 @@ def find_node_by_path(root, path):
 
 
 class Shortcut(QtCore.QObject):
-    def __init__(self, graph, domain, key, callback):
-        self._qshortcut = QtWidgets.QShortcut(QtGui.QKeySequence(key), graph)
+    @reg_inject
+    def __init__(self, domain, key, callback, main=Inject('viewer/main')):
+        self._qshortcut = QtWidgets.QShortcut(QtGui.QKeySequence(key), main)
         self._qshortcut.activated.connect(callback)
         self._qshortcut.setContext(QtCore.Qt.WidgetWithChildrenShortcut)
         self._qshortcut.setWhatsThis(callback.__name__)
+        main.shortcuts.append(self)
         self.domain = domain
         self.key = key
         self.callback = callback
-        graph.domain_changed.connect(self.domain_changed)
+        main.domain_changed.connect(self.domain_changed)
 
     @property
     def enabled(self):
         return self._qshortcut.isEnabled()
 
     def domain_changed(self, domain):
-        print(f'{domain} ?= {self.domain}')
-        if (self.domain is None) or (self.domain == domain):
+        if (self.domain is None
+                and domain[0] != '_') or (self.domain == domain):
             self._qshortcut.setEnabled(True)
         else:
-            print('Shortcut disabled')
             self._qshortcut.setEnabled(False)
 
 
@@ -82,7 +83,7 @@ class BufferStack(QtWidgets.QStackedLayout):
         else:
             self.setCurrentIndex(next_id)
 
-        self.graph.domain_changed.emit(self.current_name)
+        self.graph.change_domain(self.current_name)
 
 
 class MainWindow(QtWidgets.QMainWindow):
@@ -96,6 +97,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self._undo_stack = QtWidgets.QUndoStack(self)
         self.buffers = {}
+        self.shortcuts = []
 
         self.vbox = QtWidgets.QVBoxLayout()
         self.vbox.setSpacing(0)
@@ -120,10 +122,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self._init_actions()
         self._nodes = []
 
-        self.shortcuts = [
-            Shortcut(self, domain, key, callback)
-            for domain, key, callback in registry('viewer/shortcuts')
-        ]
+        for domain, key, callback in registry('viewer/shortcuts'):
+            Shortcut(domain, key, callback)
 
     def _init_actions(self):
         QtWidgets.QShortcut(
@@ -132,6 +132,9 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def _key_cancel_event(self):
         self.key_cancel.emit()
+
+    def change_domain(self, domain):
+        self.domain_changed.emit(domain)
 
     @reg_inject
     def _minibuffer_completed(self, text, graph=Inject('viewer/graph')):

@@ -347,7 +347,7 @@ class NodeItem(AbstractNodeItem):
         port_item.display_name = display_name
         text = QtWidgets.QGraphicsTextItem(port_item.name, self)
         text.font().setPointSize(8)
-        # text.setFont(text.font())
+        text.setFont(text.font())
         # text.setVisible(display_name)
 
         v = Vertex(port_item)
