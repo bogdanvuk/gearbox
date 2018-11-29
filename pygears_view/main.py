@@ -1,6 +1,7 @@
 #!/usr/bin/python
 import sys
 import os
+import multiprocessing
 
 from PySide2 import QtGui, QtWidgets
 
@@ -14,15 +15,11 @@ from pygears.sim.extens.sim_extend import SimExtend
 
 
 class PyGearsView(SimExtend):
-    # @reg_inject
-    # def __init__(self, layers=Inject('viewer/layers')):
-    #     super().__init__()
-        # self.layers = layers
-
     @reg_inject
-    def after_run(self, sim, outdir=Inject('sim/artifact_dir')):
-        os.path.join(outdir, 'pygears.vcd')
+    def before_run(self, sim, outdir=Inject('sim/artifact_dir')):
         main()
+        # p = multiprocessing.Process(target=main)
+        # p.start()
 
 
 @reg_inject

@@ -18,12 +18,12 @@ from pygears_view import PyGearsView
 from pygears.sim.extens.vcd import VCD
 from pygears import bind
 
-seq = [(2, 8, 2)]
+seq = [(2, 1 << 17, 2)]
 verif(
-    drv(t=Tuple[Uint[4], Uint[4], Uint[2]], seq=seq),
+    drv(t=Tuple[Uint[20], Uint[20], Uint[2]], seq=seq),
     f=rng(sim_cls=SimVerilated),
     ref=rng(name='ref_model'))
 
-
 bind('svgen/debug_intfs', ['*'])
-sim(outdir='build', extens=[VCD, PyGearsView])
+sim(outdir='build', extens=[VCD])
+# sim(outdir='build', extens=[VCD, PyGearsView])
