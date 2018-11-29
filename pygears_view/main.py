@@ -3,7 +3,7 @@ import sys
 import os
 import multiprocessing
 
-from PySide2 import QtGui, QtWidgets
+from PySide2 import QtGui, QtWidgets, QtCore
 
 from pygears_view.main_window import MainWindow
 from pygears_view.graph import graph
@@ -17,17 +17,21 @@ from pygears.sim.extens.sim_extend import SimExtend
 class PyGearsView(SimExtend):
     @reg_inject
     def before_run(self, sim, outdir=Inject('sim/artifact_dir')):
-        main()
-        # p = multiprocessing.Process(target=main)
-        # p.start()
+        self.pipe, qt_pipe = multiprocessing.Pipe()
+        # main()
+        p = multiprocessing.Process(target=main, args=(qt_pipe, ))
+        p.start()
+
+    def after_run(self, sim):
+        self.pipe.send("after_run")
 
 
 @reg_inject
-def main(layers=Inject('viewer/layers')):
+def main(pipe, layers=Inject('viewer/layers')):
     app = QtWidgets.QApplication(sys.argv)
     app.setFont(QtGui.QFont("Source Code Pro", 13))
 
-    main_window = MainWindow()
+    main_window = MainWindow(sim_pipe=pipe)
 
     for l in layers:
         l()

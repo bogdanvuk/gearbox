@@ -268,13 +268,8 @@ class NodeItem(AbstractNodeItem):
         self.painter(self, painter, option, widget)
 
     def hide(self):
-        ports = self.inputs + self.outputs
-        for port in ports:
-            for pipe in port.connected_pipes:
-                pipe.hide()
-
-        for node in self._nodes:
-            node.hide()
+        for obj in self.children:
+            obj.hide()
 
         super().hide()
 
@@ -292,8 +287,8 @@ class NodeItem(AbstractNodeItem):
             return
 
         print(f'Collapsing: {self.model.name}')
-        for node in self._nodes:
-            node.hide()
+        for obj in self.children:
+            obj.hide()
 
         self.collapsed = True
         self.graph.top.layout()
@@ -304,8 +299,8 @@ class NodeItem(AbstractNodeItem):
 
         print(f'Expanding: {self.model.name}')
 
-        for node in self._nodes:
-            node.show()
+        for obj in self.children:
+            obj.show()
 
         self.collapsed = False
         self.show()
@@ -630,6 +625,10 @@ class NodeItem(AbstractNodeItem):
         for p in self.pipes:
             if not self.collapsed:
                 p.draw_path()
+
+    @property
+    def children(self):
+        return self._nodes + self.pipes
 
     def add_node(self, node):
         if self.parent is not None:

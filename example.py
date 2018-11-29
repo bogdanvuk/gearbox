@@ -25,5 +25,5 @@ verif(
     ref=rng(name='ref_model'))
 
 bind('svgen/debug_intfs', ['*'])
-sim(outdir='build', extens=[VCD])
-# sim(outdir='build', extens=[VCD, PyGearsView])
+# sim(outdir='build', extens=[VCD])
+sim(outdir='build', extens=[VCD, PyGearsView])
