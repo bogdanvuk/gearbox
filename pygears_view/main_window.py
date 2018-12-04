@@ -1,5 +1,6 @@
 from PySide2 import QtCore, QtWidgets, QtGui
 from pygears.conf import PluginBase, registry, safe_bind, reg_inject, Inject
+from .stylesheet import STYLE_MODELINE
 
 from .minibuffer import Minibuffer
 
@@ -57,20 +58,32 @@ class Shortcut(QtCore.QObject):
 
 
 class BufferStack(QtWidgets.QStackedLayout):
-    def __init__(self, graph, parent=None):
+    def __init__(self, main, parent=None):
         super().__init__(parent)
         self.setMargin(0)
-        self.graph = graph
+        self.main = main
         self.setContentsMargins(0, 0, 0, 0)
         self._buffers = {}
+        self.currentChanged.connect(self.current_changed)
 
     def __setitem__(self, key, value):
         self._buffers[key] = value
         self.addWidget(value)
-        # value.installEventFilter(self.graph)
 
     def __getitem__(self, key):
         return self._buffers[key]
+
+    def current_changed(self):
+        self.main.modeline.setText(self.current_name)
+        if hasattr(self.current, 'activate'):
+            self.current.activate()
+
+    @property
+    def current(self):
+        try:
+            return list(self._buffers.values())[self.currentIndex()]
+        except KeyError:
+            return None
 
     @property
     def current_name(self):
@@ -83,50 +96,7 @@ class BufferStack(QtWidgets.QStackedLayout):
         else:
             self.setCurrentIndex(next_id)
 
-        self.graph.change_domain(self.current_name)
-
-
-class PyGearsBridge(QtCore.QObject):
-    after_run = QtCore.Signal()
-    after_timestep = QtCore.Signal()
-
-    def __init__(self, pipe, after_timestep_interval=1000, parent=None):
-        super().__init__(parent)
-        self.pipe = SimPipeListener(pipe)
-        self.pipe.message.connect(self.message)
-        if after_timestep_interval:
-            self.after_timestep_timer = QtCore.QTimer(self)
-            self.after_timestep_timer.timeout.connect(self.after_timestep_slot)
-            self.after_timestep_timer.start(after_timestep_interval)
-
-    def message(self, msg):
-        if msg == "after_run":
-            self.after_timestep_timer.stop()
-            self.after_run.emit()
-
-    def after_timestep_slot(self):
-        self.after_timestep.emit()
-
-
-class SimPipeListener(QtCore.QObject):
-    message = QtCore.Signal(str)
-
-    def __init__(self, pipe, after_timestep_interval=1000, parent=None):
-        super().__init__(parent)
-        self.pipe = pipe
-        self.thrd = QtCore.QThread()
-        self.moveToThread(self.thrd)
-        self.thrd.started.connect(self.run)
-        self.thrd.start()
-
-    def run(self):
-        nop = QtCore.QTimer(self)
-        while True:
-            nop.start()
-            msg = self.pipe.recv()
-            self.message.emit(msg)
-            if msg == "after_run":
-                break
+        self.main.change_domain(self.current_name)
 
 
 class MainWindow(QtWidgets.QMainWindow):
@@ -138,7 +108,6 @@ class MainWindow(QtWidgets.QMainWindow):
         super().__init__(parent)
         safe_bind('viewer/main', self)
 
-        self.sim_bridge = PyGearsBridge(sim_pipe)
         self._undo_stack = QtWidgets.QUndoStack(self)
         self.buffers = {}
         self.shortcuts = []
@@ -148,7 +117,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.vbox.setMargin(0)
         self.vbox.setContentsMargins(0, 0, 0, 0)
 
-        self.buffers = BufferStack(graph=self)
+        self.buffers = BufferStack(main=self)
         self.vbox.addLayout(self.buffers)
 
         mainWidget = QtWidgets.QWidget()
@@ -159,6 +128,12 @@ class MainWindow(QtWidgets.QMainWindow):
         self.minibuffer.completed.connect(self._minibuffer_completed)
         safe_bind('viewer/minibuffer', self.minibuffer)
 
+        self.modeline = QtWidgets.QLabel(self)
+        self.modeline.setStyleSheet(STYLE_MODELINE)
+
+        safe_bind('viewer/modeline', self.modeline)
+
+        self.vbox.addWidget(self.modeline)
         self.vbox.addWidget(self.minibuffer)
 
         self.setCentralWidget(mainWidget)

@@ -66,6 +66,14 @@ background: rgba(35, 35, 35, 255);
 selection-background-color: rgba(219, 158, 0, 255);
 '''
 
+STYLE_MODELINE = '''
+padding: 2px;
+margin-bottom: 1px;
+color: rgba(255, 255, 255, 150);
+background: rgba(35, 35, 35, 255);
+selection-background-color: rgba(219, 158, 0, 255);
+'''
+
 
 STYLE_TABSEARCH_LIST = '''
 QListView {

@@ -36,7 +36,8 @@ class Graph(QtWidgets.QGraphicsView):
     connection_changed = QtCore.Signal(list, list)
     node_selected = QtCore.Signal(str)
 
-    def __init__(self, parent=None):
+    @reg_inject
+    def __init__(self, parent=None, sim_bridge=Inject('viewer/sim_bridge')):
         super().__init__(parent)
         scene_area = 8000.0
         scene_pos = (scene_area / 2) * -1
@@ -63,13 +64,37 @@ class Graph(QtWidgets.QGraphicsView):
         self.RMB_state = False
         self.MMB_state = False
 
+        sim_bridge.after_timestep.connect(self.sim_refresh)
+        sim_bridge.after_run.connect(self.sim_refresh)
+
     def __str__(self):
         return '{}.{}()'.format(self.__module__, self.__class__.__name__)
 
     def __repr__(self):
         return '{}.{}()'.format(self.__module__, self.__class__.__name__)
 
-    # --- private methods ---
+    def sim_refresh(self):
+        self.print_modeline()
+
+    @reg_inject
+    def print_modeline(self,
+                       modeline=Inject('viewer/modeline'),
+                       sim_proxy=Inject('viewer/sim_proxy')):
+        template = f"""
+    <table>
+        <td width=20%><font color=\"darkorchid\"><b>graph</b></font></td>
+        <td width=80%>Timestep: {sim_proxy.registry("sim/timestep")}</td>
+    </table>
+        """
+
+        # buffer_name = '<font color=\"darkorchid\"><b>graph</b></font>&nbsp;&nbsp;'
+        # timestep = f'Timestep: {sim_proxy.registry("sim/timestep")}'
+
+        # modeline.setText('&nbsp;&nbsp;'.join([buffer_name, timestep]))
+        modeline.setText(template)
+
+    def activate(self):
+        self.print_modeline()
 
     def _set_viewer_zoom(self, value):
         if value == 0.0:

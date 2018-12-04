@@ -48,7 +48,7 @@ class WhichKey(QLabel):
             if ctrl_id is not None:
                 keys.insert(0, 'C')
 
-            shortut_string = (f'<font color=\"DeepPink\"><b>'
+            shortut_string = (f'<font color=\"darkorchid\"><b>'
                               f'{"-".join(keys)}'
                               f'</b></font> &#8594; {s.callback.__name__}')
 

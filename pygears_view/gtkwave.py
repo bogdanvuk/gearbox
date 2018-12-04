@@ -61,7 +61,8 @@ def find_verilated_modules(top=Inject('gear/hier_root')):
 
 
 @reg_inject
-def reload(viewer=Inject('viewer/gtkwave')):
+def reload(viewer=Inject('viewer/gtkwave'),
+           sim_proxy=Inject('viewer/sim_proxy')):
     viewer.command(f'gtkwave::reLoadFile')
 
 
@@ -69,9 +70,10 @@ def reload(viewer=Inject('viewer/gtkwave')):
 def load(
         main=Inject('viewer/main'),
         outdir=MayInject('sim/artifact_dir'),
+        sim_bridge=Inject('viewer/sim_bridge'),
         viewer=Inject('viewer/gtkwave')):
     main.buffers['gtkwave'] = viewer.gtkwave_widget
-    main.sim_bridge.after_timestep.connect(reload)
+    sim_bridge.after_timestep.connect(reload)
     verilator_waves.extend(
         [VerilatorWave(m, viewer) for m in find_verilated_modules()])
 
