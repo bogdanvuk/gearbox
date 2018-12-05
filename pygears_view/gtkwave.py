@@ -70,10 +70,13 @@ def reload(viewer=Inject('viewer/gtkwave'),
 def load(
         main=Inject('viewer/main'),
         outdir=MayInject('sim/artifact_dir'),
-        sim_bridge=Inject('viewer/sim_bridge'),
+        sim_bridge=MayInject('viewer/sim_bridge'),
         viewer=Inject('viewer/gtkwave')):
     main.buffers['gtkwave'] = viewer.gtkwave_widget
-    sim_bridge.after_timestep.connect(reload)
+
+    if sim_bridge:
+        sim_bridge.sim_refresh.connect(reload)
+
     verilator_waves.extend(
         [VerilatorWave(m, viewer) for m in find_verilated_modules()])
 

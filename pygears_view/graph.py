@@ -10,7 +10,7 @@ from .port import PortItem
 from .scene import NodeScene
 from .node import NodeItem
 
-from pygears.conf import Inject, reg_inject, bind
+from pygears.conf import Inject, reg_inject, bind, MayInject
 
 ZOOM_MIN = -0.95
 ZOOM_MAX = 2.0
@@ -37,7 +37,10 @@ class Graph(QtWidgets.QGraphicsView):
     node_selected = QtCore.Signal(str)
 
     @reg_inject
-    def __init__(self, parent=None, sim_bridge=Inject('viewer/sim_bridge')):
+    def __init__(self,
+                 parent=None,
+                 sim_bridge=MayInject('viewer/sim_bridge'),
+                 sim_proxy=MayInject('viewer/sim_proxy')):
         super().__init__(parent)
         scene_area = 8000.0
         scene_pos = (scene_area / 2) * -1
@@ -64,8 +67,10 @@ class Graph(QtWidgets.QGraphicsView):
         self.RMB_state = False
         self.MMB_state = False
 
-        sim_bridge.after_timestep.connect(self.sim_refresh)
-        sim_bridge.after_run.connect(self.sim_refresh)
+        if sim_bridge:
+            sim_bridge.sim_refresh.connect(self.sim_refresh)
+            sim_bridge.after_run.connect(self.sim_refresh)
+            self.timestep_proxy = sim_proxy.registry('sim/timestep')
 
     def __str__(self):
         return '{}.{}()'.format(self.__module__, self.__class__.__name__)
@@ -78,23 +83,19 @@ class Graph(QtWidgets.QGraphicsView):
 
     @reg_inject
     def print_modeline(self,
-                       modeline=Inject('viewer/modeline'),
-                       sim_proxy=Inject('viewer/sim_proxy')):
+                       modeline=Inject('viewer/modeline')):
         template = f"""
-    <table>
-        <td width=20%><font color=\"darkorchid\"><b>graph</b></font></td>
-        <td width=80%>Timestep: {sim_proxy.registry("sim/timestep")}</td>
-    </table>
+        <table>
+            <td width=20%><font color=\"darkorchid\"><b>graph</b></font></td>
+            <td width=80%>Timestep: {self.timestep_proxy.get()}</td>
+        </table>
         """
 
-        # buffer_name = '<font color=\"darkorchid\"><b>graph</b></font>&nbsp;&nbsp;'
-        # timestep = f'Timestep: {sim_proxy.registry("sim/timestep")}'
-
-        # modeline.setText('&nbsp;&nbsp;'.join([buffer_name, timestep]))
         modeline.setText(template)
 
     def activate(self):
-        self.print_modeline()
+        if hasattr(self, 'timestep_proxy'):
+            self.print_modeline()
 
     def _set_viewer_zoom(self, value):
         if value == 0.0:

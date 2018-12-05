@@ -1,11 +1,9 @@
 #!/usr/bin/python
 import sys
-import os
-import multiprocessing
 import threading
-from multiprocessing.managers import BaseManager, BaseProxy
+import multiprocessing
 
-from PySide2 import QtGui, QtWidgets, QtCore
+from PySide2 import QtGui, QtWidgets
 
 from pygears_view.main_window import MainWindow
 from pygears_view.graph import graph
@@ -13,59 +11,40 @@ from pygears_view.which_key import which_key
 from pygears_view.gtkwave import gtkwave
 from pygears_view.sniper import sniper
 from pygears.conf import Inject, reg_inject, safe_bind, PluginBase
-from pygears.sim.extens.sim_extend import SimExtend
-from pygears import registry, bind
-from .pygears_proxy import PyGearsBridge
+from .pygears_proxy import PyGearsBridgeServer, PyGearsManager, sim_bridge
 
 
-class SimulatorProxy(BaseProxy):
-    _exposed = ['proba', '__getattr__']
+class PyGearsView(PyGearsBridgeServer):
+    @reg_inject
+    def __init__(self, top=None, live=False):
+        super().__init__(top)
+        self.live = live
+        self.pipe = None
 
-    def proba(self):
-        return self._callmethod('proba')
-
-    def timestep(self):
-        return self._callmethod('__getattr__', 'timestep')
-
-
-class PyGearsManager(BaseManager):
-    pass
-
-
-PyGearsManager.register('simproxy', lambda: registry('sim/simulator'),
-                        SimulatorProxy)
-PyGearsManager.register('registry', lambda path: registry(path))
-
-
-class PyGearsView(SimExtend):
     @reg_inject
     def before_run(self, sim, outdir=Inject('sim/artifact_dir')):
-        self.manager = PyGearsManager(address=('', 5000))
-        thread = threading.Thread(
-            target=self.manager.get_server().serve_forever)
-        thread.start()
+        if self.live:
+            self.manager = PyGearsManager(address=('', 5000))
+            thread = threading.Thread(
+                target=self.manager.get_server().serve_forever)
+            thread.start()
 
-        self.pipe, qt_pipe = multiprocessing.Pipe()
-        # main()
-        p = multiprocessing.Process(target=main, args=(qt_pipe, ))
-        p.start()
+            self.pipe, qt_pipe = multiprocessing.Pipe()
+            safe_bind('viewer/sim_bridge_pipe', qt_pipe)
+            p = multiprocessing.Process(target=main)
+            p.start()
 
-    def after_run(self, sim):
-        self.pipe.send("after_run")
+    def after_cleanup(self, sim):
+        if not self.live:
+            main()
 
 
 @reg_inject
-def main(pipe, layers=Inject('viewer/layers')):
-    manager = PyGearsManager(address=('', 5000))
-    manager.connect()
-
+def main(layers=Inject('viewer/layers')):
     app = QtWidgets.QApplication(sys.argv)
-    app.setFont(QtGui.QFont("Source Code Pro", 13))
+    app.setFont(QtGui.QFont("DejaVu Sans Mono", 13))
 
-    sim_bridge = PyGearsBridge(pipe)
     main_window = MainWindow()
-    safe_bind('viewer/sim_bridge', sim_bridge)
-    safe_bind('viewer/sim_proxy', manager)
 
     for l in layers:
         l()
@@ -77,4 +56,7 @@ def main(pipe, layers=Inject('viewer/layers')):
 class SimPlugin(PluginBase):
     @classmethod
     def bind(cls):
-        safe_bind('viewer/layers', [graph, which_key, gtkwave, sniper])
+        safe_bind(
+            'viewer/layers',
+            # [sim_bridge, graph, which_key, gtkwave, sniper])
+            [which_key, graph, gtkwave, sniper])
