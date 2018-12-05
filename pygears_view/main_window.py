@@ -35,9 +35,13 @@ def find_node_by_path(root, path):
 class Shortcut(QtCore.QObject):
     @reg_inject
     def __init__(self, domain, key, callback, main=Inject('viewer/main')):
-        self._qshortcut = QtWidgets.QShortcut(QtGui.QKeySequence(key), main)
+        if not isinstance(key, tuple):
+            key = (key, )
+
+        self._qshortcut = QtWidgets.QShortcut(QtGui.QKeySequence(*key), main)
         self._qshortcut.activated.connect(callback)
-        self._qshortcut.setContext(QtCore.Qt.WidgetWithChildrenShortcut)
+        self._qshortcut.activatedAmbiguously.connect(main.shortcut_prefix)
+        # self._qshortcut.setContext(QtCore.Qt.ApplicationShortcut)
         # self._qshortcut.setWhatsThis(callback.__name__)
         main.shortcuts.append(self)
         self.domain = domain
@@ -77,6 +81,8 @@ class BufferStack(QtWidgets.QStackedLayout):
         self.main.modeline.setText(self.current_name)
         if hasattr(self.current, 'activate'):
             self.current.activate()
+
+        self.main.change_domain(self.current_name)
 
     @property
     def current(self):
@@ -151,6 +157,9 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def _key_cancel_event(self):
         self.key_cancel.emit()
+
+    def shortcut_prefix(self):
+        print("Prefix!")
 
     def change_domain(self, domain):
         self.domain_changed.emit(domain)

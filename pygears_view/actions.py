@@ -131,6 +131,16 @@ def toggle_expand(node, graph):
         node.collapse()
 
 
+@shortcut('graph', (Qt.Key_Comma, Qt.Key_W))
+def proba():
+    print("Hey!!!")
+
+
+@shortcut('graph', (Qt.Key_Comma, Qt.Key_P))
+def proba2():
+    print("Hey2!!!")
+
+
 from pygears_view.gtkwave import verilator_waves
 from pygears.rtl.gear import rtl_from_gear_port
 
