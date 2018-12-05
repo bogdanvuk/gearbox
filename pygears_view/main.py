@@ -28,25 +28,13 @@ class SimulatorProxy(BaseProxy):
         return self._callmethod('__getattr__', 'timestep')
 
 
-def get_registry(path):
-    return registry(path)
-
-
-def get_simulator():
-    return registry('sim/simulator')
-
-
 class PyGearsManager(BaseManager):
     pass
 
 
-PyGearsManager.register('simproxy', get_simulator, SimulatorProxy)
-PyGearsManager.register('registry', get_registry)
-
-
-def manager_server(manager):
-    print("Starting server!")
-    manager.get_server().serve_forever()
+PyGearsManager.register('simproxy', lambda: registry('sim/simulator'),
+                        SimulatorProxy)
+PyGearsManager.register('registry', lambda path: registry(path))
 
 
 class PyGearsView(SimExtend):
