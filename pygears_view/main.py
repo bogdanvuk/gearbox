@@ -35,6 +35,8 @@ class PyGearsView(PyGearsBridgeServer):
             p = multiprocessing.Process(target=main, args=(qt_pipe, ))
             p.start()
 
+        super().before_run(sim)
+
     def after_cleanup(self, sim):
         if not self.live:
             main()

@@ -131,6 +131,19 @@ def toggle_expand(node, graph):
         node.collapse()
 
 
+@shortcut('graph', Qt.Key_S)
+@reg_inject
+def step_simulator(sim_bridge=Inject('viewer/sim_bridge')):
+    sim_bridge.breakpoints.add(lambda: (True, False))
+    if not sim_bridge.running:
+        sim_bridge.cont()
+
+@shortcut('graph', Qt.Key_C)
+@reg_inject
+def cont_simulator(sim_bridge=Inject('viewer/sim_bridge')):
+    sim_bridge.cont()
+
+
 @shortcut('graph', (Qt.Key_Comma, Qt.Key_W))
 def proba():
     print("Hey!!!")
