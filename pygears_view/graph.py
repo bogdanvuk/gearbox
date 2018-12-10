@@ -9,6 +9,7 @@ from .pipe import Pipe
 from .port import PortItem
 from .scene import NodeScene
 from .node import NodeItem
+from .html_utils import tabulate, fontify
 
 from pygears.conf import Inject, reg_inject, bind, MayInject
 
@@ -82,16 +83,24 @@ class Graph(QtWidgets.QGraphicsView):
         self.print_modeline()
 
     @reg_inject
-    def print_modeline(self,
-                       modeline=Inject('viewer/modeline')):
-        template = f"""
-        <table>
-            <td width=20%><font color=\"darkorchid\"><b>graph</b></font></td>
-            <td width=80%>Timestep: {self.timestep_proxy.get()}</td>
-        </table>
-        """
+    def print_modeline(self, modeline=Inject('viewer/modeline')):
+        table = [[
+            ('style="padding-right: 20px;"',
+             fontify('graph', color='"darkorchid"', bold=True)),
+            ('', f'Simulation: R'),
+            ('', f'Timestep: {self.timestep_proxy.get()}'),
+        ]]
+        tbl = tabulate(table)
 
-        modeline.setText(template)
+        style = """
+<style>
+td {
+padding-left: 10px;
+padding-right: 10px;
+}
+</style>
+        """
+        modeline.setText(style+tbl)
 
     def activate(self):
         if hasattr(self, 'timestep_proxy'):

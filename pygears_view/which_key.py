@@ -1,4 +1,6 @@
 import math
+from . import html_utils
+
 from PySide2.QtWidgets import QLabel
 from .stylesheet import STYLE_WHICH_KEY
 from pygears.conf import Inject, bind, reg_inject
@@ -11,20 +13,6 @@ def which_key(main=Inject('viewer/main')):
     w = WhichKey(main)
     main.vbox.insertWidget(main.vbox.count() - 1, w)
     bind('viewer/which_key', w)
-
-
-def html_tabulate(table):
-    res = ['<table>']
-    for row in table:
-        res.append('<tr>')
-        for width, elem in row:
-            res.append(f'<td width={width}>{elem}</td>')
-
-        res.append('</tr>')
-
-    res.append('<table>')
-
-    return '\n'.join(res)
 
 
 class WhichKey(QLabel):
@@ -114,14 +102,12 @@ class WhichKey(QLabel):
         table = [[] for _ in range(row_num)]
         for i, key_name in enumerate(sorted(which_key_string)):
 
-            shortcut_string = (
-                f'<font color=\"darkorchid\"><b>'
-                f'{key_name}'
-                f'</b></font> &#8594; {which_key_string[key_name]}')
+            shortcut_string = (html_utils.fontify(key_name, '"darkorchid"') +
+                               f' &#8594; {which_key_string[key_name]}')
 
-            table[i % row_num].append((max_width, shortcut_string))
+            table[i % row_num].append((f'width={max_width}', shortcut_string))
 
-        self.setText(html_tabulate(table))
+        self.setText(html_utils.tabulate(table))
         super().show()
 
     def cancel(self):
