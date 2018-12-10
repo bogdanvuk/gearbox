@@ -10,16 +10,17 @@ from pygears_view.graph import graph
 from pygears_view.which_key import which_key
 from pygears_view.gtkwave import gtkwave
 from pygears_view.sniper import sniper
-from pygears.conf import Inject, reg_inject, safe_bind, PluginBase
+from pygears.conf import Inject, reg_inject, safe_bind, PluginBase, registry
 from .pygears_proxy import PyGearsBridgeServer, PyGearsManager, sim_bridge
 
 
 class PyGearsView(PyGearsBridgeServer):
-    @reg_inject
     def __init__(self, top=None, live=False):
         super().__init__(top)
         self.live = live
         self.pipe = None
+        if live:
+            registry('viewer/layers').insert(0, sim_bridge)
 
     @reg_inject
     def before_run(self, sim, outdir=Inject('sim/artifact_dir')):
@@ -30,8 +31,8 @@ class PyGearsView(PyGearsBridgeServer):
             thread.start()
 
             self.pipe, qt_pipe = multiprocessing.Pipe()
-            safe_bind('viewer/sim_bridge_pipe', qt_pipe)
-            p = multiprocessing.Process(target=main)
+
+            p = multiprocessing.Process(target=main, args=(qt_pipe, ))
             p.start()
 
     def after_cleanup(self, sim):
@@ -40,7 +41,10 @@ class PyGearsView(PyGearsBridgeServer):
 
 
 @reg_inject
-def main(layers=Inject('viewer/layers')):
+def main(pipe=None, layers=Inject('viewer/layers')):
+    if pipe:
+        safe_bind('viewer/sim_bridge_pipe', pipe)
+
     app = QtWidgets.QApplication(sys.argv)
     app.setFont(QtGui.QFont("DejaVu Sans Mono", 13))
 
@@ -56,7 +60,4 @@ def main(layers=Inject('viewer/layers')):
 class SimPlugin(PluginBase):
     @classmethod
     def bind(cls):
-        safe_bind(
-            'viewer/layers',
-            # [sim_bridge, graph, which_key, gtkwave, sniper])
-            [which_key, graph, gtkwave, sniper])
+        safe_bind('viewer/layers', [which_key, graph, gtkwave, sniper])
