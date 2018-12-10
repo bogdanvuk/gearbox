@@ -72,6 +72,7 @@ class Graph(QtWidgets.QGraphicsView):
             sim_bridge.sim_refresh.connect(self.sim_refresh)
             sim_bridge.after_run.connect(self.sim_refresh)
             self.timestep_proxy = sim_proxy.registry('sim/timestep')
+            self.activity_proxy = sim_proxy.activity()
 
     def __str__(self):
         return '{}.{}()'.format(self.__module__, self.__class__.__name__)
@@ -84,6 +85,8 @@ class Graph(QtWidgets.QGraphicsView):
 
     @reg_inject
     def print_modeline(self, modeline=Inject('viewer/modeline')):
+        print(self.activity_proxy.get_port_status('/rng.dout'))
+
         table = [[
             ('style="padding-right: 20px;"',
              fontify('graph', color='"darkorchid"', bold=True)),

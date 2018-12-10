@@ -1,5 +1,5 @@
 from PySide2 import QtCore, QtWidgets
-from pygears import registry
+from pygears import registry, find
 from pygears.conf import MayInject, reg_inject, safe_bind
 from multiprocessing.managers import BaseManager
 from pygears.sim.extens.sim_extend import SimExtend
@@ -18,7 +18,21 @@ class RegistryProxy:
         return registry(self.path)
 
 
+class ActivityProxy:
+    @reg_inject
+    def get(self, activity=MayInject('sim/activity')):
+        if activity:
+            return activity.blockers
+
+    @reg_inject
+    def get_port_status(self, path, activity=MayInject('sim/activity')):
+        if activity:
+            port = find(path)
+            return activity.get_port_status(port)
+
+
 PyGearsManager.register('registry', RegistryProxy)
+PyGearsManager.register('activity', ActivityProxy)
 
 
 class PyGearsBridgeServer(SimExtend):
