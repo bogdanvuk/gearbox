@@ -2,6 +2,8 @@ from pygears_view import main
 from pygears.cookbook.rng import rng
 from pygears.common import shred
 
+from functools import partial
+
 # add(2, 3) | shred
 # rng(8) | shred
 # main()
@@ -18,7 +20,7 @@ from pygears_view import PyGearsView
 from pygears.sim.extens.vcd import VCD
 from pygears import bind
 
-seq = [(2, 1 << 17, 2)]
+seq = [(2, 1 << 16, 2)]
 verif(
     drv(t=Tuple[Uint[20], Uint[20], Uint[2]], seq=seq),
     f=rng(sim_cls=SimVerilated),
@@ -26,4 +28,4 @@ verif(
 
 bind('svgen/debug_intfs', ['*'])
 # sim(outdir='build', extens=[VCD])
-sim(outdir='build', extens=[VCD, PyGearsView])
+sim(outdir='build', extens=[VCD, partial(PyGearsView, live=True)])
