@@ -11,7 +11,7 @@ from .scene import NodeScene
 from .node import NodeItem
 from .html_utils import tabulate, fontify
 
-from pygears.conf import Inject, reg_inject, bind, MayInject
+from pygears.conf import Inject, reg_inject, bind, MayInject, registry
 
 ZOOM_MIN = -0.95
 ZOOM_MAX = 2.0
@@ -71,8 +71,6 @@ class Graph(QtWidgets.QGraphicsView):
         if sim_bridge:
             sim_bridge.sim_refresh.connect(self.sim_refresh)
             sim_bridge.after_run.connect(self.sim_refresh)
-            self.timestep_proxy = sim_proxy.registry('sim/timestep')
-            self.activity_proxy = sim_proxy.activity()
 
     def __str__(self):
         return '{}.{}()'.format(self.__module__, self.__class__.__name__)
@@ -85,13 +83,13 @@ class Graph(QtWidgets.QGraphicsView):
 
     @reg_inject
     def print_modeline(self, modeline=Inject('viewer/modeline')):
-        print(self.activity_proxy.get_port_status('/rng.dout'))
+        # print(self.activity_proxy.get_port_status('/rng.dout'))
 
         table = [[
             ('style="padding-right: 20px;"',
              fontify('graph', color='"darkorchid"', bold=True)),
             ('', f'Simulation: R'),
-            ('', f'Timestep: {self.timestep_proxy.get()}'),
+            ('', f'Timestep: {registry("sim/timestep")}'),
         ]]
         tbl = tabulate(table)
 
@@ -103,7 +101,7 @@ padding-right: 10px;
 }
 </style>
         """
-        modeline.setText(style+tbl)
+        modeline.setText(style + tbl)
 
     def activate(self):
         if hasattr(self, 'timestep_proxy'):

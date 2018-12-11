@@ -1,7 +1,7 @@
 #!/usr/bin/python
+import queue
 import sys
 import threading
-import multiprocessing
 
 from PySide2 import QtGui, QtWidgets
 
@@ -10,13 +10,16 @@ from pygears_view.graph import graph
 from pygears_view.which_key import which_key
 from pygears_view.gtkwave import gtkwave
 from pygears_view.sniper import sniper
-from pygears.conf import Inject, reg_inject, safe_bind, PluginBase, registry
-from .pygears_proxy import PyGearsBridgeServer, PyGearsManager, sim_bridge
+from pygears.conf import Inject, reg_inject, safe_bind, PluginBase, registry, bind
+from .pygears_proxy import PyGearsBridgeServer, sim_bridge
 
 
 class PyGearsView(PyGearsBridgeServer):
     def __init__(self, top=None, live=False):
         super().__init__(top)
+
+        bind('sim/pygears_view', self)
+
         self.live = live
         self.pipe = None
         if live:
@@ -25,15 +28,10 @@ class PyGearsView(PyGearsBridgeServer):
     @reg_inject
     def before_run(self, sim, outdir=Inject('sim/artifact_dir')):
         if self.live:
-            self.manager = PyGearsManager(address=('', 5000))
-            thread = threading.Thread(
-                target=self.manager.get_server().serve_forever)
+            self.queue = queue.Queue()
+
+            thread = threading.Thread(target=main)
             thread.start()
-
-            self.pipe, qt_pipe = multiprocessing.Pipe()
-
-            p = multiprocessing.Process(target=main, args=(qt_pipe, ))
-            p.start()
 
         super().before_run(sim)
 

@@ -16,12 +16,19 @@ class VerilatorWave:
         self.path_prefix = '.'.join(
             ['TOP', sim_module.wrap_name])
         self.verilator_intf = verilator_intf
+        self.loaded = False
 
-        verilator_vcd = sim_module.trace_fn
-        verilator_intf.command(f'gtkwave::loadFile {verilator_vcd}')
+    def load_vcd(self):
+        verilator_vcd = self.sim_module.trace_fn
+        ret = self.verilator_intf.command(f'gtkwave::loadFile {verilator_vcd}')
+        if "File load failure" not in ret:
+            self.loaded = True
+        else:
+            return
+
         self.signal_name_map = self.make_relative_signal_name_map(
-            self.path_prefix, verilator_intf.command('list_signals'))
-        verilator_intf.command(f'gtkwave::setZoomFactor -7')
+            self.path_prefix, self.verilator_intf.command('list_signals'))
+        self.verilator_intf.command(f'gtkwave::setZoomFactor -7')
 
     def make_relative_signal_name_map(self, path_prefix, signal_list):
         signal_name_map = {}
@@ -61,8 +68,11 @@ def find_verilated_modules(top=Inject('gear/hier_root')):
 
 
 @reg_inject
-def reload(viewer=Inject('viewer/gtkwave'),
-           sim_proxy=Inject('viewer/sim_proxy')):
+def reload(viewer=Inject('viewer/gtkwave')):
+    for v in verilator_waves:
+        if not v.loaded:
+            v.load_vcd()
+
     viewer.command(f'gtkwave::reLoadFile')
 
 

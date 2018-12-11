@@ -1,64 +1,33 @@
+import queue
+import time
 from PySide2 import QtCore, QtWidgets
-from pygears import registry, find
-from pygears.conf import MayInject, reg_inject, safe_bind
-from multiprocessing.managers import BaseManager
+from pygears.conf import Inject, reg_inject, safe_bind
 from pygears.sim.extens.sim_extend import SimExtend
-from pygears.core.sim_event import SimEvent
-
-
-class PyGearsManager(BaseManager):
-    pass
-
-
-class RegistryProxy:
-    def __init__(self, path):
-        self.path = path
-
-    def get(self):
-        return registry(self.path)
-
-
-class ActivityProxy:
-    @reg_inject
-    def get(self, activity=MayInject('sim/activity')):
-        if activity:
-            return activity.blockers
-
-    @reg_inject
-    def get_port_status(self, path, activity=MayInject('sim/activity')):
-        if activity:
-            port = find(path)
-            return activity.get_port_status(port)
-
-
-PyGearsManager.register('registry', RegistryProxy)
-PyGearsManager.register('activity', ActivityProxy)
 
 
 class PyGearsBridgeServer(SimExtend):
+    def handle_event(self, name):
+        self.event_name = name
+        self.queue.put(name)
+        self.queue.join()
+
+        # Let GUI thread do some work
+        time.sleep(0.0001)
+
     def before_run(self, sim):
-        if self.pipe:
-            self.pipe.send("before_run")
-            self.pipe.recv()
+        self.handle_event('before_run')
 
     def after_timestep(self, sim, timestep):
-        if self.pipe:
-            self.pipe.send("after_timestep")
-            self.pipe.recv()
-            return True
+        self.handle_event('after_timestep')
+        return True
 
     def after_run(self, sim):
-        if self.pipe:
-            self.pipe.send("after_run")
+        self.handle_event('after_run')
 
 
 def sim_bridge():
-    manager = PyGearsManager(address=('', 5000))
-    manager.connect()
-
     sim_bridge = PyGearsClient()
     safe_bind('viewer/sim_bridge', sim_bridge)
-    safe_bind('viewer/sim_proxy', manager)
 
 
 class PyGearsClient(QtCore.QObject):
@@ -69,14 +38,12 @@ class PyGearsClient(QtCore.QObject):
 
     @reg_inject
     def __init__(self,
-                 pipe=MayInject('viewer/sim_bridge_pipe'),
-                 step=True,
+                 plugin=Inject('sim/pygears_view'),
                  refresh_interval=1000,
                  parent=None):
         super().__init__(parent)
 
-        self.pipe = pipe
-        self.step = step
+        self.plugin = plugin
         self.refresh_interval = refresh_interval
         self.loop = QtCore.QEventLoop(self)
         self.breakpoints = set()
@@ -111,24 +78,19 @@ class PyGearsClient(QtCore.QObject):
 
     def run(self):
 
-        # if self.refresh_interval:
-        #     self.after_timestep_timer = QtCore.QTimer(self)
-        #     self.after_timestep_timer.timeout.connect(self.refresh_timeout)
-        #     self.after_timestep_timer.start(self.refresh_interval)
-
         refresh_counter = 0
 
         while True:
             self.thrd.eventDispatcher().processEvents(
                 QtCore.QEventLoop.AllEvents)
 
-            if not self.pipe.poll(0.001):
+            try:
+                msg = self.plugin.queue.get(0.001)
+            except queue.Empty:
                 continue
 
-            msg = self.pipe.recv()
-
-            self.message.emit(msg)
-            if msg == "after_timestep" and self.step:
+            msg = self.plugin.event_name
+            if msg == "after_timestep":
                 self.after_timestep.emit()
 
                 refresh_counter += 1
@@ -143,18 +105,20 @@ class PyGearsClient(QtCore.QObject):
                     self.sim_refresh.emit()
                     refresh_counter = 0
 
-                self.pipe.send(' ')
+                self.plugin.queue.task_done()
 
             elif msg == "after_run":
                 self.sim_refresh.emit()
                 self.after_run.emit()
                 self.quit()
+                self.plugin.queue.task_done()
                 return
+
             elif msg == "before_run":
                 self.running = False
                 self.loop.exec_()
                 self.running = True
-                self.pipe.send(' ')
+                self.plugin.queue.task_done()
 
     def quit(self):
         self.thrd.quit()
