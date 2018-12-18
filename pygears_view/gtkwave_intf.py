@@ -10,7 +10,7 @@ from PySide2 import QtWidgets, QtGui, QtCore
 class GtkWaveProc(QtCore.QObject):
 
     window_up = QtCore.Signal(str, int, int)
-    response = QtCore.Signal(str)
+    response = QtCore.Signal(str, int)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -39,10 +39,10 @@ class GtkWaveProc(QtCore.QObject):
 
         self.window_up.emit(version, self.p.pid, int(window_id, 16))
 
-    def command(self, cmd):
+    def command(self, cmd, cmd_id):
         self.p.send(cmd + '\n')
         self.p.expect('%')
-        self.response.emit(self.p.before)
+        self.response.emit(self.p.before, cmd_id)
 
     def quit(self):
         self.p.close()
@@ -50,15 +50,21 @@ class GtkWaveProc(QtCore.QObject):
 
 
 class GtkWaveCmdBlock(QtCore.QEventLoop):
+    @property
+    def cmd_id(self):
+        return id(self) & 0xffff
+
     def command(self, cmd, gtk_wave):
-        gtk_wave.send_command.emit(cmd)
+        self.cmd = cmd
+        gtk_wave.send_command.emit(cmd, self.cmd_id)
         gtk_wave.proc.response.connect(self.response)
         self.exec_()
         return self.resp
 
-    def response(self, resp):
-        self.resp = resp
-        self.quit()
+    def response(self, resp, cmd_id):
+        if cmd_id == self.cmd_id:
+            self.resp = resp
+            self.quit()
 
 
 class GtkWaveXevProc(QtCore.QObject):
@@ -119,7 +125,7 @@ class GtkWaveXevProc(QtCore.QObject):
 
 
 class GtkWave(QtCore.QObject):
-    send_command = QtCore.Signal(str)
+    send_command = QtCore.Signal(str, int)
     initialized = QtCore.Signal()
 
     def __init__(self, parent=None):
@@ -130,10 +136,9 @@ class GtkWave(QtCore.QObject):
         QtWidgets.QApplication.instance().aboutToQuit.connect(self.proc.quit)
 
     def command_nb(self, cmd):
-        self.send_command.emit(cmd)
+        self.send_command.emit(cmd, 0)
 
     def command(self, cmd):
-        print(f"Gtkwave: {cmd}")
         cmd_block = GtkWaveCmdBlock()
         resp = cmd_block.command(cmd, self)
         return resp

@@ -307,6 +307,18 @@ class NodeItem(AbstractNodeItem):
         self.graph.top.layout()
         self.selected = True
 
+    def get_visible_objs(self, objtype):
+        for n in self._nodes:
+            if (objtype is None) or (objtype is NodeItem):
+                yield n
+
+            if not n.collapsed:
+                yield from n.get_visible_objs(objtype)
+
+        if (objtype is None) or (objtype is Pipe):
+            for p in self.pipes:
+                yield p
+
     def set_pos(self, x=0.0, y=0.0):
         self.pos = (x, y)
         # print(f'Pos {self.model.name}: {self.pos}')

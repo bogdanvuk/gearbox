@@ -138,6 +138,7 @@ def step_simulator(sim_bridge=Inject('viewer/sim_bridge')):
     if not sim_bridge.running:
         sim_bridge.cont()
 
+
 @shortcut('graph', Qt.Key_C)
 @reg_inject
 def cont_simulator(sim_bridge=Inject('viewer/sim_bridge')):

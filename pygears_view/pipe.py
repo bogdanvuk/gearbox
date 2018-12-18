@@ -2,11 +2,12 @@
 import math
 
 from PySide2 import QtCore, QtGui, QtWidgets
+from pygears.conf import Inject, reg_inject, registry
 
 from .constants import (
     PIPE_DEFAULT_COLOR, PIPE_ACTIVE_COLOR, PIPE_HIGHLIGHT_COLOR,
-    PIPE_STYLE_DASHED, PIPE_STYLE_DEFAULT, PIPE_STYLE_DOTTED,
-    PIPE_LAYOUT_STRAIGHT, PIPE_WIDTH, IN_PORT, OUT_PORT, Z_VAL_PIPE)
+    PIPE_STYLE_DASHED, PIPE_STYLE_DEFAULT, PIPE_STYLE_DOTTED, PIPE_WIDTH,
+    IN_PORT, OUT_PORT, Z_VAL_PIPE, PIPE_WAITED_COLOR, PIPE_HANDSHAKED_COLOR)
 from .port import PortItem
 
 PIPE_STYLES = {
@@ -15,18 +16,35 @@ PIPE_STYLES = {
     PIPE_STYLE_DOTTED: QtCore.Qt.PenStyle.DotLine
 }
 
+PIPE_SIM_STATUS_COLOR = {
+    'empty': PIPE_DEFAULT_COLOR,
+    'active': PIPE_ACTIVE_COLOR,
+    'waited': PIPE_WAITED_COLOR,
+    'handshaked': PIPE_HANDSHAKED_COLOR
+}
+
 
 class Pipe(QtWidgets.QGraphicsPathItem):
     """
     Base Pipe Item.
     """
 
-    def __init__(self, output_port, input_port, parent=None):
+    @reg_inject
+    def __init__(self,
+                 output_port,
+                 input_port,
+                 parent=None,
+                 graph=Inject('viewer/graph'),
+                 sim_activity=Inject('sim/activity')):
         super().__init__(parent)
+        self.graph = graph
+        self.sim_activity = sim_activity
+        self.graph.sim_refresh.connect(self.sim_refresh)
         self.model = input_port.model.consumer
         self.setZValue(Z_VAL_PIPE)
         self.setAcceptHoverEvents(True)
         self.setFlags(self.ItemIsSelectable)
+        self.width = PIPE_WIDTH
         self._color = PIPE_DEFAULT_COLOR
         self._style = PIPE_STYLE_DEFAULT
         self._active = False
@@ -47,6 +65,67 @@ class Pipe(QtWidgets.QGraphicsPathItem):
         return '{}.Pipe(\'{}\', \'{}\')'.format(self.__module__, in_name,
                                                 out_name)
 
+    def get_activity_status(self):
+        try:
+            return self.sim_activity.get_port_status(self.model)
+        except KeyError:
+            pass
+
+        from pygears.rtl.gear import rtl_from_gear_port
+        from pygears_view.gtkwave import verilator_waves
+
+        # import pdb; pdb.set_trace()
+        print(f'Pipe: {self}')
+        if not hasattr(self, 'rtl_port'):
+            # port = self.input_port.model
+            port = self.output_port.model
+            self.rtl_port = rtl_from_gear_port(port)
+
+        rtl_intf = self.rtl_port.consumer
+        try:
+            sigs = verilator_waves[0].get_signals_for_intf(rtl_intf)
+        except:
+            import pdb
+            pdb.set_trace()
+
+        print(sigs)
+        valid = 0
+        ready = 0
+        viewer = registry('viewer/gtkwave')
+        for s in verilator_waves[0].get_signals_for_intf(rtl_intf):
+            if s.endswith('_valid'):
+                ret = viewer.command(
+                    f'gtkwave::signalChangeList {s} -dir backward -max 1')
+                valid = int(ret.split()[1])
+            elif s.endswith('_ready'):
+                ret = viewer.command(
+                    f'gtkwave::signalChangeList {s} -dir backward -max 1')
+                ready = int(ret.split()[1])
+
+        print('Valid, ready: ', valid, ready)
+
+        if valid and not ready:
+            return 'active'
+        elif not valid and ready:
+            return 'waited'
+        elif valid and ready:
+            return 'handshaked'
+        else:
+            return 'empty'
+
+    def sim_refresh(self):
+        status = self.get_activity_status()
+
+        new_color = PIPE_SIM_STATUS_COLOR[status]
+        if new_color != self.color:
+            if status == 'empty':
+                self.width = PIPE_WIDTH
+            else:
+                self.width = PIPE_WIDTH * 3
+
+            self.color = new_color
+            self.update()
+
     def mouseReleaseEvent(self, event):
         super().mouseReleaseEvent(event)
         # self.setFlag(self.ItemIsMovable, True)
@@ -64,9 +143,9 @@ class Pipe(QtWidgets.QGraphicsPathItem):
     def paint(self, painter, option, widget):
         color = QtGui.QColor(*self._color)
         pen_style = PIPE_STYLES.get(self.style)
-        pen_width = PIPE_WIDTH
+        pen_width = self.width
         if self._active:
-            color = QtGui.QColor(*PIPE_ACTIVE_COLOR)
+            color = QtGui.QColor(*PIPE_HIGHLIGHT_COLOR)
         elif self.isSelected():
             color = QtGui.QColor(*PIPE_HIGHLIGHT_COLOR)
             pen_style = PIPE_STYLES.get(PIPE_STYLE_DEFAULT)
@@ -265,7 +344,7 @@ class Pipe(QtWidgets.QGraphicsPathItem):
 
     def activate(self):
         self._active = True
-        pen = QtGui.QPen(QtGui.QColor(*PIPE_ACTIVE_COLOR), 2)
+        pen = QtGui.QPen(QtGui.QColor(*PIPE_HIGHLIGHT_COLOR), 2)
         pen.setStyle(PIPE_STYLES.get(PIPE_STYLE_DEFAULT))
         self.setPen(pen)
 

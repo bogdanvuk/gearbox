@@ -3,7 +3,8 @@
 from PySide2 import QtCore, QtWidgets, QtGui
 
 from .constants import (IN_PORT, OUT_PORT, PIPE_LAYOUT_CURVED,
-                        PIPE_LAYOUT_STRAIGHT)
+                        PIPE_LAYOUT_STRAIGHT, PIPE_DEFAULT_COLOR)
+
 from .node_abstract import AbstractNodeItem
 from .pipe import Pipe
 from .port import PortItem
@@ -15,6 +16,9 @@ from pygears.conf import Inject, reg_inject, bind, MayInject, registry
 
 ZOOM_MIN = -0.95
 ZOOM_MAX = 2.0
+
+PIPE_WAITED_COLOR = (13, 232, 184, 255)
+PIPE_ACTIVE_COLOR = (232, 13, 184, 255)
 
 
 @reg_inject
@@ -36,6 +40,7 @@ class Graph(QtWidgets.QGraphicsView):
     moved_nodes = QtCore.Signal(dict)
     connection_changed = QtCore.Signal(list, list)
     node_selected = QtCore.Signal(str)
+    sim_refresh = QtCore.Signal()
 
     @reg_inject
     def __init__(self,
@@ -69,8 +74,8 @@ class Graph(QtWidgets.QGraphicsView):
         self.MMB_state = False
 
         if sim_bridge:
-            sim_bridge.sim_refresh.connect(self.sim_refresh)
-            sim_bridge.after_run.connect(self.sim_refresh)
+            sim_bridge.sim_refresh.connect(self._sim_refresh_slot)
+            sim_bridge.after_run.connect(self._sim_refresh_slot)
 
     def __str__(self):
         return '{}.{}()'.format(self.__module__, self.__class__.__name__)
@@ -78,13 +83,12 @@ class Graph(QtWidgets.QGraphicsView):
     def __repr__(self):
         return '{}.{}()'.format(self.__module__, self.__class__.__name__)
 
-    def sim_refresh(self):
+    def _sim_refresh_slot(self):
+        self.sim_refresh.emit()
         self.print_modeline()
 
     @reg_inject
     def print_modeline(self, modeline=Inject('viewer/modeline')):
-        # print(self.activity_proxy.get_port_status('/rng.dout'))
-
         table = [[
             ('style="padding-right: 20px;"',
              fontify('graph', color='"darkorchid"', bold=True)),
@@ -104,8 +108,7 @@ padding-right: 10px;
         modeline.setText(style + tbl)
 
     def activate(self):
-        if hasattr(self, 'timestep_proxy'):
-            self.print_modeline()
+        self.print_modeline()
 
     def _set_viewer_zoom(self, value):
         if value == 0.0:
