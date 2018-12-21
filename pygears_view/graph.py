@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 from PySide2 import QtCore, QtWidgets, QtGui
+import warnings
 
 from .constants import (IN_PORT, OUT_PORT, PIPE_LAYOUT_CURVED,
                         PIPE_LAYOUT_STRAIGHT, PIPE_DEFAULT_COLOR)
@@ -67,6 +68,8 @@ class Graph(QtWidgets.QGraphicsView):
         self._rubber_band = QtWidgets.QRubberBand(
             QtWidgets.QRubberBand.Rectangle, self)
         self._undo_stack = QtWidgets.QUndoStack(self)
+        warnings.filterwarnings(
+            'ignore', '.*cell size too small for content.*', RuntimeWarning)
 
         self.acyclic = True
         self.LMB_state = False

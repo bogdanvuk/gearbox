@@ -4,9 +4,44 @@ from pygears.common import shred
 
 from functools import partial
 
-# add(2, 3) | shred
-# rng(8) | shred
-# main()
+# import pygraphviz as pgv
+
+# d = {
+#     '1': {
+#         '2': None,
+#         '3': None
+#     },
+#     '2': {
+#         '1': None,
+#         '3': None
+#     },
+#     '3': {
+#         '2': None
+#     },
+#     '4': {
+#         '6': None,
+#         '5': None
+#     },
+#     '5': {
+#         '1': None
+#     },
+#     '6': {
+#         '3': None
+#     }
+
+# }
+# G = pgv.AGraph(d, directed=True)
+# G.graph_attr['rankdir'] = 'LR'
+# G.get_node(1).attr['width'] = 2
+# G.get_node(1).attr['height'] = 2
+# G.layout(prog='dot')
+# for n in G.nodes_iter():
+#     print({k: v for k, v in n.attr.items()})
+
+# for n in G.edges_iter():
+#     print({k: v for k, v in n.attr.items()})
+
+# G.draw('proba.png')
 
 from pygears.typing import Tuple, Uint
 from pygears.cookbook.rng import rng

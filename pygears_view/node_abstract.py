@@ -146,14 +146,15 @@ class AbstractNodeItem(QGraphicsItem):
     def selected(self, selected=False):
         self.setSelected(selected)
 
-    @property
-    def pos(self):
-        return float(self.scenePos().x()), float(self.scenePos().y())
+    # @property
+    # def pos(self):
+    #     return self.pos()
+    #     # return float(self.scenePos().x()), float(self.scenePos().y())
 
-    @pos.setter
-    def pos(self, pos=None):
-        pos = pos or [0.0, 0.0]
-        self.setPos(pos[0], pos[1])
+    # @pos.setter
+    # def pos(self, pos=None):
+    #     pos = pos or [0.0, 0.0]
+    #     self.setPos(pos[0], pos[1])
 
     @property
     def name(self):

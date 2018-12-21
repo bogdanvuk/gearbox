@@ -201,40 +201,66 @@ class Pipe(QtWidgets.QGraphicsPathItem):
     def draw_path(self):
         path = QtGui.QPainterPath()
 
-        qp_points = ([self.input_port.plug_pos(self.parentItem(), OUT_PORT)
-                      ] + self.layout_path +
-                     [self.output_port.plug_pos(self.parentItem(), IN_PORT)])
+        # qp_points = ([self.input_port.plug_pos(self.parentItem(), OUT_PORT)
+        #               ] + self.layout_path +
+        #              [self.output_port.plug_pos(self.parentItem(), IN_PORT)])
 
-        points = [(p.x(), p.y()) for p in qp_points]
+        # points = [(p.x(), p.y()) for p in qp_points]
 
-        from grandalf.utils.geometry import setcurve
-        splines = setcurve(None, points)
+        # from grandalf.utils.geometry import setcurve
+        # splines = setcurve(None, points)
 
-        from itertools import tee
+        # from itertools import tee
 
-        def pairwise(iterable):
-            "s -> (s0,s1), (s1,s2), (s2, s3), ..."
-            a, b = tee(iterable)
-            next(b, None)
-            return zip(a, b)
+        # def pairwise(iterable):
+        #     "s -> (s0,s1), (s1,s2), (s2, s3), ..."
+        #     a, b = tee(iterable)
+        #     next(b, None)
+        #     return zip(a, b)
 
         # if len(splines) > 2:
         #     import pdb; pdb.set_trace()
 
-        start_spline = self.spline(qp_points[0], qp_points[1], start=True)[0]
-        splines[0][1] = (start_spline.x(), start_spline.y())
+        # start_spline = self.spline(
+        #     qp_start, self.layout_path[0], start=True)[0]
+        # start_spline = self.spline(qp_points[0], qp_points[1], start=True)[0]
+        # splines[0][1] = (start_spline.x(), start_spline.y())
 
-        end_spline = self.spline(qp_points[-2], qp_points[-1], start=False)[1]
-        splines[-1][2] = (end_spline.x(), end_spline.y())
+        # end_spline = self.spline(
+        #     self.layout_path[-1], qp_end, start=False)[0]
+        # end_spline = self.spline(qp_points[-2], qp_points[-1], start=False)[1]
+        # splines[-1][2] = (end_spline.x(), end_spline.y())
 
-        path.moveTo(qp_points[0])
+        # path.moveTo(qp_points[0])
+
+        ####################################################
+
+        qp_start = self.input_port.plug_pos(self.parentItem(), OUT_PORT)
+        qp_end = self.output_port.plug_pos(self.parentItem(), IN_PORT)
+
+        # path.moveTo(qp_start)
+        # ctr1, ctr2 = self.spline(qp_start, self.layout_path[0], start=True)
+        # path.cubicTo(ctr1, ctr2, self.layout_path[0])
+
+        # path.moveTo(self.layout_path[1])
+        path.moveTo(qp_end)
+        for i in range(2, len(self.layout_path), 3):
+            path.cubicTo(*self.layout_path[i:i + 3])
+
+        # path.lineTo(self.layout_path[0])
+        path.lineTo(qp_start)
+
+        # ctr1, ctr2 = self.spline(self.layout_path[-1], qp_end, start=False)
+        # path.cubicTo(ctr1, ctr2, qp_end)
+
+        ####################################################
 
         # for p1, p2 in pairwise(qp_points):
         #     ctr1, ctr2 = self.spline(p1, p2)
         #     path.cubicTo(ctr1, ctr2, p2)
 
-        for s in splines:
-            path.cubicTo(*[QtCore.QPointF(*pt) for pt in s[1:]])
+        # for s in splines:
+        #     path.cubicTo(*[QtCore.QPointF(*pt) for pt in s[1:]])
 
         # for p in self.layout_path:
         #     path.lineTo(p)

@@ -9,6 +9,8 @@ from .constants import (IN_PORT, OUT_PORT, NODE_SEL_COLOR,
 from pygears.core.port import InPort
 from pygears.conf import reg_inject, Inject
 
+import pygraphviz as pgv
+from . import gv_utils
 from grandalf.layouts import SugiyamaLayout
 from grandalf.graphs import Vertex, Edge, Graph
 from grandalf.routing import EdgeViewer
@@ -67,16 +69,22 @@ def inst_children(node):
 def hier_expand(node, padding=40):
     bound = node.node_bounding_rect
 
+    print(bound)
     width, height = bound.width(), bound.height()
 
-    if width < node.minimum_size[0]:
-        width = node.minimum_size[0]
+    if node.collapsed:
+        if width < node.minimum_size[0]:
+            width = node.minimum_size[0]
 
-    if height < node.minimum_size[1]:
-        height = node.minimum_size[1]
+        if height < node.minimum_size[1]:
+            height = node.minimum_size[1]
 
-    node._width = width + padding * 2
-    node._height = height + padding * 2
+        node._width = width + padding * 2
+        node._height = height + padding * 2
+    else:
+        node._width = width
+        node._height = height + padding * 2
+
     node.post_init()
 
     # node.parent.layout()
@@ -185,6 +193,11 @@ class NodeItem(AbstractNodeItem):
 
         self.parent = parent
         self.graph = graph
+        self.layout_graph = pgv.AGraph(
+            directed=True, rankdir='LR', splines='true', esep=1)
+
+        self.layout_pipe_map = {}
+
         self._text_item = QtWidgets.QGraphicsTextItem(self.name, self)
         self._input_items = {}
         self._output_items = {}
@@ -320,7 +333,7 @@ class NodeItem(AbstractNodeItem):
                 yield p
 
     def set_pos(self, x=0.0, y=0.0):
-        self.pos = (x, y)
+        self.setPos(x, y)
         # print(f'Pos {self.model.name}: {self.pos}')
         # if not self.hierarchical:
         #     return
@@ -357,14 +370,22 @@ class NodeItem(AbstractNodeItem):
         text.setFont(text.font())
         # text.setVisible(display_name)
 
-        v = Vertex(port_item)
-        v.view = defaultview(10, 10)
-
         if isinstance(port, InPort):
-            self.layout_inport_vertices[port_item] = v
+            self.layout_graph.add_node(
+                f'i{len(self._input_items)}',
+                label='',
+                rank='source',
+                width=2 / 72,
+                height=2 / 72)
             self._input_items[port_item] = text
         else:
-            self.layout_outport_vertices[port_item] = v
+            self.layout_graph.add_node(
+                f'o{len(self._output_items)}',
+                label='',
+                rank='sink',
+                width=2 / 72,
+                height=2 / 72)
+
             self._output_items[port_item] = text
 
         return port_item
@@ -531,19 +552,17 @@ class NodeItem(AbstractNodeItem):
         height = self._height - padding_y
 
         # adjust input position
-        if self.inputs:
+        if self.collapsed and self.inputs:
             port_width = self.inputs[0].boundingRect().width()
             port_height = self.inputs[0].boundingRect().height()
             chunk = (height / len(self.inputs))
             port_x = (port_width / 2) * -1
             port_y = (chunk / 2) - (port_height / 2)
             # for port in self.inputs:
-            for port, v in self.layout_inport_vertices.items():
-                if hasattr(v.view, 'xy'):
-                    port.setPos(port_x + padding_x, v.view.xy[1])
-                else:
-                    port.setPos(port_x + padding_x, port_y + (padding_y / 2))
+            for i, p in enumerate(self.inputs):
+                p.setPos(port_x + padding_x, port_y + (padding_y / 2) + 15)
                 port_y += chunk
+
         # adjust input text position
         for port, text in self._input_items.items():
             txt_height = text.boundingRect().height() - 8.0
@@ -552,20 +571,18 @@ class NodeItem(AbstractNodeItem):
             text.setPos(txt_x + 3.0, txt_y)
 
         # adjust output position
-        if self.outputs:
+        if self.collapsed and self.outputs:
             port_width = self.outputs[0].boundingRect().width()
             port_height = self.outputs[0].boundingRect().height()
             chunk = height / len(self.outputs)
             port_x = width - (port_width / 2)
             port_y = (chunk / 2) - (port_height / 2)
             # for port in self.outputs:
-            for port, v in self.layout_outport_vertices.items():
-                if hasattr(v.view, 'xy'):
-                    port.setPos(port_x + padding_x, v.view.xy[1])
-                else:
-                    port.setPos(port_x, port_y + (padding_y / 2))
 
+            for i, p in enumerate(self.outputs):
+                p.setPos(port_x, port_y + (padding_y / 2) + 15)
                 port_y += chunk
+
         # adjust output text position
         for port, text in self._output_items.items():
             txt_width = text.boundingRect().width()
@@ -632,7 +649,7 @@ class NodeItem(AbstractNodeItem):
 
         # arrange input and output ports.
         self.arrange_ports(padding_y=35.0)
-        self.offset_ports(0.0, 15.0)
+        # self.offset_ports(0.0, 15.0)
 
         for p in self.pipes:
             if not self.collapsed:
@@ -646,13 +663,13 @@ class NodeItem(AbstractNodeItem):
         if self.parent is not None:
             node.setParentItem(self)
         else:
-            self.graph.add_node(node, node.pos)
+            self.graph.add_node(node, node.pos())
 
         node.update()
 
+        self.layout_graph.add_node(id(node), shape='none', margin=0)
+
         self._nodes.append(node)
-        v = Vertex(node)
-        self.layout_vertices[node] = v
 
     def connect(self, port1, port2):
         node1 = port1.node
@@ -666,112 +683,225 @@ class NodeItem(AbstractNodeItem):
 
         self.pipes.append(pipe)
 
-        # pipe = port1.connect_to(port2)
-        # pipe.parent = self
-
         if (node2 is not self) and (node1 is not self):
-            self.layout_edges.append(
-                Edge(
-                    self.layout_vertices[node1],
-                    self.layout_vertices[node2],
-                    data=pipe))
-
-            pipe.view = EdgeViewer()
-            self.layout_edges[-1].view = pipe.view
-
+            self.layout_graph.add_edge(
+                id(node1),
+                id(node2),
+                tailport=f'o{pipe.output_port.model.index}',
+                headport=f'i{pipe.input_port.model.index}',
+                key=id(pipe))
         elif (node2 is self):
-            self.layout_edges.append(
-                Edge(self.layout_vertices[node1],
-                     self.layout_outport_vertices[port2]))
+            self.layout_graph.add_edge(
+                id(node1),
+                f'o{pipe.input_port.model.index}',
+                tailport=f'o{pipe.output_port.model.index}',
+                key=id(pipe))
         else:
-            self.layout_edges.append(
-                Edge(self.layout_inport_vertices[port1],
-                     self.layout_vertices[node2]))
+            self.layout_graph.add_edge(
+                f'i{pipe.input_port.model.index}',
+                id(node2),
+                headport=f'i{pipe.input_port.model.index}',
+                key=id(pipe))
 
     @property
     def node_bounding_rect(self):
         bound = QtCore.QRectF()
         for n in self._nodes:
             br = n.boundingRect()
-            br.translate(*n.pos)
+            br.translate(n.x(), n.y())
             bound = bound.united(br)
+
+        if not self.collapsed:
+            for p in self.inputs:
+                br = p.boundingRect()
+                br.translate(p.x() + br.width() / 2, p.y())
+                bound = bound.united(br)
+
+            for p in self.outputs:
+                br = p.boundingRect()
+                br.translate(p.x() - br.width() / 2, p.y())
+                bound = bound.united(br)
 
         return bound
 
+    def get_layout_edge(self, pipe):
+        node1 = pipe.output_port.node
+        node2 = pipe.input_port.node
+
+        if node1 is self:
+            node1_id = f'i{pipe.input_port.model.index}'
+        else:
+            node1_id = id(node1)
+
+        if node2 is self:
+            node2_id = f'o{pipe.input_port.model.index}'
+        else:
+            node2_id = id(node2)
+
+        return self.layout_graph.get_edge(node1_id, node2_id, id(pipe))
+
+    def get_layout_node(self, node):
+        return self.layout_graph.get_node(str(id(node)))
+
     def layout(self):
+        print(f'Laying out {self.model.name}')
         if not self.hierarchical:
             return
 
-        all_port_vertices = {
-            **self.layout_inport_vertices,
-            **self.layout_outport_vertices
-        }
-
         if self.collapsed:
             self._width, self._height = self.collapsed_size
-
-            for n, v in all_port_vertices.items():
-                if hasattr(v.view, 'xy'):
-                    del v.view.xy
             self.post_init()
             return
 
-        all_vertices = {**self.layout_vertices, **all_port_vertices}
-        g = Graph(list(all_vertices.values()), self.layout_edges)
-
-        for node, v in self.layout_vertices.items():
+        for node in self._nodes:
             if hasattr(node, 'layout'):
                 node.layout()
-            v.view = defaultview(node.width, node.height)
 
-        # sug = DigcoLayout(g.C[0])
-        sug = SugiyamaLayout(g.C[0])
+        for node in self._nodes:
+            gvn = self.get_layout_node(node)
+            gvn.attr['label'] = gv_utils.get_node_record(node).replace(
+                '\n', '')
 
-        # sug.init_all(roots=self.layout_dummy_vertices[0:1])
-        sug.init_all(optimize=True)
-        # sug.xspace = 20
-        sug.yspace = 50
+        # for i in range(len(self.inputs)):
+        #     gvn = self.layout_graph.get_node(f'i{i}')
 
-        # sug.route_edge = route_with_rounded_corners
-        sug.draw(5)
-        sug.draw_edges()
+        # for i in range(len(self.outputs)):
+        #     gvn = self.layout_graph.get_node(f'o{i}')
+
+        # for pipe in self.pipes:
+        #     gve = self.get_layout_edge(pipe)
+
+        print(self.model.name)
+        self.layout_graph.layout(prog='dot')
+        if self.model.name == '':
+            self.layout_graph.draw('proba.png')
+            self.layout_graph.draw('proba.dot')
+        else:
+            self.layout_graph.draw(f'{self.model.name.replace("/", "_")}.png')
+            self.layout_graph.draw(f'{self.model.name.replace("/", "_")}.dot')
+
+        # if self.model.name == '/ref_model':
+        #     self.layout_graph.draw('proba.dot')
+
+        # all_vertices = {**self.layout_vertices, **all_port_vertices}
+        # g = Graph(list(all_vertices.values()), self.layout_edges)
+
+        # for node, v in self.layout_vertices.items():
+        #     if hasattr(node, 'layout'):
+        #         node.layout()
+        #     v.view = defaultview(node.width, node.height)
+
+        # # sug = DigcoLayout(g.C[0])
+        # sug = SugiyamaLayout(g.C[0])
+
+        # # sug.init_all(roots=self.layout_dummy_vertices[0:1])
+        # sug.init_all(optimize=True)
+        # # sug.xspace = 20
+        # sug.yspace = 50
+
+        # # sug.route_edge = route_with_rounded_corners
+        # sug.draw(5)
+        # sug.draw_edges()
 
         # for v in self.layout_dummy_vertices:
         #     print(vars(v.view))
 
-        self.layers = []
-        for layer in sug.layers:
-            layer = [
-                v.data for v in layer if getattr(v, 'data', None) and (
-                    not isinstance(v.data, PortItem))
-            ]
-            if layer:
-                self.layers.append(layer)
+        # self.layers = []
+        # for layer in sug.layers:
+        #     layer = [
+        #         v.data for v in layer if getattr(v, 'data', None) and (
+        #             not isinstance(v.data, PortItem))
+        #     ]
+        #     if layer:
+        #         self.layers.append(layer)
+
+        # padding = 40
+        # x_min = min(
+        #     v.view.xy[1] - v.view.h / 2 for v in self.layout_vertices.values())
+
+        # y_min = min(
+        #     v.view.xy[0] - v.view.w / 2 for v in self.layout_vertices.values())
+
+        # for n, v in self.layout_vertices.items():
+        #     n.set_pos(v.view.xy[1] - x_min - v.view.h / 2 + padding,
+        #               v.view.xy[0] - y_min - v.view.w / 2 + padding)
+
+        # for n, v in all_port_vertices.items():
+        #     v.view.xy = (v.view.xy[1] - x_min + padding,
+        #                  v.view.xy[0] - y_min + padding)
+
+        def gv_point_load(point):
+            return tuple(float(num) for num in point.split(',')[-2:])
 
         padding = 40
-        x_min = min(
-            v.view.xy[1] - v.view.h / 2 for v in self.layout_vertices.values())
+        max_y = 0
+        max_x = 0
 
-        y_min = min(
-            v.view.xy[0] - v.view.w / 2 for v in self.layout_vertices.values())
+        # if self.model.name == '/ref_model':
+        #     import pdb
+        #     pdb.set_trace()
 
-        for n, v in self.layout_vertices.items():
-            n.set_pos(v.view.xy[1] - x_min - v.view.h / 2 + padding,
-                      v.view.xy[0] - y_min - v.view.w / 2 + padding)
+        for node in self._nodes:
+            gvn = self.get_layout_node(node)
+            pos = gv_point_load(gvn.attr['pos'])
+            node.set_pos(pos[0] - node.width / 2, pos[1] + node.height / 2)
 
-        for n, v in all_port_vertices.items():
-            v.view.xy = (v.view.xy[1] - x_min + padding,
-                         v.view.xy[0] - y_min + padding)
+            if self.outputs:
+                self.layout_graph.add_edge(
+                    gvn, self.layout_graph.get_node(f'o0'), style='invis')
 
-        for edge in self.layout_edges:
-            if not hasattr(edge, 'view'):
-                continue
+            max_y = max(max_y, (pos[1] + node.height / 2))
+            max_x = max(max_x, (pos[0] + node.width / 2))
 
-            pipe = edge.data
+        if self.inputs:
+            port_height = self.inputs[0].boundingRect().height()
 
-            pipe.layout_path = [
-                QtCore.QPointF(p[1] - x_min + padding, p[0] - y_min + padding)
-                for p in reversed(edge.view._pts[1:-1])
-            ]
+            for i, p in enumerate(self.inputs):
+                gvn = self.layout_graph.get_node(f'i{i}')
+                pos = gv_point_load(gvn.attr['pos'])
+
+                p.setPos(-port_height / 2, pos[1] + port_height / 2)
+
+        if self.outputs:
+            port_height = self.outputs[0].boundingRect().height()
+
+            for i, p in enumerate(self.outputs):
+                gvn = self.layout_graph.get_node(f'o{i}')
+                pos = gv_point_load(gvn.attr['pos'])
+
+                p.setPos(pos[0] - port_height / 2, pos[1] + port_height / 2)
+
+        for pipe in self.pipes:
+            gve = self.get_layout_edge(pipe)
+            path = [gv_point_load(point) for point in gve.attr['pos'].split()]
+            pipe.layout_path = [QtCore.QPointF(p[0], p[1]) for p in path]
+
+            max_y = max(max_y, *(p.y() for p in pipe.layout_path))
+
+        for node in self._nodes:
+            node.setY(max_y - node.y() + padding)
+
+        for p in self.inputs:
+            p.setY(max_y - p.y() + padding)
+
+        for p in self.outputs:
+            p.setY(max_y - p.y() + padding)
+            if p.x() <= max_x:
+                p.setX(max_x + padding)
+
+        for pipe in self.pipes:
+            for p in pipe.layout_path:
+                p.setY(max_y - p.y() + padding)
+
+        # for edge in self.layout_edges:
+        #     if not hasattr(edge, 'view'):
+        #         continue
+
+        #     pipe = edge.data
+
+        #     pipe.layout_path = [
+        #         QtCore.QPointF(p[1] - x_min + padding, p[0] - y_min + padding)
+        #         for p in reversed(edge.view._pts[1:-1])
+        #     ]
 
         self.size_expander(self)
