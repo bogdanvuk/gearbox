@@ -69,7 +69,6 @@ def inst_children(node):
 def hier_expand(node, padding=40):
     bound = node.node_bounding_rect
 
-    print(bound)
     width, height = bound.width(), bound.height()
 
     if node.collapsed:
@@ -299,7 +298,6 @@ class NodeItem(AbstractNodeItem):
         if self.collapsed or not self.hierarchical:
             return
 
-        print(f'Collapsing: {self.model.name}')
         for obj in self.children:
             obj.hide()
 
@@ -309,8 +307,6 @@ class NodeItem(AbstractNodeItem):
     def expand(self):
         if not self.collapsed or not self.hierarchical:
             return None
-
-        print(f'Expanding: {self.model.name}')
 
         for obj in self.children:
             obj.show()
@@ -529,7 +525,6 @@ class NodeItem(AbstractNodeItem):
         height = port_height * (max([len(self.inputs), len(self.outputs)]) + 2)
         height += 10
 
-        print(f'Size {self.model.name}: {width}, {height}')
         return width, height
 
     def arrange_label(self):
@@ -744,7 +739,6 @@ class NodeItem(AbstractNodeItem):
         return self.layout_graph.get_node(str(id(node)))
 
     def layout(self):
-        print(f'Laying out {self.model.name}')
         if not self.hierarchical:
             return
 
@@ -771,7 +765,6 @@ class NodeItem(AbstractNodeItem):
         # for pipe in self.pipes:
         #     gve = self.get_layout_edge(pipe)
 
-        print(self.model.name)
         self.layout_graph.layout(prog='dot')
         if self.model.name == '':
             self.layout_graph.draw('proba.png')

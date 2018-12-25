@@ -155,14 +155,15 @@ def proba2():
     print("Hey2!!!")
 
 
-from pygears_view.gtkwave import verilator_waves
 from pygears.rtl.gear import rtl_from_gear_port
 
 
 @shortcut('graph', Qt.Key_W)
 @reg_inject
 def send_to_wave(
-        graph=Inject('viewer/graph'), gtkwave=Inject('viewer/gtkwave')):
+        graph=Inject('viewer/graph'),
+        gtkwave=Inject('viewer/gtkwave'),
+        gtkwave_status=Inject('viewer/gtkwave_status')):
 
     for pipe in graph.selected_pipes():
         rtl_port = rtl_from_gear_port(pipe.output_port.model)
@@ -170,7 +171,7 @@ def send_to_wave(
             return
 
         rtl_intf = rtl_port.consumer
-        sigs = verilator_waves[0].get_signals_for_intf(rtl_intf)
+        sigs = gtkwave_status.verilator_waves[0].get_signals_for_intf(rtl_intf)
         gtkw_fn = os.path.join(tempfile.gettempdir(), 'pygears.gtkw')
         with open(gtkw_fn, 'w') as f:
             gtkw = GTKWSave(f)
