@@ -42,7 +42,7 @@ class GtkWaveProc(QtCore.QObject):
     def command(self, cmd, cmd_id):
         self.p.send(cmd + '\n')
         self.p.expect('%')
-        self.response.emit(self.p.before, cmd_id)
+        self.response.emit(self.p.before.strip(), cmd_id)
 
     def quit(self):
         self.p.close()

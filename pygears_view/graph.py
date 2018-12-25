@@ -6,6 +6,7 @@ import warnings
 from .constants import (IN_PORT, OUT_PORT, PIPE_LAYOUT_CURVED,
                         PIPE_LAYOUT_STRAIGHT, PIPE_DEFAULT_COLOR)
 
+from .graph_sim_status import GraphSimStatus
 from .node_abstract import AbstractNodeItem
 from .pipe import Pipe
 from .port import PortItem
@@ -57,6 +58,7 @@ class Graph(QtWidgets.QGraphicsView):
         self.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         self.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         self.setViewportUpdateMode(QtWidgets.QGraphicsView.FullViewportUpdate)
+        self.sim_status = GraphSimStatus(self)
         self._pipe_layout = PIPE_LAYOUT_STRAIGHT
         self._live_pipe = None
         self._detached_port = None
@@ -87,7 +89,8 @@ class Graph(QtWidgets.QGraphicsView):
         return '{}.{}()'.format(self.__module__, self.__class__.__name__)
 
     def _sim_refresh_slot(self):
-        self.sim_refresh.emit()
+        self.sim_status.update()
+        # self.sim_refresh.emit()
         self.print_modeline()
 
     @reg_inject

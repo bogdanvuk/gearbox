@@ -39,7 +39,7 @@ class Pipe(QtWidgets.QGraphicsPathItem):
         super().__init__(parent)
         self.graph = graph
         self.sim_activity = sim_activity
-        self.graph.sim_refresh.connect(self.sim_refresh)
+        # self.graph.sim_refresh.connect(self.sim_refresh)
         self.model = input_port.model.consumer
         self.setZValue(Z_VAL_PIPE)
         self.setAcceptHoverEvents(True)
@@ -65,56 +65,56 @@ class Pipe(QtWidgets.QGraphicsPathItem):
         return '{}.Pipe(\'{}\', \'{}\')'.format(self.__module__, in_name,
                                                 out_name)
 
-    def get_activity_status(self):
-        try:
-            return self.sim_activity.get_port_status(self.model)
-        except KeyError:
-            pass
+    # def get_activity_status(self):
+    #     try:
+    #         return self.sim_activity.get_port_status(self.model)
+    #     except KeyError:
+    #         pass
 
-        from pygears.rtl.gear import rtl_from_gear_port
-        from pygears_view.gtkwave import verilator_waves
+    #     from pygears.rtl.gear import rtl_from_gear_port
+    #     from pygears_view.gtkwave import verilator_waves
 
-        # import pdb; pdb.set_trace()
-        print(f'Pipe: {self}')
-        if not hasattr(self, 'rtl_port'):
-            # port = self.input_port.model
-            port = self.output_port.model
-            self.rtl_port = rtl_from_gear_port(port)
+    #     # import pdb; pdb.set_trace()
+    #     print(f'Pipe: {self}')
+    #     if not hasattr(self, 'rtl_port'):
+    #         # port = self.input_port.model
+    #         port = self.output_port.model
+    #         self.rtl_port = rtl_from_gear_port(port)
 
-        rtl_intf = self.rtl_port.consumer
-        try:
-            sigs = verilator_waves[0].get_signals_for_intf(rtl_intf)
-        except:
-            import pdb
-            pdb.set_trace()
+    #     rtl_intf = self.rtl_port.consumer
+    #     try:
+    #         sigs = verilator_waves[0].get_signals_for_intf(rtl_intf)
+    #     except:
+    #         import pdb
+    #         pdb.set_trace()
 
-        print(sigs)
-        valid = 0
-        ready = 0
-        viewer = registry('viewer/gtkwave')
-        for s in verilator_waves[0].get_signals_for_intf(rtl_intf):
-            if s.endswith('_valid'):
-                ret = viewer.command(
-                    f'gtkwave::signalChangeList {s} -dir backward -max 1')
-                valid = int(ret.split()[1])
-            elif s.endswith('_ready'):
-                ret = viewer.command(
-                    f'gtkwave::signalChangeList {s} -dir backward -max 1')
-                ready = int(ret.split()[1])
+    #     print(sigs)
+    #     valid = 0
+    #     ready = 0
+    #     viewer = registry('viewer/gtkwave')
+    #     for s in verilator_waves[0].get_signals_for_intf(rtl_intf):
+    #         if s.endswith('_valid'):
+    #             ret = viewer.command(
+    #                 f'gtkwave::signalChangeList {s} -dir backward -max 1')
+    #             valid = int(ret.split()[1])
+    #         elif s.endswith('_ready'):
+    #             ret = viewer.command(
+    #                 f'gtkwave::signalChangeList {s} -dir backward -max 1')
+    #             ready = int(ret.split()[1])
 
-        print('Valid, ready: ', valid, ready)
+    #     print('Valid, ready: ', valid, ready)
 
-        if valid and not ready:
-            return 'active'
-        elif not valid and ready:
-            return 'waited'
-        elif valid and ready:
-            return 'handshaked'
-        else:
-            return 'empty'
+    #     if valid and not ready:
+    #         return 'active'
+    #     elif not valid and ready:
+    #         return 'waited'
+    #     elif valid and ready:
+    #         return 'handshaked'
+    #     else:
+    #         return 'empty'
 
-    def sim_refresh(self):
-        status = self.get_activity_status()
+    def set_status(self, status):
+        # status = self.get_activity_status()
 
         new_color = PIPE_SIM_STATUS_COLOR[status]
         if new_color != self.color:
