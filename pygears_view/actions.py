@@ -5,8 +5,7 @@ from pygears.conf import Inject, reg_inject, registry
 from .main_window import Shortcut
 from functools import wraps, partial
 from .node_search import node_search_completer
-from vcd.gtkw import GTKWSave
-import tempfile
+from .pipe import Pipe
 import os
 
 
@@ -21,9 +20,9 @@ def single_select_action(func):
     @wraps(func)
     @reg_inject
     def wrapper(graph=Inject('viewer/graph')):
-        nodes = graph.selected_nodes()
-        if len(nodes) == 1:
-            func(nodes[0], graph)
+        items = graph.selected_items()
+        if len(items) == 1:
+            func(items[0], graph)
 
     return wrapper
 
@@ -31,7 +30,7 @@ def single_select_action(func):
 @shortcut('graph', Qt.SHIFT + Qt.Key_K)
 @single_select_action
 def node_up_level(node, graph):
-    if node.collapsed:
+    if isinstance(node, Pipe) or node.collapsed:
         graph.select(node.parent)
     else:
         node.collapse()
@@ -40,6 +39,9 @@ def node_up_level(node, graph):
 @shortcut('graph', Qt.SHIFT + Qt.Key_J)
 @single_select_action
 def node_down_level(node, graph):
+    if isinstance(node, Pipe):
+        return
+
     if node.collapsed:
         node.expand()
 
@@ -125,6 +127,9 @@ def next_buffer(main=Inject('viewer/main')):
 @shortcut('graph', Qt.Key_Return)
 @single_select_action
 def toggle_expand(node, graph):
+    if isinstance(node, Pipe):
+        return
+
     if node.collapsed:
         node.expand()
     else:
@@ -162,24 +167,10 @@ from pygears.rtl.gear import rtl_from_gear_port
 @reg_inject
 def send_to_wave(
         graph=Inject('viewer/graph'),
-        gtkwave=Inject('viewer/gtkwave'),
         gtkwave_status=Inject('viewer/gtkwave_status')):
 
     for pipe in graph.selected_pipes():
-        rtl_port = rtl_from_gear_port(pipe.output_port.model)
-        if rtl_port is None:
-            return
-
-        rtl_intf = rtl_port.consumer
-        sigs = gtkwave_status.verilator_waves[0].get_signals_for_intf(rtl_intf)
-        gtkw_fn = os.path.join(tempfile.gettempdir(), 'pygears.gtkw')
-        with open(gtkw_fn, 'w') as f:
-            gtkw = GTKWSave(f)
-            with gtkw.group("    " + rtl_intf.basename):
-                for s in sigs:
-                    gtkw.trace(s)
-
-        gtkwave.command_nb(f'gtkwave::loadFile {gtkw_fn}')
+        gtkwave_status.show_pipe(pipe)
 
 
 # @shortcut('graph', Qt.Key_L)

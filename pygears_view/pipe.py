@@ -37,6 +37,7 @@ class Pipe(QtWidgets.QGraphicsPathItem):
                  graph=Inject('viewer/graph'),
                  sim_activity=Inject('sim/activity')):
         super().__init__(parent)
+        self.parent = parent
         self.graph = graph
         self.sim_activity = sim_activity
         # self.graph.sim_refresh.connect(self.sim_refresh)

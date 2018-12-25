@@ -390,6 +390,9 @@ padding-right: 10px;
                 pipes.append(item)
         return pipes
 
+    def selected_items(self):
+        return self.selected_nodes() + self.selected_pipes()
+
     def add_node(self, node, pos=None):
         print(f'Adding: {node.name}')
         pos = pos or (self._previous_pos.x(), self._previous_pos.y())

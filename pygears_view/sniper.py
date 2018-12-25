@@ -91,8 +91,17 @@ class Sniper:
 
     def snipe_select(self, objtype=None):
         nodes = self.graph.selected_nodes()
+
+        nodes = [
+            node.parent if node.collapsed else node for node in nodes
+        ]
+
         if not nodes:
-            nodes = [self.graph.top]
+            pipes = self.graph.selected_pipes()
+            if not pipes:
+                nodes = [self.graph.top]
+            else:
+                nodes = [pipe.parent for pipe in pipes]
 
         keys = [2]
 
@@ -110,10 +119,10 @@ class Sniper:
 
                 if isinstance(obj, NodeItem):
                     text.setPos(
-                        obj.mapToScene((obj.boundingRect().bottomLeft() +
-                                        obj.boundingRect().bottomRight()) / 2)
-                        - QtCore.QPointF(text.boundingRect().width() / 2,
-                                         text.boundingRect().height()))
+                        obj.mapToScene((obj.boundingRect().bottomLeft() + obj.
+                                        boundingRect().bottomRight()) / 2) -
+                        QtCore.QPointF(text.boundingRect().width() / 2,
+                                       text.boundingRect().height()))
                 else:
                     text.setPos(
                         obj.mapToScene(obj.path().pointAtPercent(0.5)) -

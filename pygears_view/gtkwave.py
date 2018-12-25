@@ -1,5 +1,7 @@
 from pygears.core.hier_node import HierVisitorBase
+from vcd.gtkw import GTKWSave
 
+import tempfile
 from pygears.conf import Inject, reg_inject
 from pygears.rtl.gear import rtl_from_gear_port
 from typing import NamedTuple
@@ -51,7 +53,7 @@ class VerilatorWave:
 
     def get_signals_for_intf(self, rtl_intf):
         signals = fnmatch.filter(self.signal_name_map.keys(),
-                                 rtl_intf.name + '*')
+                                 rtl_intf.name + '_*')
         return [self.signal_name_map[s] for s in signals]
 
 
@@ -145,8 +147,10 @@ class GraphGtkWaveStatus:
     @reg_inject
     def __init__(self,
                  graph=Inject('viewer/graph'),
+                 gtkwave=Inject('viewer/gtkwave'),
                  sim_bridge=MayInject('viewer/sim_bridge')):
         self.graph = graph
+        self.gtkwave = gtkwave
 
         if sim_bridge:
             sim_bridge.sim_refresh.connect(self.update)
@@ -156,6 +160,36 @@ class GraphGtkWaveStatus:
         ]
 
         self.pipe_collect = GraphPipeCollector(self.verilator_waves)
+
+        self.pipes_on_wave = {}
+
+    def show_pipe(self, pipe):
+        rtl_port = rtl_from_gear_port(pipe.output_port.model)
+        if rtl_port is None:
+            return
+
+        rtl_intf = rtl_port.consumer
+        sigs = self.verilator_waves[0].get_signals_for_intf(rtl_intf)
+        gtkw_fn = os.path.join(tempfile.gettempdir(), 'pygears.gtkw')
+        with open(gtkw_fn, 'w') as f:
+            gtkw = GTKWSave(f)
+            with gtkw.group(rtl_intf.name, highlight=True):
+                for s in sigs:
+                    gtkw.trace(s)
+
+        self.gtkwave.command_nb(f'gtkwave::loadFile {gtkw_fn}')
+        self.pipes_on_wave[pipe] = rtl_intf.name
+
+        # ret = self.gtkwave.command('list_traces')
+        # print(ret)
+        ret = self.gtkwave.command(
+            f'select_trace_by_name "{self.pipes_on_wave[pipe]}"')
+        print(ret)
+        # ret = self.gtkwave.command('gtkwave::setTraceHighlightFromIndex 0 on')
+        # print(ret)
+        # ret = self.gtkwave.command('gtkwave::setTraceHighlightFromNameMatch add_s on')
+        # print(ret)
+
 
     def update_rtl_intf(self, pipe, wave_status):
         if wave_status == '1 0':
@@ -169,8 +203,7 @@ class GraphGtkWaveStatus:
 
         pipe.set_status(status)
 
-    @reg_inject
-    def update(self, gtkwave=Inject('viewer/gtkwave')):
+    def update(self):
         for v in self.verilator_waves:
             if not v.loaded:
                 if v.load_vcd():
@@ -179,11 +212,11 @@ class GraphGtkWaveStatus:
         if not all(v.loaded for v in self.verilator_waves):
             return
 
-        gtkwave.command(f'gtkwave::reLoadFile')
+        self.gtkwave.command(f'gtkwave::reLoadFile')
 
         signal_names = list(self.pipe_collect.rtl_intfs.values())
 
-        ret = gtkwave.command(f'get_values [list {" ".join(signal_names)}]')
+        ret = self.gtkwave.command(f'get_values [list {" ".join(signal_names)}]')
         self.rtl_status = ret.split('\n')
 
         # assert len(self.rtl_status) == len(self.pipe_collect.rtl_intfs)
