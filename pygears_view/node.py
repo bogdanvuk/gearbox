@@ -670,7 +670,7 @@ class NodeItem(AbstractNodeItem):
         node1 = port1.node
         node2 = port2.node
 
-        pipe = Pipe(port1, port2)
+        pipe = Pipe(port1, port2, parent=self)
         if self.parent is not None:
             pipe.setParentItem(self)
         else:
@@ -753,6 +753,12 @@ class NodeItem(AbstractNodeItem):
 
         for node in self._nodes:
             gvn = self.get_layout_node(node)
+            try:
+                del gvn.attr['width']
+                del gvn.attr['height']
+            except KeyError:
+                pass
+
             gvn.attr['label'] = gv_utils.get_node_record(node).replace(
                 '\n', '')
 
