@@ -166,6 +166,7 @@ class Pipe(QtWidgets.QGraphicsPathItem):
         painter.setPen(pen)
         painter.setRenderHint(painter.Antialiasing, True)
         painter.drawPath(self.path())
+        print(f"Drawing {self}: {self.path()}, on {self.parentItem()}")
 
         # path = QtGui.QPainterPath()
 
@@ -176,7 +177,7 @@ class Pipe(QtWidgets.QGraphicsPathItem):
 
         # path.lineTo(self.output_port.plug_pos(OUT_PORT))
 
-        painter.drawPath(self.path())
+        # painter.drawPath(self.path())
 
     def spline(self, pos1, pos2, start=True):
         ctr_offset_x1, ctr_offset_x2 = pos1.x(), pos2.x()

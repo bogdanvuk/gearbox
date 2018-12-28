@@ -11,6 +11,7 @@ from .pipe import Pipe
 from .port import PortItem
 from .scene import NodeScene
 from .node import NodeItem
+from .node_model import NodeModel
 from .html_utils import tabulate, fontify
 
 from pygears.conf import Inject, reg_inject, bind, MayInject, registry
@@ -45,7 +46,8 @@ def graph(main=Inject('viewer/main'), root=Inject('gear/hier_root')):
     viewer.resize(800, 500)
     viewer.setGeometry(500, viewer.y(), 800, 500)
 
-    top = NodeItem(root)
+    # top = NodeItem(root)
+    top = NodeModel(root).view
     viewer.top = top
     top.layout()
     viewer.fit_all()

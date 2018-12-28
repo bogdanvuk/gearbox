@@ -187,11 +187,12 @@ def node_painter(self, painter, option, widget):
 
 class NodeItem(AbstractNodeItem):
     @reg_inject
-    def __init__(self, model, parent=None, graph=Inject('viewer/graph')):
-        super().__init__(model.basename)
+    def __init__(self, name, parent=None, model=None, graph=Inject('viewer/graph')):
+        super().__init__(name)
 
         self.parent = parent
         self.graph = graph
+        self.model = model
         self.layout_graph = pgv.AGraph(
             directed=True, rankdir='LR', splines='true', esep=1)
 
@@ -202,7 +203,6 @@ class NodeItem(AbstractNodeItem):
         self._output_items = {}
         self._nodes = []
         self.pipes = []
-        self.model = model
         self.minimum_size = (80, 80)
 
         self.layout_vertices = {}
@@ -211,38 +211,30 @@ class NodeItem(AbstractNodeItem):
         self.layout_inport_vertices = {}
         self.layout_outport_vertices = {}
 
-        if self.hierarchical:
-            self.setZValue(Z_VAL_PIPE - 1)
-            self.size_expander = hier_expand
-            self.painter = hier_painter
-        else:
-            self.size_expander = lambda x: None
-            self.painter = node_painter
-
-        if parent is not None:
-            for port in model.in_ports + model.out_ports:
-                self._add_port(port)
-
-        self._hide_single_port_labels()
+        # if parent is not None:
+        #     for port in model.in_ports + model.out_ports:
+        #         self._add_port(port)
 
         self.collapsed = False if parent is None else True
-        self.collapsed_size = self.calc_size()
-        self._width, self._height = self.collapsed_size
-
-        self.post_init()
-
         self.layers = []
 
         # First add node to the scene, so that all pipes can be rendered in the
         # inst_children() procedure
-        if self.parent is not None:
-            self.parent.add_node(self)
+        # if self.parent is not None:
+        #     self.parent.add_node(self)
 
-        self.child_node_map = inst_children(self)
+        # self.child_node_map = inst_children(self)
 
-        if parent is not None:
-            for node in self._nodes:
-                node.hide()
+        # if parent is not None:
+        #     for node in self._nodes:
+        #         node.hide()
+
+    def setup_done(self):
+        self._hide_single_port_labels()
+        self.collapsed_size = self.calc_size()
+        self._width, self._height = self.collapsed_size
+
+        self.post_init()
 
     def mouseDoubleClickEvent(self, event):
         self.auto_resize()
@@ -268,7 +260,7 @@ class NodeItem(AbstractNodeItem):
 
     @property
     def hierarchical(self):
-        return bool(self.model.child)
+        return bool(self._nodes)
 
     def auto_resize(self, nodes=None):
         if self.collapsed:
@@ -772,12 +764,8 @@ class NodeItem(AbstractNodeItem):
         #     gve = self.get_layout_edge(pipe)
 
         self.layout_graph.layout(prog='dot')
-        if self.model.name == '':
-            self.layout_graph.draw('proba.png')
-            self.layout_graph.draw('proba.dot')
-        else:
-            self.layout_graph.draw(f'{self.model.name.replace("/", "_")}.png')
-            self.layout_graph.draw(f'{self.model.name.replace("/", "_")}.dot')
+        self.layout_graph.draw('proba.png')
+        self.layout_graph.draw('proba.dot')
 
         # if self.model.name == '/ref_model':
         #     self.layout_graph.draw('proba.dot')
@@ -903,4 +891,8 @@ class NodeItem(AbstractNodeItem):
         #         for p in reversed(edge.view._pts[1:-1])
         #     ]
 
-        self.size_expander(self)
+        if self.parent is not None:
+            self.size_expander(self)
+        else:
+            for p in self.pipes:
+                p.draw_path()
