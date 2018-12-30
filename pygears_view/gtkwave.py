@@ -14,7 +14,6 @@ import fnmatch
 import os
 import re
 
-bla = [0]
 
 class VerilatorWave:
     @reg_inject
@@ -184,6 +183,8 @@ class GraphGtkWaveStatus:
         prefix = self.verilator_waves[0].intf_basename(rtl_intf)
         intf_name = rtl_intf.name.replace('.', '/')
         status_sig = prefix + '_state[1:0]'
+
+        self.pipes_on_wave[pipe] = intf_name
 
         commands = []
 

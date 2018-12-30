@@ -58,6 +58,7 @@ class Graph(QtWidgets.QGraphicsView):
 
     moved_nodes = QtCore.Signal(dict)
     connection_changed = QtCore.Signal(list, list)
+    selection_changed = QtCore.Signal(list)
     node_selected = QtCore.Signal(str)
     sim_refresh = QtCore.Signal()
 
@@ -70,6 +71,7 @@ class Graph(QtWidgets.QGraphicsView):
         scene_area = 8000.0
         scene_pos = (scene_area / 2) * -1
         self.setScene(NodeScene(self))
+        self.scene().selectionChanged.connect(self.selection_changed_slot)
         self.setSceneRect(scene_pos, scene_pos, scene_area, scene_area)
         self.setRenderHint(QtGui.QPainter.Antialiasing, True)
         self.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
@@ -277,65 +279,65 @@ padding-right: 10px;
         # pipe.draw_path(pipe.input_port, pipe.output_port)
         return pipe
 
-    def sceneMousePressEvent(self, event):
-        """
-        triggered mouse press event for the scene (takes priority over viewer).
-         - detect selected pipe and start connection.
-         - remap Shift and Ctrl modifier.
+    # def sceneMousePressEvent(self, event):
+    #     """
+    #     triggered mouse press event for the scene (takes priority over viewer).
+    #      - detect selected pipe and start connection.
+    #      - remap Shift and Ctrl modifier.
 
-        Args:
-            event (QtWidgets.QGraphicsScenePressEvent):
-                The event handler from the QtWidgets.QGraphicsScene
-        """
-        ctrl_modifier = event.modifiers() == QtCore.Qt.ControlModifier
-        alt_modifier = event.modifiers() == QtCore.Qt.AltModifier
-        shift_modifier = event.modifiers() == QtCore.Qt.ShiftModifier
-        if shift_modifier:
-            event.setModifiers(QtCore.Qt.ControlModifier)
-        elif ctrl_modifier:
-            event.setModifiers(QtCore.Qt.ShiftModifier)
+    #     Args:
+    #         event (QtWidgets.QGraphicsScenePressEvent):
+    #             The event handler from the QtWidgets.QGraphicsScene
+    #     """
+    #     ctrl_modifier = event.modifiers() == QtCore.Qt.ControlModifier
+    #     alt_modifier = event.modifiers() == QtCore.Qt.AltModifier
+    #     shift_modifier = event.modifiers() == QtCore.Qt.ShiftModifier
+    #     if shift_modifier:
+    #         event.setModifiers(QtCore.Qt.ControlModifier)
+    #     elif ctrl_modifier:
+    #         event.setModifiers(QtCore.Qt.ShiftModifier)
 
-        if not alt_modifier:
-            pos = event.scenePos()
-            # port_items = self._items_near(pos, PortItem, 5, 5)
-            # if port_items:
-            #     port = port_items[0]
-            #     if not port.multi_connection and port.connected_ports:
-            #         self._detached_port = port.connected_ports[0]
-            #     self.start_live_connection(port)
-            #     if not port.multi_connection:
-            #         [p.delete() for p in port.connected_pipes]
-            #     return
+    #     if not alt_modifier:
+    #         pos = event.scenePos()
+    #         # port_items = self._items_near(pos, PortItem, 5, 5)
+    #         # if port_items:
+    #         #     port = port_items[0]
+    #         #     if not port.multi_connection and port.connected_ports:
+    #         #         self._detached_port = port.connected_ports[0]
+    #         #     self.start_live_connection(port)
+    #         #     if not port.multi_connection:
+    #         #         [p.delete() for p in port.connected_pipes]
+    #         #     return
 
-            node_items = self._items_near(pos, AbstractNodeItem, 3, 3)
-            if node_items:
-                node = node_items[0]
+    #         node_items = self._items_near(pos, AbstractNodeItem, 3, 3)
+    #         if node_items:
+    #             node = node_items[0]
 
-                # record the node positions at selection time.
-                for n in node_items:
-                    self._node_positions[n] = n.pos
+    #             # record the node positions at selection time.
+    #             for n in node_items:
+    #                 self._node_positions[n] = n.pos
 
-                # emit selected node id with LMB.
-                if event.button() == QtCore.Qt.LeftButton:
-                    self.node_selected.emit(node.id)
+    #             # emit selected node id with LMB.
+    #             if event.button() == QtCore.Qt.LeftButton:
+    #                 self.node_selected.emit(node.id)
 
-                if not node.model.child:
-                    return
+    #             if not node.model.child:
+    #                 return
 
-            # pipe_items = self._items_near(pos, Pipe, 3, 3)
-            # if pipe_items:
-            #     pipe = pipe_items[0]
-            #     attr = {IN_PORT: 'output_port', OUT_PORT: 'input_port'}
-            #     from_port = pipe.port_from_pos(pos, True)
-            #     to_port = getattr(pipe, attr[from_port.port_type])
-            #     if not from_port.multi_connection and from_port.connected_ports:
-            #         self._detached_port = from_port.connected_ports[0]
-            #     elif not to_port.multi_connection:
-            #         self._detached_port = to_port
+    #         # pipe_items = self._items_near(pos, Pipe, 3, 3)
+    #         # if pipe_items:
+    #         #     pipe = pipe_items[0]
+    #         #     attr = {IN_PORT: 'output_port', OUT_PORT: 'input_port'}
+    #         #     from_port = pipe.port_from_pos(pos, True)
+    #         #     to_port = getattr(pipe, attr[from_port.port_type])
+    #         #     if not from_port.multi_connection and from_port.connected_ports:
+    #         #         self._detached_port = from_port.connected_ports[0]
+    #         #     elif not to_port.multi_connection:
+    #         #         self._detached_port = to_port
 
-            #     self.start_live_connection(from_port)
-            #     self._live_pipe.draw_path(self._start_port, None, pos)
-            #     pipe.delete()
+    #         #     self.start_live_connection(from_port)
+    #         #     self._live_pipe.draw_path(self._start_port, None, pos)
+    #         #     pipe.delete()
 
     def all_pipes(self):
         pipes = []
@@ -343,6 +345,9 @@ padding-right: 10px;
             if isinstance(item, Pipe):
                 pipes.append(item)
         return pipes
+
+    def selection_changed_slot(self):
+        self.selection_changed.emit(self.selected_items())
 
     def select(self, obj):
 
@@ -353,6 +358,9 @@ padding-right: 10px;
             p.setSelected(False)
 
         obj.setSelected(True)
+
+        # print("Selection changed!")
+        # self.selection_changed.emit(self.selected_items())
 
     def select_all(self):
         """

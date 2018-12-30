@@ -1,7 +1,7 @@
 #!/usr/bin/python
 from PySide2.QtCore import Qt
 from PySide2 import QtWidgets, QtGui, QtCore
-from pygears.conf import Inject, reg_inject, registry
+from pygears.conf import Inject, reg_inject, registry, inject_async, bind
 from .main_window import Shortcut
 from functools import wraps, partial
 from .node_search import node_search_completer
@@ -190,6 +190,34 @@ def send_to_wave(
 def node_search(
         minibuffer=Inject('viewer/minibuffer'), graph=Inject('viewer/graph')):
     minibuffer.complete(node_search_completer(graph.top))
+
+
+class GraphGtkwaveSelectSync(QtCore.QObject):
+    @reg_inject
+    def __init__(self, graph=Inject('viewer/graph')):
+        graph.selection_changed.connect(self.selection_changed)
+
+    @reg_inject
+    def selection_changed(self,
+                          selected,
+                          gtkwave=Inject('viewer/gtkwave'),
+                          gtkwave_status=Inject('viewer/gtkwave_status')):
+
+        selected_wave_pipes = []
+        for s in selected:
+            wave_intf = gtkwave_status.pipes_on_wave.get(s, None)
+            if wave_intf:
+                selected_wave_pipes.append(wave_intf)
+
+        if selected_wave_pipes:
+            gtkwave.command('gtkwave::/Edit/UnHighlight_All')
+            gtkwave.command('gtkwave::highlightSignalsFromList {' +
+                            " ".join(selected_wave_pipes) + '}')
+
+
+@inject_async
+def graph_gtkwave_select_sync(graph=Inject('viewer/graph')):
+    bind('viewer/graph_gtkwave_select_sync', GraphGtkwaveSelectSync(graph))
 
 
 def zoom_in(graph):

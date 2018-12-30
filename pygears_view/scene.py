@@ -65,19 +65,19 @@ class NodeScene(QtWidgets.QGraphicsScene):
 
         painter.restore()
 
-    def mousePressEvent(self, event):
-        selected_nodes = self.viewer().selected_nodes()
-        if self.viewer():
-            self.viewer().sceneMousePressEvent(event)
-        super().mousePressEvent(event)
-        keep_selection = any([
-            event.button() == QtCore.Qt.MiddleButton,
-            event.button() == QtCore.Qt.RightButton,
-            event.modifiers() == QtCore.Qt.AltModifier
-        ])
-        if keep_selection:
-            for node in selected_nodes:
-                node.setSelected(True)
+    # def mousePressEvent(self, event):
+    #     selected_nodes = self.viewer().selected_nodes()
+    #     if self.viewer():
+    #         self.viewer().sceneMousePressEvent(event)
+    #     super().mousePressEvent(event)
+    #     keep_selection = any([
+    #         event.button() == QtCore.Qt.MiddleButton,
+    #         event.button() == QtCore.Qt.RightButton,
+    #         event.modifiers() == QtCore.Qt.AltModifier
+    #     ])
+    #     if keep_selection:
+    #         for node in selected_nodes:
+    #             node.setSelected(True)
 
     # def mouseMoveEvent(self, event):
     #     if self.viewer():

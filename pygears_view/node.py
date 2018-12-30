@@ -764,8 +764,8 @@ class NodeItem(AbstractNodeItem):
         #     gve = self.get_layout_edge(pipe)
 
         self.layout_graph.layout(prog='dot')
-        self.layout_graph.draw('proba.png')
-        self.layout_graph.draw('proba.dot')
+        # self.layout_graph.draw('proba.png')
+        # self.layout_graph.draw('proba.dot')
 
         # if self.model.name == '/ref_model':
         #     self.layout_graph.draw('proba.dot')
