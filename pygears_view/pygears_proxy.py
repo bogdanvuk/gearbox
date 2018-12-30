@@ -1,5 +1,6 @@
 import queue
 import time
+import sys
 from PySide2 import QtCore, QtWidgets
 from pygears.conf import Inject, reg_inject, safe_bind
 from pygears.sim.extens.sim_extend import SimExtend
@@ -11,6 +12,9 @@ class PyGearsBridgeServer(SimExtend):
         self.queue.put(name)
         self.queue.join()
 
+        if self.done:
+            sys.exit(0)
+
         # Let GUI thread do some work
         time.sleep(0.0001)
 
@@ -18,6 +22,7 @@ class PyGearsBridgeServer(SimExtend):
         self.handle_event('before_run')
 
     def after_timestep(self, sim, timestep):
+        # if timestep > (1 << 15):
         self.handle_event('after_timestep')
         return True
 
@@ -121,6 +126,7 @@ class PyGearsClient(QtCore.QObject):
                 self.plugin.queue.task_done()
 
     def quit(self):
+        self.plugin.done = True
         self.thrd.quit()
 
     def refresh_timeout(self):

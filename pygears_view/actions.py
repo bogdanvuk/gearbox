@@ -6,6 +6,7 @@ from .main_window import Shortcut
 from functools import wraps, partial
 from .node_search import node_search_completer
 from .pipe import Pipe
+from .saver import save
 import os
 
 
@@ -158,6 +159,12 @@ def proba():
 @shortcut('graph', (Qt.Key_Comma, Qt.Key_P))
 def proba2():
     print("Hey2!!!")
+
+
+@shortcut('graph', (Qt.Key_Q, Qt.Key_S))
+def save_layout():
+    save()
+    QtWidgets.QApplication.instance().quit()
 
 
 from pygears.rtl.gear import rtl_from_gear_port

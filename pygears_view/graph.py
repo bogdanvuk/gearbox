@@ -47,9 +47,10 @@ def graph(main=Inject('viewer/main'), root=Inject('gear/hier_root')):
     viewer.setGeometry(500, viewer.y(), 800, 500)
 
     # top = NodeItem(root)
-    top = NodeModel(root).view
-    viewer.top = top
-    top.layout()
+    top_model = NodeModel(root)
+    bind('viewer/graph_model', top_model)
+    viewer.top = top_model.view
+    top_model.view.layout()
     viewer.fit_all()
 
 

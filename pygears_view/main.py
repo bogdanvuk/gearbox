@@ -1,4 +1,5 @@
 #!/usr/bin/python
+import runpy
 import queue
 import sys
 import threading
@@ -10,18 +11,22 @@ from pygears_view.graph import graph
 from pygears_view.which_key import which_key
 from pygears_view.gtkwave import gtkwave
 from pygears_view.sniper import sniper
-from pygears.conf import Inject, reg_inject, safe_bind, PluginBase, registry, bind
+from pygears.conf import Inject, reg_inject, safe_bind, PluginBase, registry, bind, MayInject
 from .pygears_proxy import PyGearsBridgeServer, sim_bridge
+from .saver import get_save_file_path
 
 
 class PyGearsView(PyGearsBridgeServer):
-    def __init__(self, top=None, live=False):
+    def __init__(self, top=None, live=False, reload=True):
         super().__init__(top)
 
         bind('sim/pygears_view', self)
 
         self.live = live
         self.pipe = None
+        self.done = False
+        self.reload = reload
+
         if live:
             registry('viewer/layers').insert(0, sim_bridge)
 
@@ -57,7 +62,19 @@ def main(pipe=None, layers=Inject('viewer/layers')):
     app.exec_()
 
 
+@reg_inject
+def reloader(
+        outdir=MayInject('sim/artifact_dir'),
+        plugin=Inject('sim/pygears_view')):
+    if plugin.reload:
+        try:
+            runpy.run_path(get_save_file_path())
+        except Exception as e:
+            print(f'Loading save file failed: {e}')
+
+
 class SimPlugin(PluginBase):
     @classmethod
     def bind(cls):
-        safe_bind('viewer/layers', [which_key, graph, gtkwave, sniper])
+        safe_bind('viewer/layers',
+                  [which_key, graph, gtkwave, sniper, reloader])

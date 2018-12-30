@@ -41,7 +41,9 @@ class GtkWaveProc(QtCore.QObject):
 
     def command(self, cmd, cmd_id):
         self.p.send(cmd + '\n')
+        print(f'GtkWave: {cmd}')
         self.p.expect('%')
+        print(f'GtkWave: {self.p.before.strip()}')
         self.response.emit(self.p.before.strip(), cmd_id)
 
     def quit(self):

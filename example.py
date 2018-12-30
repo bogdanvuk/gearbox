@@ -63,4 +63,6 @@ verif(
 
 bind('svgen/debug_intfs', ['*'])
 # sim(outdir='build', extens=[VCD])
-sim(outdir='build', check_activity=True, extens=[VCD, partial(PyGearsView, live=True)])
+sim(outdir='build',
+    check_activity=True,
+    extens=[VCD, partial(PyGearsView, live=True, reload=True)])

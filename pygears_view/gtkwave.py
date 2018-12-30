@@ -1,7 +1,8 @@
+import tempfile
+import collections
 from pygears.core.hier_node import HierVisitorBase
 from vcd.gtkw import GTKWSave
 
-import tempfile
 from pygears.conf import Inject, reg_inject
 from pygears.rtl.gear import rtl_from_gear_port
 from typing import NamedTuple
@@ -13,6 +14,7 @@ import fnmatch
 import os
 import re
 
+bla = [0]
 
 class VerilatorWave:
     @reg_inject
@@ -36,6 +38,9 @@ class VerilatorWave:
         self.verilator_intf.command(f'gtkwave::setZoomFactor -7')
 
         return True
+
+    def intf_basename(self, rtl_intf):
+        return f'{self.path_prefix}.{rtl_intf.name}'
 
     def make_relative_signal_name_map(self, path_prefix, signal_list):
         signal_name_map = {}
@@ -82,7 +87,9 @@ def load(
         viewer=Inject('viewer/gtkwave')):
 
     main.buffers['gtkwave'] = viewer.gtkwave_widget
-    bind('viewer/gtkwave_status', GraphGtkWaveStatus())
+    status = GraphGtkWaveStatus()
+    bind('viewer/gtkwave_status', status)
+    status.update()
 
     # if outdir:
     #     pyvcd = os.path.abspath(os.path.join(outdir, 'pygears.vcd'))
@@ -170,25 +177,67 @@ class GraphGtkWaveStatus:
 
         rtl_intf = rtl_port.consumer
         sigs = self.verilator_waves[0].get_signals_for_intf(rtl_intf)
-        gtkw_fn = os.path.join(tempfile.gettempdir(), 'pygears.gtkw')
-        with open(gtkw_fn, 'w') as f:
-            gtkw = GTKWSave(f)
-            with gtkw.group(rtl_intf.name, highlight=True):
-                for s in sigs:
-                    gtkw.trace(s)
 
-        self.gtkwave.command_nb(f'gtkwave::loadFile {gtkw_fn}')
-        self.pipes_on_wave[pipe] = rtl_intf.name
+        struct_sigs = collections.defaultdict(dict)
+        sig_names = []
 
-        # ret = self.gtkwave.command('list_traces')
-        # print(ret)
-        ret = self.gtkwave.command(
-            f'select_trace_by_name "{self.pipes_on_wave[pipe]}"')
-        print(ret)
-        # ret = self.gtkwave.command('gtkwave::setTraceHighlightFromIndex 0 on')
-        # print(ret)
-        # ret = self.gtkwave.command('gtkwave::setTraceHighlightFromNameMatch add_s on')
-        # print(ret)
+        prefix = self.verilator_waves[0].intf_basename(rtl_intf)
+        intf_name = rtl_intf.name.replace('.', '/')
+        status_sig = prefix + '_state[1:0]'
+
+        commands = []
+
+        dti_translate_path = os.path.join(os.path.dirname(__file__), "dti_translate.py")
+        commands.append(f'gtkwave::addSignalsFromList {{ {status_sig} }}')
+        commands.append(f'gtkwave::highlightSignalsFromList {{ {status_sig} }}')
+        commands.append(f'gtkwave::setCurrentTranslateTransProc "{dti_translate_path}"')
+        commands.append(f'gtkwave::installTransFilter 1')
+
+        # struct_sigs['_data']['state'] = status_sig
+
+        for s in sigs:
+            stem = s[len(prefix):]
+            if stem.startswith('_data'):
+                sig_names.append(s)
+                sig_name_no_width = stem.partition('[')[0]
+
+                path = sig_name_no_width.split('.')
+                place = struct_sigs
+                for p in path[:-1]:
+                    place = place[p]
+
+                place[path[-1]] = s
+
+        commands.append('gtkwave::addSignalsFromList {' + " ".join(sig_names) + '}')
+
+        print(sig_names)
+
+        def dfs(name, lvl):
+            if isinstance(lvl, dict):
+                selected = []
+                for k, v in lvl.items():
+                    if isinstance(v, dict):
+                        ret = yield from dfs(k, v)
+                        selected.extend(ret)
+                    else:
+                        selected.append(v)
+
+            else:
+                selected = [lvl]
+
+            yield name, selected
+            return selected
+
+        struct_sigs = dict(struct_sigs)
+
+        groups = list(dfs(intf_name, struct_sigs['_data']))
+        for name, selected in reversed(groups):
+            commands.append('gtkwave::highlightSignalsFromList {' + " ".join(selected) + '}')
+            commands.append(f'gtkwave::/Edit/Combine_Down {name}')
+
+        commands.append('select_trace_by_name {' + intf_name + '}')
+        commands.append('gtkwave::/Edit/Toggle_Group_Open|Close')
+        self.gtkwave.command('\n'.join(commands))
 
 
     def update_rtl_intf(self, pipe, wave_status):

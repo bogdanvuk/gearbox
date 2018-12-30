@@ -166,7 +166,6 @@ class Pipe(QtWidgets.QGraphicsPathItem):
         painter.setPen(pen)
         painter.setRenderHint(painter.Antialiasing, True)
         painter.drawPath(self.path())
-        print(f"Drawing {self}: {self.path()}, on {self.parentItem()}")
 
         # path = QtGui.QPainterPath()
 
