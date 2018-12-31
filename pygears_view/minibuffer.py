@@ -17,23 +17,26 @@ class Minibuffer(QtWidgets.QLineEdit):
         # self.hide()
 
     @reg_inject
-    def complete(self, completer, main=Inject('viewer/main')):
+    def complete(self, completer=None, main=Inject('viewer/main')):
         self.previous_domain = main.buffers.current_name
         main.change_domain('minibuffer')
         self.setDisabled(False)
 
         self._completer = completer
-        self.setCompleter(self._completer)
-        popup = self._completer.popup()
-        popup.setStyleSheet(STYLE_TABSEARCH_LIST)
-        self.editingFinished.connect(self._on_search_submitted)
-        self.textChanged.connect(self._singled_out)
-        self.prev_text_len = len(self.text())
+        if completer:
+            self.setCompleter(self._completer)
+            popup = self._completer.popup()
+            popup.setStyleSheet(STYLE_TABSEARCH_LIST)
+            self.textChanged.connect(self._singled_out)
+            self.prev_text_len = len(self.text())
 
+        self.editingFinished.connect(self._on_search_submitted)
         self.setSelection(0, len(self.text()))
         self.setFocus()
-        self.completer().popup().show()
-        self.completer().complete()
+
+        if completer:
+            self.completer().popup().show()
+            self.completer().complete()
 
     def _singled_out(self, text):
         if (self._completer.completionCount() == 1):

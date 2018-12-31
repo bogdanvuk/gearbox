@@ -1,4 +1,5 @@
 #!/usr/bin/python
+import inspect
 from PySide2.QtCore import Qt
 from PySide2 import QtWidgets, QtGui, QtCore
 from pygears.conf import Inject, reg_inject, registry, inject_async, bind
@@ -10,9 +11,45 @@ from .saver import save
 import os
 
 
+class Interactive:
+    def __init__(self, *args, **kwargs):
+        self.args = args
+        self.kwargs = kwargs
+
+
+class MinibufferWaiter(QtCore.QEventLoop):
+    @reg_inject
+    def wait(self, minibuffer=Inject('viewer/minibuffer')):
+        minibuffer.complete()
+        minibuffer.completed.connect(self.completed)
+        self.exec_()
+        return self.resp
+
+    def completed(self, text):
+        self.resp = text
+        self.quit()
+
+
 def shortcut(domain, shortcut):
     def wrapper(func):
-        registry('viewer/shortcuts').append((domain, shortcut, func))
+        sig = inspect.signature(func)
+        # default values in func definition
+        interactives = {
+            k: v.default
+            for k, v in sig.parameters.items()
+            if isinstance(v.default, Interactive)
+        }
+
+        if interactives:
+
+            @wraps(func)
+            def arg_func():
+                kwds = {k: MinibufferWaiter().wait() for k in interactives}
+                func(**kwds)
+
+            registry('viewer/shortcuts').append((domain, shortcut, arg_func))
+        else:
+            registry('viewer/shortcuts').append((domain, shortcut, func))
 
     return wrapper
 
@@ -167,7 +204,9 @@ def save_layout():
     QtWidgets.QApplication.instance().quit()
 
 
-from pygears.rtl.gear import rtl_from_gear_port
+@shortcut(None, (Qt.Key_Q, Qt.Key_Q))
+def quit():
+    QtWidgets.QApplication.instance().quit()
 
 
 @shortcut('graph', Qt.Key_W)
@@ -192,22 +231,32 @@ def node_search(
     minibuffer.complete(node_search_completer(graph.top))
 
 
+@shortcut('graph', Qt.Key_Colon)
+@reg_inject
+def time_search(time=Interactive(), sim_bridge=Inject('viewer/sim_bridge')):
+
+    time = int(time)
+
+    @reg_inject
+    def break_on_timestep(cur_time=Inject('sim/timestep')):
+        print(f'Test bp on {cur_time}')
+        if cur_time == time:
+            return True, False
+        else:
+            return False, True
+
+    sim_bridge.breakpoints.add(break_on_timestep)
+    if not sim_bridge.running:
+        sim_bridge.cont()
+
+    print(f"Finished: {time}")
+
+
 @inject_async
 def graph_gtkwave_select_sync(
         graph=Inject('viewer/graph'),
         gtkwave_status=Inject('viewer/gtkwave_status')):
     bind('viewer/graph_gtkwave_select_sync', GraphGtkwaveSelectSync(graph))
-
-
-def trigger(obj, signal):
-    def wrapper(func):
-        @inject_async
-        def waiter(emitter=Inject(obj)):
-            getattr(emitter, signal).connect(func)
-
-        return waiter
-
-    return wrapper
 
 
 class GraphGtkwaveSelectSync(QtCore.QObject):

@@ -62,7 +62,7 @@ def save_expanded(root=Inject('viewer/graph_model')):
 @reg_inject
 def save_gtkwave(gtkwave=Inject('viewer/gtkwave')):
     gtkwave.command(
-        'gtkwave::/File/Write_Save_File {get_gtkwave_save_file_path()}')
+        f'gtkwave::/File/Write_Save_File {get_gtkwave_save_file_path()}')
 
     return load_str_template(gtkwave_load_func_template).render({
         'fn':

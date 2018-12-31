@@ -65,8 +65,11 @@ class WhichKey(QLabel):
                 else:
                     key = key[1:]
 
+            key_group = False
             if len(key) > 1:
-                continue
+                key_group = True
+                key = key[0:1]
+                # continue
 
             keys = QKeySequence(*key).toString().split('+')
 
@@ -90,7 +93,10 @@ class WhichKey(QLabel):
 
             key_name = "-".join(keys)
 
-            which_key_string[key_name] = s.callback.__name__
+            if not key_group:
+                which_key_string[key_name] = s.callback.__name__
+            else:
+                which_key_string[key_name] = 'group'
 
         max_width = max(
             self.fontMetrics().horizontalAdvance(f'{key_name} -> {s}')
