@@ -53,6 +53,7 @@ class Pipe(QtWidgets.QGraphicsPathItem):
         self._input_port = input_port
         self._output_port = output_port
         self.layout_path = []
+        self.status = "empty"
 
     def __str__(self):
         in_name = self._input_port.name if self._input_port else ''
@@ -117,13 +118,9 @@ class Pipe(QtWidgets.QGraphicsPathItem):
     def set_status(self, status):
         # status = self.get_activity_status()
 
+        self.status = status
         new_color = PIPE_SIM_STATUS_COLOR[status]
         if new_color != self.color:
-            if status == 'empty':
-                self.width = PIPE_WIDTH
-            else:
-                self.width = PIPE_WIDTH * 3
-
             self.color = new_color
             self.update()
 
@@ -137,27 +134,23 @@ class Pipe(QtWidgets.QGraphicsPathItem):
 
     def hoverLeaveEvent(self, event):
         self.reset()
-        if (self.isSelected() or self.input_port.node.isSelected()
-                or self.output_port.node.isSelected()):
+        if self.isSelected():
             self.highlight()
 
     def paint(self, painter, option, widget):
         color = QtGui.QColor(*self._color)
         pen_style = PIPE_STYLES.get(self.style)
-        pen_width = self.width
+
+        if self.status == 'empty':
+            pen_width = PIPE_WIDTH
+        else:
+            pen_width = PIPE_WIDTH * 3
+
         if self._active:
             color = QtGui.QColor(*PIPE_HIGHLIGHT_COLOR)
         elif self.isSelected():
             color = QtGui.QColor(*PIPE_HIGHLIGHT_COLOR)
             pen_style = PIPE_STYLES.get(PIPE_STYLE_DEFAULT)
-
-        if self.input_port and self.output_port:
-            in_node = self.input_port.node
-            out_node = self.output_port.node
-            if in_node.disabled or out_node.disabled:
-                color.setAlpha(200)
-                pen_width += 0.2
-                pen_style = PIPE_STYLES.get(PIPE_STYLE_DOTTED)
 
         pen = QtGui.QPen(color, pen_width)
         pen.setStyle(pen_style)

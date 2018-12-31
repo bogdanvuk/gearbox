@@ -113,11 +113,15 @@ class Graph(QtWidgets.QGraphicsView):
 
     @reg_inject
     def print_modeline(self, modeline=Inject('viewer/modeline')):
+        timestep = registry("sim/timestep")
+        if timestep is None:
+            timestep = '-'
+
         table = [[
             ('style="padding-right: 20px;"',
              fontify('graph', color='"darkorchid"', bold=True)),
             ('', f'Simulation: R'),
-            ('', f'Timestep: {registry("sim/timestep")}'),
+            ('', f'Timestep: {timestep}'),
         ]]
         tbl = tabulate(table)
 

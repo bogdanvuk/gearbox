@@ -1,3 +1,5 @@
+from PySide2 import QtCore
+from functools import partial
 import tempfile
 import collections
 from pygears.core.hier_node import HierVisitorBase
@@ -85,6 +87,7 @@ def load(
         outdir=MayInject('sim/artifact_dir'),
         viewer=Inject('viewer/gtkwave')):
 
+    bind('viewer/gtkwave', viewer)
     main.buffers['gtkwave'] = viewer.gtkwave_widget
     status = GraphGtkWaveStatus()
     bind('viewer/gtkwave_status', status)
@@ -97,8 +100,7 @@ def load(
 
 def gtkwave():
     viewer = GtkWave()
-    bind('viewer/gtkwave', viewer)
-    viewer.initialized.connect(load)
+    viewer.initialized.connect(partial(load, viewer=viewer))
 
 
 @reg_inject
@@ -149,12 +151,15 @@ class GraphPipeCollector(GraphVisitor):
                 pass
 
 
-class GraphGtkWaveStatus:
+class GraphGtkWaveStatus(QtCore.QObject):
+    vcd_loaded = QtCore.Signal()
+
     @reg_inject
     def __init__(self,
                  graph=Inject('viewer/graph'),
                  gtkwave=Inject('viewer/gtkwave'),
                  sim_bridge=MayInject('viewer/sim_bridge')):
+        super().__init__()
         self.graph = graph
         self.gtkwave = gtkwave
 
@@ -258,6 +263,7 @@ class GraphGtkWaveStatus:
             if not v.loaded:
                 if v.load_vcd():
                     self.pipe_collect.visit(self.graph.top)
+                    self.vcd_loaded.emit()
 
         if not all(v.loaded for v in self.verilator_waves):
             return
@@ -268,6 +274,7 @@ class GraphGtkWaveStatus:
 
         ret = self.gtkwave.command(f'get_values [list {" ".join(signal_names)}]')
         self.rtl_status = ret.split('\n')
+        # self.gtkwave.command(f'list_values [list {" ".join(signal_names)}]')
 
         # assert len(self.rtl_status) == len(self.pipe_collect.rtl_intfs)
         if len(self.rtl_status) != len(self.pipe_collect.rtl_intfs):

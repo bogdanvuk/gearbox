@@ -34,6 +34,20 @@ gtkwave::/View/Dynamic_Resize
 #     }
 # }
 
+proc list_values {signals} {
+    set end_time_value [ gtkwave::getWindowEndTime ]
+    puts "End time: $end_time_value"
+    foreach s $signals {
+        if { [catch {
+            set valid_val [gtkwave::signalChangeList ${s}_valid -start_time $end_time_value -max 1]
+            set ready_val [gtkwave::signalChangeList ${s}_ready -start_time $end_time_value -max 1]
+            puts [format "%s: %s - %s " $s $valid_val $ready_val]
+        } err ]} {
+            puts "$s: 0 0"
+        }
+    }
+}
+
 proc get_values {signals} {
     set end_time_value [ gtkwave::getWindowEndTime ]
     foreach s $signals {

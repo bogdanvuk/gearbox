@@ -137,7 +137,7 @@ def toggle_expand(node, graph):
         node.collapse()
 
 
-@shortcut('graph', Qt.Key_S)
+@shortcut(None, Qt.Key_S)
 @reg_inject
 def step_simulator(sim_bridge=Inject('viewer/sim_bridge')):
     sim_bridge.breakpoints.add(lambda: (True, False))
@@ -161,7 +161,7 @@ def proba2():
     print("Hey2!!!")
 
 
-@shortcut('graph', (Qt.Key_Q, Qt.Key_S))
+@shortcut(None, (Qt.Key_Q, Qt.Key_S))
 def save_layout():
     save()
     QtWidgets.QApplication.instance().quit()
@@ -192,6 +192,24 @@ def node_search(
     minibuffer.complete(node_search_completer(graph.top))
 
 
+@inject_async
+def graph_gtkwave_select_sync(
+        graph=Inject('viewer/graph'),
+        gtkwave_status=Inject('viewer/gtkwave_status')):
+    bind('viewer/graph_gtkwave_select_sync', GraphGtkwaveSelectSync(graph))
+
+
+def trigger(obj, signal):
+    def wrapper(func):
+        @inject_async
+        def waiter(emitter=Inject(obj)):
+            getattr(emitter, signal).connect(func)
+
+        return waiter
+
+    return wrapper
+
+
 class GraphGtkwaveSelectSync(QtCore.QObject):
     @reg_inject
     def __init__(self, graph=Inject('viewer/graph')):
@@ -209,14 +227,16 @@ class GraphGtkwaveSelectSync(QtCore.QObject):
             if wave_intf:
                 selected_wave_pipes.append(wave_intf)
 
+        gtkwave.command('gtkwave::/Edit/UnHighlight_All')
         if selected_wave_pipes:
-            gtkwave.command('gtkwave::/Edit/UnHighlight_All')
             gtkwave.command('gtkwave::highlightSignalsFromList {' +
                             " ".join(selected_wave_pipes) + '}')
 
 
 @inject_async
-def graph_gtkwave_select_sync(graph=Inject('viewer/graph')):
+def graph_gtkwave_select_sync(
+        graph=Inject('viewer/graph'),
+        gtkwave_status=Inject('viewer/gtkwave_status')):
     bind('viewer/graph_gtkwave_select_sync', GraphGtkwaveSelectSync(graph))
 
 
