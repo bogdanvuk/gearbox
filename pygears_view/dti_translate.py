@@ -17,11 +17,11 @@ state_code = {0: '', 1: '?DarkRed?V', 2: '?DarkBlue?R', 3: '?DarkGreen?H'}
 
 def dump_seq(seq):
     # print(f'$name {name}', flush=True)
-    print(f'$name --', flush=True)
-    for i, state in enumerate(seq.values()):
-        print(f'#{i*10} {state_code[state]}', flush=True)
+    print(f'$name --')
+    for i, state in seq.items():
+        print(f'#{i*10} {state_code[state]}')
 
-    print('$finish', flush=True)
+    print('$finish')
 
 
 cur_time = 0
