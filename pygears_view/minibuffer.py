@@ -81,6 +81,9 @@ class Minibuffer(QtCore.QObject):
             self._completer.complete()
 
     def _singled_out(self, text):
+        if not self._completer:
+            return
+
         self._completer.setCompletionPrefix(text)
 
         if (self._completer.completionCount() == 1):
@@ -88,11 +91,6 @@ class Minibuffer(QtCore.QObject):
             if (len(completion_text) >= len(text)) and (len(text) >
                                                         self.prev_text_len):
                 self.input_box.setText(completion_text)
-                self.filled.emit(completion_text)
-
-                # Immediatelly show possibly new completer. Need to call
-                # complete() async, apparently present events need to resolve
-                QtCore.QTimer.singleShot(100, self._completer.complete)
 
         self.prev_text_len = len(text)
 
@@ -122,6 +120,8 @@ class Minibuffer(QtCore.QObject):
     def tab_key_event(self):
         prefix = os.path.commonprefix(list(self.completions()))
         self.input_box.setText(prefix)
+        if (self._completer.completionCount() == 1):
+            self.filled.emit(prefix)
 
 
 class InputBox(QtWidgets.QLineEdit):

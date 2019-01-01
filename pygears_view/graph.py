@@ -362,6 +362,7 @@ padding-right: 10px;
             p.setSelected(False)
 
         obj.setSelected(True)
+        self.ensureVisible(obj)
 
         # print("Selection changed!")
         # self.selection_changed.emit(self.selected_items())
