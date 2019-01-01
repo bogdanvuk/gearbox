@@ -87,12 +87,68 @@ def node_down_level(node, graph):
         graph.select(node.layers[0][0])
 
 
+@shortcut('graph', Qt.Key_L)
+@single_select_action
+def node_right(node, graph):
+    if isinstance(node, Pipe):
+        return
+
+    layer_id, layer, node_id = get_node_layer(node)
+
+    if layer_id == len(node.parent.layers) - 1:
+        layer_id = 0
+    else:
+        layer_id += 1
+
+    closest = node.parent.layers[layer_id][0]
+
+    for n in node.parent.layers[layer_id][1:]:
+        if abs(node.y() - n.y()) < abs(node.y() - closest.y()):
+            closest = n
+
+    graph.select(closest)
+
+
+@shortcut('graph', Qt.Key_H)
+@single_select_action
+def node_left(node, graph):
+    if isinstance(node, Pipe):
+        return
+
+    layer_id, layer, node_id = get_node_layer(node)
+
+    if layer_id == 0:
+        layer_id = len(node.parent.layers) - 1
+    else:
+        layer_id -= 1
+
+    closest = node.parent.layers[layer_id][0]
+
+    for n in node.parent.layers[layer_id][1:]:
+        if abs(node.y() - n.y()) < abs(node.y() - closest.y()):
+            closest = n
+
+    graph.select(closest)
+
+
 def get_node_layer(node):
     for i, layer in enumerate(node.parent.layers):
         if node in layer:
             return i, layer, layer.index(node)
     else:
         return None
+
+
+@shortcut('graph', (Qt.Key_Z, Qt.Key_Z))
+@reg_inject
+def zoom_selected(graph=Inject('viewer/graph')):
+    graph.zoom_to_nodes(graph.selected_nodes())
+
+
+@shortcut('graph', (Qt.Key_Z, Qt.Key_A))
+@reg_inject
+def zoom_all(graph=Inject('viewer/graph')):
+    graph.fit_all()
 
 
 @shortcut('graph', Qt.Key_K)
