@@ -39,7 +39,8 @@ class Shortcut(QtCore.QObject):
             key = (key, )
 
         self._qshortcut = QtWidgets.QShortcut(QtGui.QKeySequence(*key), main)
-        self._qshortcut.activated.connect(callback)
+        # self._qshortcut.activated.connect(callback)
+        self._qshortcut.activated.connect(self.activated)
         self._qshortcut.activatedAmbiguously.connect(main.shortcut_prefix)
         # self._qshortcut.setContext(QtCore.Qt.ApplicationShortcut)
         # self._qshortcut.setWhatsThis(callback.__name__)
@@ -48,6 +49,11 @@ class Shortcut(QtCore.QObject):
         self.key = key
         self.callback = callback
         main.domain_changed.connect(self.domain_changed)
+
+    def activated(self):
+        self._qshortcut.setEnabled(False)
+        self.callback()
+        self._qshortcut.setEnabled(True)
 
     @property
     def enabled(self):

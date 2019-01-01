@@ -177,6 +177,24 @@ def node_up(graph=Inject('viewer/graph')):
     graph.select(node)
 
 
+@shortcut('gtkwave', Qt.Key_J)
+@reg_inject
+def trace_down(gtkwave=Inject('viewer/gtkwave')):
+    gtkwave.command('trace_down')
+
+
+@shortcut('gtkwave', Qt.Key_K)
+@reg_inject
+def trace_up(gtkwave=Inject('viewer/gtkwave')):
+    gtkwave.command('trace_up')
+
+
+@shortcut('gtkwave', Qt.Key_Return)
+@reg_inject
+def trace_toggle(gtkwave=Inject('viewer/gtkwave')):
+    gtkwave.command('gtkwave::/Edit/Toggle_Group_Open|Close')
+
+
 @shortcut('graph', Qt.Key_J)
 @reg_inject
 def node_down(graph=Inject('viewer/graph')):
@@ -334,6 +352,9 @@ class GraphGtkwaveSelectSync(QtCore.QObject):
         gtkwave.command('gtkwave::/Edit/UnHighlight_All')
         if selected_wave_pipes:
             gtkwave.command('gtkwave::highlightSignalsFromList {' +
+                            " ".join(selected_wave_pipes) + '}')
+
+            gtkwave.command('gtkwave::getTraceFlagsFromName {' +
                             " ".join(selected_wave_pipes) + '}')
 
 
