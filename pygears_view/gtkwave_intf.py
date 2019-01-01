@@ -69,6 +69,11 @@ class GtkWaveCmdBlock(QtCore.QEventLoop):
             self.quit()
 
 
+native_key_map = {
+    65293: 16777220  # Key_Return
+}
+
+
 class GtkWaveXevProc(QtCore.QObject):
 
     key_press = QtCore.Signal(int, int)
@@ -110,6 +115,8 @@ class GtkWaveXevProc(QtCore.QObject):
                 if chr(key).islower():
                     key = ord(chr(key).upper())
 
+                key = native_key_map.get(key, key)
+
                 if native_modifiers & 0x4:
                     modifiers += QtCore.Qt.CTRL
 
@@ -147,6 +154,7 @@ class GtkWave(QtCore.QObject):
 
     @reg_inject
     def key_press(self, key, modifiers, graph=Inject('viewer/graph')):
+        # print(modifiers, QtGui.QKeySequence(key).toString())
         print(modifiers, key)
         app = QtWidgets.QApplication.instance()
         app.postEvent(
