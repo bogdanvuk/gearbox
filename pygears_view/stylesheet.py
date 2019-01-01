@@ -49,15 +49,14 @@ QLineEdit {
 '''
 
 STYLE_MINIBUFFER = '''
-QLineEdit {
-    border-radius: 0px;
-    padding: 2px;
-    margin: 0px;
-    color: rgba(255, 255, 255, 150);
-    background: rgba(35, 35, 35, 255);
-    selection-background-color: rgba(219, 158, 0, 255);
-}
+border-radius: 0px;
+padding: 2px;
+margin: 0px;
+color: rgba(255, 255, 255, 150);
+background: rgba(35, 35, 35, 255);
+selection-background-color: rgba(219, 158, 0, 255);
 '''
+
 STYLE_WHICH_KEY = '''
 padding: 2px;
 margin: 0px;

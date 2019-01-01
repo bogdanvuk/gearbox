@@ -12,15 +12,18 @@ import os
 
 
 class Interactive:
-    def __init__(self, *args, **kwargs):
-        self.args = args
-        self.kwargs = kwargs
+    def __init__(self, message=None, completer=None):
+        self.message = message
+        self.completer = completer
 
 
 class MinibufferWaiter(QtCore.QEventLoop):
     @reg_inject
-    def wait(self, minibuffer=Inject('viewer/minibuffer')):
-        minibuffer.complete()
+    def wait(self,
+             message=None,
+             completer=None,
+             minibuffer=Inject('viewer/minibuffer')):
+        minibuffer.complete(message, completer)
         minibuffer.completed.connect(self.completed)
         self.exec_()
         return self.resp
@@ -44,7 +47,10 @@ def shortcut(domain, shortcut):
 
             @wraps(func)
             def arg_func():
-                kwds = {k: MinibufferWaiter().wait() for k in interactives}
+                kwds = {
+                    k: MinibufferWaiter().wait(v.message, v.completer)
+                    for k, v in interactives.items()
+                }
                 func(**kwds)
 
             registry('viewer/shortcuts').append((domain, shortcut, arg_func))
@@ -302,12 +308,13 @@ def send_to_wave(
 @reg_inject
 def node_search(
         minibuffer=Inject('viewer/minibuffer'), graph=Inject('viewer/graph')):
-    minibuffer.complete(node_search_completer(graph.top))
+    minibuffer.complete(completer=node_search_completer(graph.top.model))
 
 
 @shortcut('graph', Qt.Key_Colon)
 @reg_inject
-def time_search(time=Interactive(), sim_bridge=Inject('viewer/sim_bridge')):
+def time_search(
+        time=Interactive('Time:'), sim_bridge=Inject('viewer/sim_bridge')):
 
     time = int(time)
 

@@ -146,7 +146,7 @@ class MainWindow(QtWidgets.QMainWindow):
         safe_bind('viewer/modeline', self.modeline)
 
         self.vbox.addWidget(self.modeline)
-        self.vbox.addWidget(self.minibuffer)
+        self.vbox.addLayout(self.minibuffer.view)
 
         self.setCentralWidget(mainWidget)
 

@@ -28,6 +28,10 @@ class NodeModel(NamedHierNode):
         self.setup_view()
 
     @property
+    def name(self):
+        return self.gear.name
+
+    @property
     def basename(self):
         return self.gear.basename
 

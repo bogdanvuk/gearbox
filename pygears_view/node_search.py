@@ -14,14 +14,14 @@ class TreeModel(QtCore.QAbstractItemModel):
             return None
 
         if role == QtCore.Qt.EditRole:
-            return self.root.name
+            return self.root.basename
 
         if role != QtCore.Qt.DisplayRole:
             return None
 
         item = index.internalPointer()
 
-        return item.name
+        return item.basename
 
     def flags(self, index):
         if not index.isValid():
@@ -32,7 +32,7 @@ class TreeModel(QtCore.QAbstractItemModel):
     def headerData(self, section, orientation, role):
         if (orientation == QtCore.Qt.Horizontal
                 and role == QtCore.Qt.DisplayRole):
-            return self.root.name
+            return self.root.basename
 
         return None
 
@@ -45,7 +45,7 @@ class TreeModel(QtCore.QAbstractItemModel):
         else:
             parentItem = parent.internalPointer()
 
-        childItem = parentItem._nodes[row]
+        childItem = parentItem.child[row]
         if childItem:
             return self.createIndex(row, column, childItem)
         else:
@@ -61,7 +61,7 @@ class TreeModel(QtCore.QAbstractItemModel):
         if parentItem == self.root:
             return QtCore.QModelIndex()
 
-        row = parentItem.parent._nodes.index(parentItem)
+        row = parentItem.parent.child.index(parentItem)
 
         return self.createIndex(row, 0, parentItem)
 
@@ -75,7 +75,7 @@ class TreeModel(QtCore.QAbstractItemModel):
             parentItem = parent.internalPointer()
 
         # print(f"childCount: {parentItem.childCount()}")
-        return len(parentItem._nodes)
+        return len(parentItem.child)
 
 
 class NodeSearchCompleter(QtWidgets.QCompleter):
@@ -89,6 +89,7 @@ class NodeSearchCompleter(QtWidgets.QCompleter):
         self._filter_model = None
 
     def splitPath(self, path):
+        print(f"splitPath: {path}")
         return path.split('/')
 
     def pathFromIndex(self, index):
