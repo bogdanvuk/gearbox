@@ -5,33 +5,6 @@ from .stylesheet import STYLE_MODELINE
 from .minibuffer import Minibuffer
 
 
-def _find_rec(path, root):
-    parts = path.split("/")
-
-    # if parts[0] == '..':
-    #     return _find_rec("/".join(parts[1:]), root.parent)
-
-    for node in root._nodes:
-        child = node.model
-        if hasattr(child, 'basename') and child.basename == parts[0]:
-            break
-    else:
-        raise Exception()
-
-    if len(parts) == 1:
-        return [node]
-    else:
-        path_rest = "/".join(parts[1:])
-        if path_rest:
-            return [node] + _find_rec("/".join(parts[1:]), node)
-        else:
-            return [node]
-
-
-def find_node_by_path(root, path):
-    return _find_rec(path, root)
-
-
 class Shortcut(QtCore.QObject):
     @reg_inject
     def __init__(self, domain, key, callback, main=Inject('viewer/main')):
@@ -137,7 +110,7 @@ class MainWindow(QtWidgets.QMainWindow):
         mainWidget.setContentsMargins(0, 0, 0, 0)
 
         self.minibuffer = Minibuffer()
-        self.minibuffer.completed.connect(self._minibuffer_completed)
+        # self.minibuffer.completed.connect(self._minibuffer_completed)
         safe_bind('viewer/minibuffer', self.minibuffer)
 
         self.modeline = QtWidgets.QLabel(self)
@@ -169,23 +142,6 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def change_domain(self, domain):
         self.domain_changed.emit(domain)
-
-    @reg_inject
-    def _minibuffer_completed(self, text, graph=Inject('viewer/graph')):
-        try:
-            node_path = find_node_by_path(graph.top, text)
-            for node in node_path[:-1]:
-                node.expand()
-        except:
-            for node in graph.selected_nodes():
-                node.setSelected(False)
-            return
-
-        for node in graph.selected_nodes():
-            node.setSelected(False)
-
-        node_path[-1].setSelected(True)
-        graph.ensureVisible(node_path[-1])
 
 
 class MainWindowPlugin(PluginBase):

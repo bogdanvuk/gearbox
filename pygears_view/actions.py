@@ -33,6 +33,10 @@ class MinibufferWaiter(QtCore.QEventLoop):
         self.quit()
 
 
+def get_minibuffer_input(message=None, completer=None, text=None):
+    return MinibufferWaiter().wait(message, completer)
+
+
 def shortcut(domain, shortcut):
     def wrapper(func):
         sig = inspect.signature(func)
@@ -48,7 +52,7 @@ def shortcut(domain, shortcut):
             @wraps(func)
             def arg_func():
                 kwds = {
-                    k: MinibufferWaiter().wait(v.message, v.completer)
+                    k: get_minibuffer_input(v.message, v.completer)
                     for k, v in interactives.items()
                 }
                 func(**kwds)
@@ -308,13 +312,57 @@ def send_to_wave(
 @reg_inject
 def node_search(
         minibuffer=Inject('viewer/minibuffer'), graph=Inject('viewer/graph')):
-    minibuffer.complete(completer=node_search_completer(graph.top.model))
+
+    items = graph.selected_items()
+    if len(items) == 1:
+        model = items[0].model
+    else:
+        model = graph.top.model
+
+    if not model.child:
+        model = model.parent
+
+    node_name = get_minibuffer_input(
+        message=f'{model.name}/', completer=node_search_completer(model))
+
+    node = graph.top.model
+    for basename in node_name[1:].split('/'):
+        node.view.expand()
+        print('basename')
+        node = node[basename]
+
+    graph.select(node.view)
+
+    # try:
+    #     node = graph.top[node_name]
+    # except KeyError:
+    #     pass
+
+    # try:
+    #     node_path = find_node_by_path(graph.top, text)
+    #     for node in node_path[:-1]:
+    #         node.expand()
+    # except:
+    #     for node in graph.selected_nodes():
+    #         node.setSelected(False)
+    #     return
+
+    # for node in graph.selected_nodes():
+    #     node.setSelected(False)
+
+    # node_path[-1].setSelected(True)
+    # graph.ensureVisible(node_path[-1])
+
+    # print(resp)
+
+    # minibuffer.complete(
+    #     message=f'{model.name}/', completer=node_search_completer(model))
 
 
 @shortcut('graph', Qt.Key_Colon)
 @reg_inject
 def time_search(
-        time=Interactive('Time:'), sim_bridge=Inject('viewer/sim_bridge')):
+        time=Interactive('Time: '), sim_bridge=Inject('viewer/sim_bridge')):
 
     time = int(time)
 

@@ -1,4 +1,5 @@
 from PySide2 import QtCore, QtWidgets
+from pygears.conf import Inject, reg_inject
 
 
 class TreeModel(QtCore.QAbstractItemModel):
@@ -79,33 +80,54 @@ class TreeModel(QtCore.QAbstractItemModel):
 
 
 class NodeSearchCompleter(QtWidgets.QCompleter):
-    def __init__(self, nodes=None, parent=None):
-        super().__init__(nodes, parent)
+    def __init__(self, node=None):
+        super().__init__()
+        self.setup_model(node)
+
+    def setup_model(self, node):
         self.setCompletionMode(self.PopupCompletion)
         self.setCaseSensitivity(QtCore.Qt.CaseInsensitive)
-        self._local_completion_prefix = ''
-        self._using_orig_model = False
-        self._source_model = None
-        self._filter_model = None
 
-    def splitPath(self, path):
-        print(f"splitPath: {path}")
-        return path.split('/')
+        self.node = node
 
-    def pathFromIndex(self, index):
-        result = []
-        while index.isValid():
-            result = [self.model().data(index, QtCore.Qt.DisplayRole)] + result
-            index = index.parent()
-        r = '/'.join(result)
-        return r
+        model = QtCore.QStringListModel()
+
+        completion_list = [c.basename for c in node.child]
+        if node.parent is not None:
+            completion_list.extend(['..', '/'])
+
+        model.setStringList(completion_list)
+
+        self.setModel(model)
+        self.setCompletionPrefix('')
+        self.setCompletionColumn(0)
+        self.setCurrentRow(0)
+
+    @property
+    def default_completion(self):
+        if len(self.node.child) == 1:
+            return self.node.child[0].basename
+        else:
+            return None
+
+    def get_result(self, text):
+        return self.node[text].name
+
+    @reg_inject
+    def filled(self, text, minibuffer=Inject('viewer/minibuffer')):
+        print(f"Try looking for {text} inside {self.node.name}")
+
+        if text == '..':
+            node = self.node.parent
+        elif text == '/':
+            node = self.node.root()
+        else:
+            node = self.node[text]
+
+        if node.child:
+            self.setup_model(node)
+            minibuffer.complete_cont(f'{node.name}/', self)
 
 
 def node_search_completer(top):
-    completer = NodeSearchCompleter()
-    completer.setModel(TreeModel(top))
-    completer.setCompletionColumn(0)
-    completer.setCompletionRole(QtCore.Qt.DisplayRole)
-    completer.setCaseSensitivity(QtCore.Qt.CaseInsensitive)
-
-    return completer
+    return NodeSearchCompleter(top)

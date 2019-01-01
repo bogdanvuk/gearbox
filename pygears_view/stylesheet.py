@@ -50,11 +50,12 @@ QLineEdit {
 
 STYLE_MINIBUFFER = '''
 border-radius: 0px;
-padding: 2px;
+padding: 0px;
 margin: 0px;
 color: rgba(255, 255, 255, 150);
 background: rgba(35, 35, 35, 255);
-selection-background-color: rgba(219, 158, 0, 255);
+selection-background-color: rgba(70, 70, 70, 255);
+selection-foreground-color: rgba(255, 255, 255, 150);
 '''
 
 STYLE_WHICH_KEY = '''
