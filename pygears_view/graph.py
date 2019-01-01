@@ -516,5 +516,6 @@ padding-right: 10px;
     def zoom_to_nodes(self, nodes):
         rect = self._combined_rect(nodes)
         self.fitInView(rect, QtCore.Qt.KeepAspectRatio)
+
         if self.get_zoom() > 0.1:
             self.reset_zoom()

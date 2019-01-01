@@ -194,6 +194,7 @@ class GraphGtkWaveStatus(QtCore.QObject):
         commands = []
 
         dti_translate_path = os.path.join(os.path.dirname(__file__), "dti_translate.py")
+        # dti_translate_path = "/tools/home/pygears_view/test.py"
         commands.append(f'gtkwave::addSignalsFromList {{ {status_sig} }}')
         commands.append(f'gtkwave::highlightSignalsFromList {{ {status_sig} }}')
         commands.append(f'gtkwave::setCurrentTranslateTransProc "{dti_translate_path}"')

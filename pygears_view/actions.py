@@ -239,7 +239,6 @@ def time_search(time=Interactive(), sim_bridge=Inject('viewer/sim_bridge')):
 
     @reg_inject
     def break_on_timestep(cur_time=Inject('sim/timestep')):
-        print(f'Test bp on {cur_time}')
         if cur_time == time:
             return True, False
         else:

@@ -187,7 +187,11 @@ def node_painter(self, painter, option, widget):
 
 class NodeItem(AbstractNodeItem):
     @reg_inject
-    def __init__(self, name, parent=None, model=None, graph=Inject('viewer/graph')):
+    def __init__(self,
+                 name,
+                 parent=None,
+                 model=None,
+                 graph=Inject('viewer/graph')):
         super().__init__(name)
 
         self.parent = parent
@@ -306,6 +310,7 @@ class NodeItem(AbstractNodeItem):
         self.collapsed = False
         self.show()
         self.graph.top.layout()
+        self.graph.ensureVisible(self)
         self.selected = True
 
     def get_visible_objs(self, objtype):
@@ -764,6 +769,7 @@ class NodeItem(AbstractNodeItem):
         #     gve = self.get_layout_edge(pipe)
 
         self.layout_graph.layout(prog='dot')
+
         # self.layout_graph.draw('proba.png')
         # self.layout_graph.draw('proba.dot')
 
@@ -865,8 +871,46 @@ class NodeItem(AbstractNodeItem):
 
             max_y = max(max_y, *(p.y() for p in pipe.layout_path))
 
+        self.layers = []
+
+        class Layer(list):
+            def __init__(self, node):
+                super().__init__([node])
+                self.rect = node.boundingRect()
+                self.rect.translate(node.pos())
+
+            def __str__(self):
+                return str(self.rect)
+
+            def __repr__(self):
+                return repr(self.rect)
+
+            def add(self, node):
+                rect = node.boundingRect()
+                rect.translate(node.pos())
+
+                if ((self.rect.left() < rect.right())
+                        and (self.rect.right() > rect.left())):
+                    self.append(node)
+                    self.sort(key=lambda n: n.y())
+                    return True
+                else:
+                    return False
+
+        def find_layer(node):
+            for layer in self.layers:
+                if layer.add(node):
+                    return
+            else:
+                self.layers.append(Layer(node))
+
         for node in self._nodes:
             node.setY(max_y - node.y() + padding)
+            find_layer(node)
+
+        self.layers = sorted(self.layers, key=lambda l: l.rect.left())
+
+        print(self.layers)
 
         for p in self.inputs:
             p.setY(max_y - p.y() + padding)
