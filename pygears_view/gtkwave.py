@@ -1,14 +1,11 @@
 from PySide2 import QtCore
 from functools import partial
-import tempfile
 import collections
 from pygears.core.hier_node import HierVisitorBase
-from vcd.gtkw import GTKWSave
 
-from pygears.conf import Inject, reg_inject
+from pygears.conf import Inject, reg_inject, MayInject, bind
 from pygears.rtl.gear import rtl_from_gear_port
 from typing import NamedTuple
-from pygears.conf import reg_inject, Inject, MayInject, bind
 from .gtkwave_intf import GtkWave
 from .graph import GraphVisitor
 from pygears.sim.modules.verilator import SimVerilated
@@ -187,20 +184,26 @@ class GraphGtkWaveStatus(QtCore.QObject):
 
         prefix = self.verilator_waves[0].intf_basename(rtl_intf)
         intf_name = rtl_intf.name.replace('.', '/')
-        status_sig = prefix + '_state[1:0]'
+        status_sig = intf_name + '_state'
+        valid_sig = prefix + '_valid'
+        ready_sig = prefix + '_ready'
 
         self.pipes_on_wave[pipe] = intf_name
 
         commands = []
 
-        dti_translate_path = os.path.join(os.path.dirname(__file__), "dti_translate.py")
-        # dti_translate_path = "/tools/home/pygears_view/test.py"
-        commands.append(f'gtkwave::addSignalsFromList {{ {status_sig} }}')
-        commands.append(f'gtkwave::highlightSignalsFromList {{ {status_sig} }}')
-        commands.append(f'gtkwave::setCurrentTranslateTransProc "{dti_translate_path}"')
+        dti_translate_path = os.path.join(
+            os.path.dirname(__file__), "dti_translate.py")
+        commands.append(
+            f'gtkwave::addSignalsFromList {{{valid_sig} {ready_sig}}}')
+        commands.append(
+            f'gtkwave::highlightSignalsFromList {{{valid_sig} {ready_sig}}}')
+        commands.append(f'gtkwave::/Edit/Combine_Down {{{status_sig}}}')
+        commands.append(f'select_trace_by_name {{{status_sig}}}')
+        commands.append('gtkwave::/Edit/Toggle_Group_Open|Close')
+        commands.append(
+            f'gtkwave::setCurrentTranslateTransProc "{dti_translate_path}"')
         commands.append(f'gtkwave::installTransFilter 1')
-
-        # struct_sigs['_data']['state'] = status_sig
 
         for s in sigs:
             stem = s[len(prefix):]
@@ -215,7 +218,8 @@ class GraphGtkWaveStatus(QtCore.QObject):
 
                 place[path[-1]] = s
 
-        commands.append('gtkwave::addSignalsFromList {' + " ".join(sig_names) + '}')
+        commands.append('gtkwave::addSignalsFromList {' + " ".join(sig_names) +
+                        '}')
 
         print(sig_names)
 
@@ -239,13 +243,13 @@ class GraphGtkWaveStatus(QtCore.QObject):
 
         groups = list(dfs(intf_name, struct_sigs['_data']))
         for name, selected in reversed(groups):
-            commands.append('gtkwave::highlightSignalsFromList {' + " ".join(selected) + '}')
+            commands.append('gtkwave::highlightSignalsFromList {' +
+                            " ".join(selected) + '}')
             commands.append(f'gtkwave::/Edit/Combine_Down {name}')
 
         commands.append('select_trace_by_name {' + intf_name + '}')
         commands.append('gtkwave::/Edit/Toggle_Group_Open|Close')
         self.gtkwave.command('\n'.join(commands))
-
 
     def update_rtl_intf(self, pipe, wave_status):
         if wave_status == '1 0':
@@ -273,7 +277,8 @@ class GraphGtkWaveStatus(QtCore.QObject):
 
         signal_names = list(self.pipe_collect.rtl_intfs.values())
 
-        ret = self.gtkwave.command(f'get_values [list {" ".join(signal_names)}]')
+        ret = self.gtkwave.command(
+            f'get_values [list {" ".join(signal_names)}]')
         self.rtl_status = ret.split('\n')
         # self.gtkwave.command(f'list_values [list {" ".join(signal_names)}]')
 

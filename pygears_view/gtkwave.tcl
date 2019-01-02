@@ -48,10 +48,12 @@ proc list_traces {} {
 
 proc select_trace_by_name {name} {
     set total_traces [ gtkwave::getTotalNumTraces ]
+    set name [string trim $name]
     for {set i 0} {$i < $total_traces } {incr i} {
         set trace_name [ gtkwave::getTraceNameFromIndex $i ]
-        puts $trace_name
+        # puts $trace_name
         if {$name == $trace_name} {
+            # puts "Selected $name"
             gtkwave::setTraceHighlightFromIndex $i on
             break
         }

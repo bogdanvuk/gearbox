@@ -148,6 +148,9 @@ class GtkWave(QtCore.QObject):
         self.send_command.emit(cmd, 0)
 
     def command(self, cmd):
+        if isinstance(cmd, list):
+            cmd = 'if {1} {' + '\n'.join(cmd) + '}'
+
         cmd_block = GtkWaveCmdBlock()
         resp = cmd_block.command(cmd, self)
         return resp

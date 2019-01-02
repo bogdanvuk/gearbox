@@ -27,6 +27,7 @@ def dump_seq(seq):
 cur_time = 0
 max_time = 0
 seq = {0: 0}
+cur_val = [0, 0]
 for line in sys.stdin:
     if line.startswith('$'):
         if 'data_end' in line:
@@ -46,4 +47,10 @@ for line in sys.stdin:
                 seq[t] = seq[cur_time]
         cur_time = next_time
     else:
-        seq[cur_time] = int(line.split()[0][1:], 2)
+        val = int(line[0])
+        pos = int(line[1]) - 1
+        cur_val[pos] = val
+
+        seq[cur_time] = (cur_val[1] << 1) + cur_val[0]
+
+        # seq[cur_time] = int(line.split()[0][1:], 2)
