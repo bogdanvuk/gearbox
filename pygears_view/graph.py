@@ -38,13 +38,30 @@ class GraphVisitor:
         pass
 
 
+class GraphBuffer:
+    def __init__(self, view, name):
+        self.view = view
+        self.name = name
+        self.position = []
+        self.modeline = None
+
+    @property
+    def widget(self):
+        return self.view
+
+    @property
+    def domain(self):
+        return 'graph'
+
+    def activate(self, window):
+        self.window = window
+
+
 @reg_inject
 def graph(main=Inject('viewer/main'), root=Inject('gear/hier_root')):
     viewer = Graph()
-    main.buffers['graph'] = viewer
+    main.add_buffer(GraphBuffer(viewer, 'graph'))
     bind('viewer/graph', viewer)
-    viewer.resize(800, 500)
-    viewer.setGeometry(500, viewer.y(), 800, 500)
 
     # top = NodeItem(root)
     top_model = NodeModel(root)
@@ -107,36 +124,10 @@ class Graph(QtWidgets.QGraphicsView):
         return '{}.{}()'.format(self.__module__, self.__class__.__name__)
 
     def _sim_refresh_slot(self):
+        pass
         # self.sim_status.update()
         # self.sim_refresh.emit()
-        self.print_modeline()
-
-    @reg_inject
-    def print_modeline(self, modeline=Inject('viewer/modeline')):
-        timestep = registry("sim/timestep")
-        if timestep is None:
-            timestep = '-'
-
-        table = [[
-            ('style="padding-right: 20px;"',
-             fontify('graph', color='"darkorchid"', bold=True)),
-            ('', f'Simulation: R'),
-            ('', f'Timestep: {timestep}'),
-        ]]
-        tbl = tabulate(table)
-
-        style = """
-<style>
-td {
-padding-left: 10px;
-padding-right: 10px;
-}
-</style>
-        """
-        modeline.setText(style + tbl)
-
-    def activate(self):
-        self.print_modeline()
+        # self.print_modeline()
 
     def _set_viewer_zoom(self, value):
         if value == 0.0:

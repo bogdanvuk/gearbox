@@ -3,7 +3,7 @@ import inspect
 from PySide2.QtCore import Qt
 from PySide2 import QtWidgets, QtGui, QtCore
 from pygears.conf import Inject, reg_inject, registry, inject_async, bind
-from .main_window import Shortcut
+from .main_window import active_buffer
 from functools import wraps, partial
 from .node_search import node_search_completer
 from .pipe import Pipe
@@ -188,21 +188,18 @@ def node_up(graph=Inject('viewer/graph')):
 
 
 @shortcut('gtkwave', Qt.Key_J)
-@reg_inject
-def trace_down(gtkwave=Inject('viewer/gtkwave')):
-    gtkwave.command('trace_down')
+def trace_down():
+    active_buffer().command('trace_down')
 
 
 @shortcut('gtkwave', Qt.Key_K)
-@reg_inject
-def trace_up(gtkwave=Inject('viewer/gtkwave')):
-    gtkwave.command('trace_up')
+def trace_up():
+    active_buffer().command('trace_up')
 
 
 @shortcut('gtkwave', Qt.Key_Return)
-@reg_inject
-def trace_toggle(gtkwave=Inject('viewer/gtkwave')):
-    gtkwave.command('gtkwave::/Edit/Toggle_Group_Open|Close')
+def trace_toggle():
+    active_buffer().command('gtkwave::/Edit/Toggle_Group_Open|Close')
 
 
 @shortcut('graph', Qt.Key_J)
@@ -293,14 +290,20 @@ def quit():
     QtWidgets.QApplication.instance().quit()
 
 
-@shortcut('graph', Qt.Key_W)
+@shortcut(None, (Qt.Key_W, Qt.Key_Slash))
+@reg_inject
+def split_horizontally(main=Inject('viewer/main')):
+    window = main.buffers.active_window()
+    window.split_horizontally()
+
+
+@shortcut('graph', Qt.Key_P)
 @reg_inject
 def send_to_wave(
-        graph=Inject('viewer/graph'),
-        gtkwave_status=Inject('viewer/gtkwave_status')):
+        graph=Inject('viewer/graph'), gtkwave=Inject('viewer/gtkwave')):
 
     for pipe in graph.selected_pipes():
-        gtkwave_status.show_pipe(pipe)
+        gtkwave.show_pipe(pipe)
 
 
 # @shortcut('graph', Qt.Key_L)
@@ -393,14 +396,11 @@ class GraphGtkwaveSelectSync(QtCore.QObject):
         graph.selection_changed.connect(self.selection_changed)
 
     @reg_inject
-    def selection_changed(self,
-                          selected,
-                          gtkwave=Inject('viewer/gtkwave'),
-                          gtkwave_status=Inject('viewer/gtkwave_status')):
+    def selection_changed(self, selected, gtkwave=Inject('viewer/gtkwave')):
 
         selected_wave_pipes = []
         for s in selected:
-            wave_intf = gtkwave_status.pipes_on_wave.get(s, None)
+            wave_intf = gtkwave.pipes_on_wave.get(s, None)
             if wave_intf:
                 selected_wave_pipes.append(wave_intf)
 

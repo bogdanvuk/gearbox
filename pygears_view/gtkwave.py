@@ -6,39 +6,44 @@ from pygears.core.hier_node import HierVisitorBase
 from pygears.conf import Inject, reg_inject, MayInject, bind
 from pygears.rtl.gear import rtl_from_gear_port
 from typing import NamedTuple
-from .gtkwave_intf import GtkWave
+from .gtkwave_intf import GtkWaveWindow
 from .graph import GraphVisitor
+from .main_window import active_buffer
 from pygears.sim.modules.verilator import SimVerilated
 import fnmatch
 import os
 import re
 
 
-class VerilatorWave:
-    @reg_inject
-    def __init__(self, sim_module, verilator_intf=Inject('viewer/gtkwave')):
-        self.signal_name_map = {}
+def active_intf():
+    active_buffer()
+
+
+class VerilatorVCDMap:
+    def __init__(self, sim_module, gtkwave_intf):
+        self.gtkwave_intf = gtkwave_intf
         self.sim_module = sim_module
         self.path_prefix = '.'.join(['TOP', sim_module.wrap_name])
-        self.verilator_intf = verilator_intf
-        self.loaded = False
+        self.pipe_signals = {}
+        self.signal_name_map = {}
 
-    def load_vcd(self):
-        verilator_vcd = self.sim_module.trace_fn
-        ret = self.verilator_intf.command(f'gtkwave::loadFile {verilator_vcd}')
-        if "File load failure" not in ret:
-            self.loaded = True
-        else:
-            return False
+    @property
+    def name(self):
+        return self.sim_module.name
 
-        self.signal_name_map = self.make_relative_signal_name_map(
-            self.path_prefix, self.verilator_intf.command('list_signals'))
-        self.verilator_intf.command(f'gtkwave::setZoomFactor -7')
+    @property
+    def vcd_fn(self):
+        return self.sim_module.trace_fn
 
-        return True
+    def pipe_rtl_intf(self, pipe):
+        rtl_port = rtl_from_gear_port(pipe.output_port.model)
+        if rtl_port is None:
+            return None
 
-    def intf_basename(self, rtl_intf):
-        return f'{self.path_prefix}.{rtl_intf.name}'
+        return rtl_port.consumer
+
+    def pipe_basename(self, pipe):
+        return f'{self.path_prefix}.{self.pipe_rtl_intf(pipe).name}'
 
     def make_relative_signal_name_map(self, path_prefix, signal_list):
         signal_name_map = {}
@@ -46,18 +51,76 @@ class VerilatorWave:
             sig_name = sig_name.strip()
 
             basename = re.search(
-                fr"{path_prefix}\.({self.sim_module.svmod.sv_inst_name}\..*)",
-                sig_name)
+                r"{0}\.({1}\..*)".format(
+                    path_prefix, self.sim_module.svmod.sv_inst_name), sig_name)
 
             if basename:
                 signal_name_map[basename.group(1)] = sig_name
 
         return signal_name_map
 
-    def get_signals_for_intf(self, rtl_intf):
+    def get_signals_for_pipe(self, pipe):
+        if pipe in self.pipe_signals:
+            return self.pipe_signals[pipe]
+
+        if not self.signal_name_map:
+            self.signal_name_map = self.make_relative_signal_name_map(
+                self.path_prefix, self.gtkwave_intf.command('list_signals'))
+
         signals = fnmatch.filter(self.signal_name_map.keys(),
-                                 rtl_intf.name + '_*')
+                                 self.pipe_rtl_intf(pipe).name + '_*')
         return [self.signal_name_map[s] for s in signals]
+
+
+# class VerilatorWave:
+#     @reg_inject
+#     def __init__(self, sim_module):
+#         self.signal_name_map = {}
+#         self.sim_module = sim_module
+#         self.path_prefix = '.'.join(['TOP', sim_module.wrap_name])
+#         self.gtkwave_intf = GtkWave()
+#         self.gtkwave_intf.initialized.connect(self.load)
+#         self.loaded = False
+
+#     def load(self, main=Inject('viewer/main')):
+#         main.add_buffer(
+#             f'gtkwave - {self.sim_module.name}', self.gtkwave_intf.widget)
+
+#     def load_vcd(self):
+#         verilator_vcd = self.sim_module.trace_fn
+#         ret = self.gtkwave_intf.command(f'gtkwave::loadFile {verilator_vcd}')
+#         if "File load failure" not in ret:
+#             self.loaded = True
+#         else:
+#             return False
+
+#         self.signal_name_map = self.make_relative_signal_name_map(
+#             self.path_prefix, self.gtkwave_intf.command('list_signals'))
+#         self.gtkwave_intf.command(f'gtkwave::setZoomFactor -7')
+
+#         return True
+
+#     def intf_basename(self, rtl_intf):
+#         return f'{self.path_prefix}.{rtl_intf.name}'
+
+#     def make_relative_signal_name_map(self, path_prefix, signal_list):
+#         signal_name_map = {}
+#         for sig_name in signal_list.split('\n'):
+#             sig_name = sig_name.strip()
+
+#             basename = re.search(
+#                 fr"{path_prefix}\.({self.sim_module.svmod.sv_inst_name}\..*)",
+#                 sig_name)
+
+#             if basename:
+#                 signal_name_map[basename.group(1)] = sig_name
+
+#         return signal_name_map
+
+#     def get_signals_for_intf(self, rtl_intf):
+#         signals = fnmatch.filter(self.signal_name_map.keys(),
+#                                  rtl_intf.name + '_*')
+#         return [self.signal_name_map[s] for s in signals]
 
 
 @reg_inject
@@ -78,37 +141,10 @@ def find_verilated_modules(top=Inject('gear/hier_root')):
     return v.verilated_modules
 
 
-@reg_inject
-def load(
-        main=Inject('viewer/main'),
-        outdir=MayInject('sim/artifact_dir'),
-        viewer=Inject('viewer/gtkwave')):
-
-    bind('viewer/gtkwave', viewer)
-    main.buffers['gtkwave'] = viewer.gtkwave_widget
-    status = GraphGtkWaveStatus()
-    bind('viewer/gtkwave_status', status)
-    status.update()
-
-    # if outdir:
-    #     pyvcd = os.path.abspath(os.path.join(outdir, 'pygears.vcd'))
-    #     viewer.command(f'gtkwave::loadFile {pyvcd}')
-
-
 def gtkwave():
-    viewer = GtkWave()
-    viewer.initialized.connect(partial(load, viewer=viewer))
-
-
-@reg_inject
-def add_gear_to_wave(gear,
-                     gtkwave=Inject('viewer/gtkwave'),
-                     vcd=Inject('VCD'),
-                     outdir=Inject('sim/artifact_dir')):
-
-    gear_fn = gear.name.replace('/', '_')
-    gtkw = os.path.join(outdir, f'{gear_fn}.gtkw')
-    gtkwave.command_nb(f'gtkwave::loadFile {gtkw}')
+    status = GtkWave()
+    bind('viewer/gtkwave', status)
+    status.update()
 
 
 class Signals(NamedTuple):
@@ -117,23 +153,14 @@ class Signals(NamedTuple):
 
 
 class GraphPipeCollector(GraphVisitor):
-    def __init__(self, verilator_waves):
+    def __init__(self, vcd_map):
         self.rtl_intfs = {}
-        self.verilator_wave = verilator_waves[0]
+        self.vcd_map = vcd_map
 
     def pipe(self, pipe):
         if pipe not in self.rtl_intfs:
-            port = pipe.output_port.model
-            rtl_port = rtl_from_gear_port(port)
-            if rtl_port is None:
-                return
-
-            rtl_intf = rtl_port.consumer
-            if rtl_intf is None:
-                return
-
             try:
-                all_sigs = self.verilator_wave.get_signals_for_intf(rtl_intf)
+                all_sigs = self.vcd_map.get_signals_for_pipe(pipe)
                 # print(f'Pipe: {pipe} ({rtl_intf.name}) -> {all_sigs}')
 
                 stem = ''
@@ -148,41 +175,100 @@ class GraphPipeCollector(GraphVisitor):
                 pass
 
 
-class GraphGtkWaveStatus(QtCore.QObject):
-    vcd_loaded = QtCore.Signal()
-
+class GtkWave:
     @reg_inject
     def __init__(self,
-                 graph=Inject('viewer/graph'),
-                 gtkwave=Inject('viewer/gtkwave'),
+                 graph=Inject('viewer/graph_model'),
                  sim_bridge=MayInject('viewer/sim_bridge')):
         super().__init__()
         self.graph = graph
-        self.gtkwave = gtkwave
 
         if sim_bridge:
             sim_bridge.sim_refresh.connect(self.update)
 
-        self.verilator_waves = [
-            VerilatorWave(m) for m in find_verilated_modules()
-        ]
+        self.graph_intfs = []
+        self.instances = []
+        self.buffers = []
 
-        self.pipe_collect = GraphPipeCollector(self.verilator_waves)
+        for m in find_verilated_modules():
+            instance = GtkWaveWindow()
+            vcd_map = VerilatorVCDMap(m, instance)
+            intf = GtkWaveGraphIntf(
+                vcd_map, instance, graph=graph[m.gear.name[1:]])
 
-        self.pipes_on_wave = {}
+            buffer = GtkWaveBuffer(intf, instance, f'gtkwave - {vcd_map.name}')
+
+            self.graph_intfs.append(intf)
+            self.instances.append(instance)
+            self.buffers.append(buffer)
+
+    def pipe_gtkwave_intf(self, pipe):
+        for intf in self.graph_intfs:
+            if intf.has_pipe_wave(pipe):
+                return intf
+
+    def pipe_gtkwave_instance(self, pipe):
+        for intf, inst in zip(self.graph_intfs, self.instances):
+            if intf.has_pipe_wave(pipe):
+                return inst
 
     def show_pipe(self, pipe):
-        rtl_port = rtl_from_gear_port(pipe.output_port.model)
-        if rtl_port is None:
-            return
+        return self.pipe_gtkwave_intf(pipe).show_pipe(pipe)
 
-        rtl_intf = rtl_port.consumer
-        sigs = self.verilator_waves[0].get_signals_for_intf(rtl_intf)
+    def update(self):
+        for w in self.graph_intfs:
+            w.update()
+
+
+class GtkWaveBuffer:
+    def __init__(self, intf, window, name):
+        self.intf = intf
+        self.name = name
+        self.window = window
+        self.window.initialized.connect(self.load)
+
+    @reg_inject
+    def load(self, main=Inject('viewer/main')):
+        pass
+        # main.add_buffer(self)
+        # main.add_buffer(self.name, self.window.widget)
+
+    @property
+    def view(self):
+        return self.window.widget
+
+    @property
+    def domain(self):
+        return 'gtkwave'
+
+
+class GtkWaveGraphIntf(QtCore.QObject):
+    vcd_loaded = QtCore.Signal()
+
+    @reg_inject
+    def __init__(self,
+                 vcd_map,
+                 gtkwave_intf,
+                 graph=Inject('viewer/graph_model')):
+        super().__init__()
+        self.graph = graph
+        self.vcd_map = vcd_map
+        self.gtkwave_intf = gtkwave_intf
+        self.loaded = False
+        self.pipe_collect = GraphPipeCollector(vcd_map)
+        self.pipes_on_wave = {}
+
+    def has_pipe_wave(self, pipe):
+        return pipe in self.pipe_collect.rtl_intfs
+
+    def show_pipe(self, pipe):
 
         struct_sigs = collections.defaultdict(dict)
         sig_names = []
 
-        prefix = self.verilator_waves[0].intf_basename(rtl_intf)
+        prefix = self.vcd_map.pipe_basename(pipe)
+
+        rtl_intf = self.vcd_map.pipe_rtl_intf(pipe)
         intf_name = rtl_intf.name.replace('.', '/')
         status_sig = intf_name + '_state'
         valid_sig = prefix + '_valid'
@@ -198,6 +284,7 @@ class GraphGtkWaveStatus(QtCore.QObject):
             f'gtkwave::addSignalsFromList {{{valid_sig} {ready_sig}}}')
         commands.append(
             f'gtkwave::highlightSignalsFromList {{{valid_sig} {ready_sig}}}')
+
         commands.append(f'gtkwave::/Edit/Combine_Down {{{status_sig}}}')
         commands.append(f'select_trace_by_name {{{status_sig}}}')
         commands.append('gtkwave::/Edit/Toggle_Group_Open|Close')
@@ -205,7 +292,7 @@ class GraphGtkWaveStatus(QtCore.QObject):
             f'gtkwave::setCurrentTranslateTransProc "{dti_translate_path}"')
         commands.append(f'gtkwave::installTransFilter 1')
 
-        for s in sigs:
+        for s in self.vcd_map.get_signals_for_pipe(pipe):
             stem = s[len(prefix):]
             if stem.startswith('_data'):
                 sig_names.append(s)
@@ -249,7 +336,7 @@ class GraphGtkWaveStatus(QtCore.QObject):
 
         commands.append('select_trace_by_name {' + intf_name + '}')
         commands.append('gtkwave::/Edit/Toggle_Group_Open|Close')
-        self.gtkwave.command('\n'.join(commands))
+        self.gtkwave_intf.command('\n'.join(commands))
 
     def update_rtl_intf(self, pipe, wave_status):
         if wave_status == '1 0':
@@ -264,20 +351,22 @@ class GraphGtkWaveStatus(QtCore.QObject):
         pipe.set_status(status)
 
     def update(self):
-        for v in self.verilator_waves:
-            if not v.loaded:
-                if v.load_vcd():
-                    self.pipe_collect.visit(self.graph.top)
-                    self.vcd_loaded.emit()
+        if not self.loaded:
+            ret = self.gtkwave_intf.command(
+                f'gtkwave::loadFile {self.vcd_map.vcd_fn}')
+            if "File load failure" not in ret:
+                self.loaded = True
+            else:
+                return False
 
-        if not all(v.loaded for v in self.verilator_waves):
-            return
+            self.pipe_collect.visit(self.graph.view)
+            self.vcd_loaded.emit()
 
-        self.gtkwave.command(f'gtkwave::reLoadFile')
+        self.gtkwave_intf.command(f'gtkwave::reLoadFile')
 
         signal_names = list(self.pipe_collect.rtl_intfs.values())
 
-        ret = self.gtkwave.command(
+        ret = self.gtkwave_intf.command(
             f'get_values [list {" ".join(signal_names)}]')
         self.rtl_status = ret.split('\n')
         # self.gtkwave.command(f'list_values [list {" ".join(signal_names)}]')

@@ -133,7 +133,7 @@ class GtkWaveXevProc(QtCore.QObject):
         self.xev_thread.quit()
 
 
-class GtkWave(QtCore.QObject):
+class GtkWaveWindow(QtCore.QObject):
     send_command = QtCore.Signal(str, int)
     initialized = QtCore.Signal()
 
@@ -143,6 +143,10 @@ class GtkWave(QtCore.QObject):
         self.proc.window_up.connect(self.window_up)
         self.send_command.connect(self.proc.command)
         QtWidgets.QApplication.instance().aboutToQuit.connect(self.proc.quit)
+
+    @property
+    def domain(self):
+        return 'gtkwave'
 
     def command_nb(self, cmd):
         self.send_command.emit(cmd, 0)
@@ -168,8 +172,7 @@ class GtkWave(QtCore.QObject):
         print(f'GtkWave started: {version}, {pid}, {window_id}')
         self.window_id = window_id
         self.gtkwave_win = QtGui.QWindow.fromWinId(window_id)
-        self.gtkwave_widget = QtWidgets.QWidget.createWindowContainer(
-            self.gtkwave_win)
+        self.widget = QtWidgets.QWidget.createWindowContainer(self.gtkwave_win)
 
         self.xev_proc = GtkWaveXevProc(window_id)
         QtWidgets.QApplication.instance().aboutToQuit.connect(

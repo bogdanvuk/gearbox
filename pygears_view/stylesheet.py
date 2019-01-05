@@ -69,6 +69,8 @@ selection-background-color: rgba(219, 158, 0, 255);
 STYLE_MODELINE = '''
 padding: 2px;
 margin-bottom: 1px;
+border-radius: 0px;
+border: 1px solid rgba(235, 235, 235, 150);
 color: rgba(255, 255, 255, 150);
 background: rgba(35, 35, 35, 255);
 selection-background-color: rgba(219, 158, 0, 255);
