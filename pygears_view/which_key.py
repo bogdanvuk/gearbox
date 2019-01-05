@@ -22,32 +22,51 @@ class WhichKey(QLabel):
         self.setStyleSheet(STYLE_WHICH_KEY)
         self.setMargin(2)
         self.hide()
-        parent.installEventFilter(self)
+        # parent.installEventFilter(self)
+        main.installEventFilter(self)
 
         main.key_cancel.connect(self.cancel)
-        main.domain_changed.connect(self.domain_changed)
-        self.prefixes = {}
+        # main.domain_changed.connect(self.domain_changed)
+        self.prefixes = []
         self.current_prefix = []
+        self.prefix_detected = False
+
+    @reg_inject
+    def is_prefix(self, key, main=Inject('viewer/main')):
+        prefix = self.current_prefix + [key]
+        for s in main.shortcuts:
+            if not s.enabled:
+                continue
+
+            if len(prefix) >= len(s.key):
+                continue
+
+            if all(k1 == k2 for k1, k2 in zip(prefix, s.key)):
+                return True
 
     def eventFilter(self, obj, event):
         if event.type() == QtCore.QEvent.ShortcutOverride:
-            if event.key() in self.prefixes:
+            if self.is_prefix(event.key()):
                 self.current_prefix.append(event.key())
+                print(f"Prefix extended: {self.current_prefix}")
                 self.show()
+                self.prefix_detected = True
         elif event.type() == QtCore.QEvent.KeyRelease:
-            if self.current_prefix and (event.key() not in self.prefixes):
+            if self.current_prefix and (not self.prefix_detected):
                 self.current_prefix.clear()
                 self.hide()
 
+            self.prefix_detected = False
+
         return super().eventFilter(obj, event)
 
-    @reg_inject
-    def domain_changed(self, domain, main=Inject('viewer/main')):
-        self.prefixes.clear()
-        for s in main.shortcuts:
-            if (s.domain is None and domain[0] != '_') or (s.domain == domain):
-                if len(s.key) > 1:
-                    self.prefixes[s.key[0]] = s
+    # @reg_inject
+    # def domain_changed(self, domain, main=Inject('viewer/main')):
+    #     self.prefixes.clear()
+    #     for s in main.shortcuts:
+    #         if (s.domain is None and domain[0] != '_') or (s.domain == domain):
+    #             if len(s.key) > 1:
+    #                 self.prefixes[s.key[0]] = s
 
     @reg_inject
     def show(self, main=Inject('viewer/main')):

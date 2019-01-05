@@ -221,21 +221,23 @@ class GtkWave:
 
 
 class GtkWaveBuffer:
-    def __init__(self, intf, window, name):
+    def __init__(self, intf, instance, name):
         self.intf = intf
         self.name = name
-        self.window = window
-        self.window.initialized.connect(self.load)
+        self.instance = instance
+        self.instance.initialized.connect(self.load)
 
     @reg_inject
     def load(self, main=Inject('viewer/main')):
-        pass
-        # main.add_buffer(self)
+        main.add_buffer(self)
         # main.add_buffer(self.name, self.window.widget)
 
     @property
     def view(self):
-        return self.window.widget
+        return self.instance.widget
+
+    def activate(self, window):
+        self.window = window
 
     @property
     def domain(self):

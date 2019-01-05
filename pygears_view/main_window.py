@@ -30,9 +30,12 @@ class Shortcut(QtCore.QObject):
         main.domain_changed.connect(self.domain_changed)
 
     def activated(self):
-        self._qshortcut.setEnabled(False)
-        self.callback()
-        self._qshortcut.setEnabled(True)
+        # self._qshortcut.setEnabled(False)
+        QtWidgets.QApplication.instance().processEvents()
+        QtCore.QTimer.singleShot(100, self.callback)
+        # self.callback()
+        # QtCore.QTimer.singleShot(2000, self.callback)
+        # self._qshortcut.setEnabled(True)
 
     @property
     def enabled(self):
@@ -47,6 +50,7 @@ class Shortcut(QtCore.QObject):
 
 
 class BufferLayout(QtWidgets.QVBoxLayout):
+    @reg_inject
     def __init__(self, parent, buff=None):
         super().__init__()
         self.buff = buff
@@ -58,13 +62,14 @@ class BufferLayout(QtWidgets.QVBoxLayout):
 
         self.modeline = Modeline(self)
 
+        self.placeholder = QtWidgets.QLabel()
+        self.placeholder.setFocusPolicy(QtCore.Qt.FocusPolicy.ClickFocus)
+        self.placeholder.setStyleSheet(STYLE_MINIBUFFER)
+
         if buff is not None:
-            self.addWidget(self.buff)
+            self.addWidget(self.buff, 1)
         else:
-            placeholder = QtWidgets.QLabel()
-            placeholder.setFocusPolicy(QtCore.Qt.FocusPolicy.ClickFocus)
-            placeholder.setStyleSheet(STYLE_MINIBUFFER)
-            self.addWidget(placeholder, 2)
+            self.addWidget(self.placeholder, 1)
 
         self.addWidget(self.modeline)
 
@@ -74,15 +79,33 @@ class BufferLayout(QtWidgets.QVBoxLayout):
     def get_window(self, position):
         return self
 
-    def activate(self):
+    @reg_inject
+    def activate(self, layout=Inject('viewer/layout')):
         if self.buff:
             self.buff.activate(self)
 
+        layout.window_activated(self)
         self.modeline.update()
+        self.buff.view.setFocus(QtCore.Qt.OtherFocusReason)
 
-    def place_buffer(self, buff, position):
+    def place_buffer(self, buff, position=None):
+        self.itemAt(0).widget().hide()
+        self.removeWidget(self.itemAt(0).widget())
+
+        if buff is not None:
+            view = buff.view
+        else:
+            view = self.placeholder
+
+        self.insertWidget(0, view, 1)
+        view.show()
+
         self.buff = buff
-        self.replaceWidget(self.itemAt(0).widget(), buff.view)
+        self.activate()
+
+    @property
+    def size(self):
+        return 1
 
     @property
     @reg_inject
@@ -170,7 +193,7 @@ class WindowLayout(QtWidgets.QBoxLayout):
         pos = self.child_index(child)
         self.size += 1
         self.insertLayout(pos + 1, BufferLayout(self), 1)
-        self.child(pos+1).modeline.update()
+        self.child(pos + 1).modeline.update()
 
     def get_window(self, position):
         return self.child(position[0]).get_window(position[1:])
@@ -195,7 +218,7 @@ class BufferStack(QtWidgets.QStackedLayout):
         self.main = main
         self.setMargin(0)
         self.setContentsMargins(0, 0, 0, 0)
-        self._buffers = {}
+        self.buffers = []
         self.currentChanged.connect(self.current_changed)
 
     def child_win_id(self, child):
@@ -205,7 +228,6 @@ class BufferStack(QtWidgets.QStackedLayout):
         return tuple()
 
     def place_buffer(self, buf, position):
-        buf.position = position
         self.current_layout.place_buffer(buf, position)
         self.activate_window(position)
 
@@ -215,20 +237,37 @@ class BufferStack(QtWidgets.QStackedLayout):
     def active_window(self):
         return self.current_layout.current
 
-    def activate_window(self, position):
-        win = self.get_window(position)
+    def window_activated(self, win):
+        last_window = self.current_window
         self.current_window = win
-        win.activate()
-        self.main.change_domain(win.buff.domain)
+
+        if last_window:
+            last_window.modeline.update()
+
+        if win.buff:
+            self.main.change_domain(win.buff.domain)
+
+    def activate_window(self, position):
+        self.get_window(position).activate()
 
     def add(self, buf):
-        self._buffers[buf.name] = buf
-        self.place_buffer(buf, [0])
+        self.buffers.append(buf)
 
-        # self.addWidget(buf.view)
+        def find_empty_position(layout):
+            if isinstance(layout, BufferLayout):
+                if layout.buff is None:
+                    return layout
+            else:
+                for i in range(layout.size):
+                    buff = find_empty_position(layout.child(i))
+                    if buff is not None:
+                        return buff
 
-    def __getitem__(self, key):
-        return self._buffers[key]
+        empty_pos = find_empty_position(self.current_layout)
+
+        if empty_pos:
+            empty_pos.place_buffer(buf)
+            empty_pos.activate()
 
     def current_changed(self):
         self.main.modeline.setText(self.current.name)
@@ -239,7 +278,8 @@ class BufferStack(QtWidgets.QStackedLayout):
 
     @property
     def current(self):
-        return self.current_layout.current
+        return self.current_window
+        # return self.current_layout.current
         # try:
         #     # return list(self._buffers.values())[self.currentIndex()]
         #     return list(self._buffers.values())[0]
@@ -248,7 +288,10 @@ class BufferStack(QtWidgets.QStackedLayout):
 
     @property
     def current_name(self):
-        return list(self._buffers.keys())[0]
+        if self.current.buff:
+            return self.current.buff.name
+        else:
+            return None
 
     def next_buffer(self):
         next_id = self.currentIndex() + 1

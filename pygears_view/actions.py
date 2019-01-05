@@ -3,7 +3,7 @@ import inspect
 from PySide2.QtCore import Qt
 from PySide2 import QtWidgets, QtGui, QtCore
 from pygears.conf import Inject, reg_inject, registry, inject_async, bind
-from .main_window import active_buffer
+from .main_window import active_buffer, BufferLayout
 from functools import wraps, partial
 from .node_search import node_search_completer
 from .pipe import Pipe
@@ -52,7 +52,7 @@ def shortcut(domain, shortcut):
             @wraps(func)
             def arg_func():
                 kwds = {
-                    k: get_minibuffer_input(v.message, v.completer)
+                    k: get_minibuffer_input(v.message, v.completer())
                     for k, v in interactives.items()
                 }
                 func(**kwds)
@@ -237,10 +237,36 @@ def toggle_help(which_key=Inject('viewer/which_key')):
         which_key.show()
 
 
-@shortcut(None, Qt.Key_B)
+class BufferCompleter(QtWidgets.QCompleter):
+    @reg_inject
+    def __init__(self, layout=Inject('viewer/layout')):
+        super().__init__()
+
+        self.layout = layout
+        self.setCompletionMode(self.PopupCompletion)
+        self.setCaseSensitivity(QtCore.Qt.CaseInsensitive)
+
+        model = QtCore.QStringListModel()
+        completion_list = [b.name for b in layout.buffers]
+        model.setStringList(completion_list)
+        self.setModel(model)
+
+    def get_result(self, text):
+        for b in self.layout.buffers:
+            if b.name == text:
+                return b
+        else:
+            return None
+
+
+@shortcut(None, (Qt.Key_B, Qt.Key_B))
 @reg_inject
-def next_buffer(main=Inject('viewer/main')):
-    main.buffers.next_buffer()
+def next_buffer(
+        buff=Interactive('buffer: ', BufferCompleter),
+        layout=Inject('viewer/layout')):
+
+    if buff is not None:
+        layout.current_window.place_buffer(buff)
 
 
 @shortcut('graph', Qt.Key_Return)
@@ -295,6 +321,29 @@ def quit():
 def split_horizontally(main=Inject('viewer/main')):
     window = main.buffers.active_window()
     window.split_horizontally()
+
+
+@shortcut(None, (Qt.Key_W, Qt.Key_L))
+@reg_inject
+def window_right(main=Inject('viewer/main')):
+    def go_leftmost_down(window):
+        if isinstance(window, BufferLayout):
+            return window
+        else:
+            return go_leftmost_down(window.child(0))
+
+    def go_right(window, pos):
+        if (window.size >
+                1) and (window.direction == QtWidgets.QBoxLayout.LeftToRight):
+            if pos < window.size - 1:
+                return go_leftmost_down(window.child(pos + 1))
+
+        else:
+            parent = window.parent
+            return go_right(parent, parent.child_index(window))
+
+    window = go_right(main.buffers.active_window(), 0)
+    window.activate()
 
 
 @shortcut('graph', Qt.Key_P)

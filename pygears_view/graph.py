@@ -46,10 +46,6 @@ class GraphBuffer:
         self.modeline = None
 
     @property
-    def widget(self):
-        return self.view
-
-    @property
     def domain(self):
         return 'graph'
 
