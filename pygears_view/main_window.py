@@ -31,8 +31,9 @@ class Shortcut(QtCore.QObject):
 
     def activated(self):
         # self._qshortcut.setEnabled(False)
-        QtWidgets.QApplication.instance().processEvents()
-        QtCore.QTimer.singleShot(100, self.callback)
+        self.callback()
+        # QtWidgets.QApplication.instance().processEvents()
+        # QtCore.QTimer.singleShot(100, self.callback)
         # self.callback()
         # QtCore.QTimer.singleShot(2000, self.callback)
         # self._qshortcut.setEnabled(True)
@@ -349,6 +350,10 @@ class MainWindow(QtWidgets.QMainWindow):
         QtWidgets.QShortcut(
             QtGui.QKeySequence(QtCore.Qt.CTRL + QtCore.Qt.Key_G),
             self).activated.connect(self._key_cancel_event)
+
+    def focusOutEvent(self, event):
+        print("Focus Out")
+        super().focusOutEvent(event)
 
     def add_buffer(self, widget):
         self.buffers.add(widget)

@@ -80,6 +80,8 @@ class Minibuffer(QtCore.QObject):
         if self._completer:
             self._completer.complete()
 
+        self.start.emit()
+
     def _singled_out(self, text):
         if not self._completer:
             return
