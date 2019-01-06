@@ -75,12 +75,12 @@ class Minibuffer(QtCore.QObject):
         main.change_domain('minibuffer')
         self.input_box.setDisabled(False)
 
+        self.start.emit()
+
         self.complete_cont(message, completer)
 
         if self._completer:
             self._completer.complete()
-
-        self.start.emit()
 
     def _singled_out(self, text):
         if not self._completer:

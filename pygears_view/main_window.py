@@ -87,7 +87,9 @@ class BufferLayout(QtWidgets.QVBoxLayout):
 
         layout.window_activated(self)
         self.modeline.update()
-        self.buff.view.setFocus(QtCore.Qt.OtherFocusReason)
+
+        if self.buff:
+            self.buff.view.setFocus(QtCore.Qt.OtherFocusReason)
 
     def place_buffer(self, buff, position=None):
         self.itemAt(0).widget().hide()

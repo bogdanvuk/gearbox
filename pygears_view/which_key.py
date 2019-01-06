@@ -25,7 +25,6 @@ class WhichKey(QLabel):
         # parent.installEventFilter(self)
         main.installEventFilter(self)
         main.minibuffer.start.connect(self.cancel)
-
         main.key_cancel.connect(self.cancel)
         # main.domain_changed.connect(self.domain_changed)
         self.prefixes = []
@@ -45,11 +44,6 @@ class WhichKey(QLabel):
             if all(k1 == k2 for k1, k2 in zip(prefix, s.key)):
                 return True
 
-    def cancel(self):
-        self.current_prefix.clear()
-        self.hide()
-        self.prefix_detected = False
-
     def eventFilter(self, obj, event):
         if event.type() == QtCore.QEvent.ShortcutOverride:
             if self.is_prefix(event.key()):
@@ -59,7 +53,9 @@ class WhichKey(QLabel):
                 self.prefix_detected = True
         elif event.type() == QtCore.QEvent.KeyRelease:
             if self.current_prefix and (not self.prefix_detected):
+                print("Cancel from eventFilter")
                 self.cancel()
+                print("Cancelled")
 
             self.prefix_detected = False
 
@@ -141,4 +137,6 @@ class WhichKey(QLabel):
         super().show()
 
     def cancel(self):
+        self.current_prefix.clear()
         self.hide()
+        self.prefix_detected = False
