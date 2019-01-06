@@ -60,7 +60,6 @@ class GtkWaveProc(QtCore.QObject):
                     if not res:
                         continue
 
-                    print(res.group(1), res.group(2))
                     native_modifiers, native_key = int(res.group(1)), int(
                         res.group(2))
 
@@ -81,8 +80,6 @@ class GtkWaveProc(QtCore.QObject):
                         modifiers += QtCore.Qt.ALT
 
                     self.key_press.emit(key, modifiers)
-
-                    print(f'Unsollicited: {(key, modifiers)}')
 
     def command(self, cmd, cmd_id):
         self.cmd_id = cmd_id

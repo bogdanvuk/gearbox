@@ -323,6 +323,17 @@ def split_horizontally(main=Inject('viewer/main')):
     window.split_horizontally()
 
 
+@shortcut(None, (Qt.Key_W, Qt.Key_Minus))
+@reg_inject
+def split_vertically(layout=Inject('viewer/layout')):
+    window = layout.active_window()
+    new_window = window.split_vertically()
+    for b in layout.buffers:
+        if not b.active:
+            new_window.place_buffer(b)
+            return
+
+
 @shortcut(None, (Qt.Key_W, Qt.Key_L))
 @reg_inject
 def window_right(main=Inject('viewer/main')):

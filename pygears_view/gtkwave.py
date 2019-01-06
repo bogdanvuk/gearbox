@@ -8,7 +8,7 @@ from pygears.rtl.gear import rtl_from_gear_port
 from typing import NamedTuple
 from .gtkwave_intf import GtkWaveWindow
 from .graph import GraphVisitor
-from .main_window import active_buffer
+from .main_window import active_buffer, Buffer
 from pygears.sim.modules.verilator import SimVerilated
 import fnmatch
 import os
@@ -220,12 +220,13 @@ class GtkWave:
             w.update()
 
 
-class GtkWaveBuffer:
+class GtkWaveBuffer(Buffer):
     def __init__(self, intf, instance, name):
         self.intf = intf
         self.name = name
         self.instance = instance
         self.instance.initialized.connect(self.load)
+        self.window = None
 
     @reg_inject
     def load(self, main=Inject('viewer/main')):
@@ -235,9 +236,6 @@ class GtkWaveBuffer:
     @property
     def view(self):
         return self.instance.widget
-
-    def activate(self, window):
-        self.window = window
 
     @property
     def domain(self):

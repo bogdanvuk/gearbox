@@ -50,6 +50,24 @@ class Shortcut(QtCore.QObject):
             self._qshortcut.setEnabled(False)
 
 
+class Buffer:
+    def __init__(self, view, name):
+        self.view = view
+        self.name = name
+        self.window = None
+
+    @property
+    def active(self):
+        return self.window is not None
+
+    def activate(self, window):
+        self.window = window
+        self.view.setFocus(QtCore.Qt.OtherFocusReason)
+
+    def deactivate(self):
+        self.window = None
+
+
 class BufferLayout(QtWidgets.QVBoxLayout):
     @reg_inject
     def __init__(self, parent, buff=None):
@@ -75,7 +93,10 @@ class BufferLayout(QtWidgets.QVBoxLayout):
         self.addWidget(self.modeline)
 
     def split_horizontally(self):
-        self.parent.split_horizontally(self)
+        return self.parent.split_horizontally(self)
+
+    def split_vertically(self):
+        return self.parent.split_vertically(self)
 
     def get_window(self, position):
         return self
@@ -87,9 +108,6 @@ class BufferLayout(QtWidgets.QVBoxLayout):
 
         layout.window_activated(self)
         self.modeline.update()
-
-        if self.buff:
-            self.buff.view.setFocus(QtCore.Qt.OtherFocusReason)
 
     def place_buffer(self, buff, position=None):
         self.itemAt(0).widget().hide()
@@ -140,11 +158,9 @@ class WindowLayout(QtWidgets.QBoxLayout):
         if direction is None:
             direction = QtWidgets.QBoxLayout.LeftToRight
 
-        self.direction = direction
-        self.parent = parent
-
         super().__init__(direction)
 
+        self.parent = parent
         self.setSpacing(0)
         self.setMargin(0)
         self.setContentsMargins(0, 0, 0, 0)
@@ -192,11 +208,25 @@ class WindowLayout(QtWidgets.QBoxLayout):
             if self.itemAt(i).layout() is child:
                 return i
 
+    def insert_child(self, pos):
+        self.size += 1
+        child = BufferLayout(self)
+        self.insertLayout(pos, child, 1)
+        child.modeline.update()
+        return child
+
     def split_horizontally(self, child):
         pos = self.child_index(child)
-        self.size += 1
-        self.insertLayout(pos + 1, BufferLayout(self), 1)
-        self.child(pos + 1).modeline.update()
+        self.insert_child(pos + 1)
+
+    def split_vertically(self, child):
+        if (self.direction() !=
+                QtWidgets.QBoxLayout.TopToBottom) and (self.size == 1):
+            self.setDirection(QtWidgets.QBoxLayout.TopToBottom)
+
+        if (self.direction() == QtWidgets.QBoxLayout.TopToBottom):
+            pos = self.child_index(child)
+            return self.insert_child(pos + 1)
 
     def get_window(self, position):
         return self.child(position[0]).get_window(position[1:])

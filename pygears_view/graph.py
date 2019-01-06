@@ -12,6 +12,7 @@ from .port import PortItem
 from .scene import NodeScene
 from .node import NodeItem
 from .node_model import NodeModel
+from .main_window import Buffer
 from .html_utils import tabulate, fontify
 
 from pygears.conf import Inject, reg_inject, bind, MayInject, registry
@@ -38,19 +39,10 @@ class GraphVisitor:
         pass
 
 
-class GraphBuffer:
-    def __init__(self, view, name):
-        self.view = view
-        self.name = name
-        self.position = []
-        self.modeline = None
-
+class GraphBuffer(Buffer):
     @property
     def domain(self):
         return 'graph'
-
-    def activate(self, window):
-        self.window = window
 
 
 @reg_inject
