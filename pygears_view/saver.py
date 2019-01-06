@@ -3,10 +3,13 @@ from pygears.conf import Inject, reg_inject, MayInject
 from .graph import GraphVisitor
 from jinja2 import Environment, BaseLoader
 from pygears.core.hier_node import HierYielderBase
+from .layout import BufferLayout
 
 save_file_prolog = """
 from pygears.conf import Inject, reg_inject, MayInject, inject_async
 from pygears_view.utils import trigger
+from pygears_view.layout import BufferLayout, WindowLayout
+from PySide2 import QtWidgets
 """
 
 expand_func_template = """
@@ -29,12 +32,27 @@ expand()
 
 gtkwave_load_func_template = """
 
-@trigger('viewer/gtkwave_status', 'vcd_loaded')
-@reg_inject
-def gtkwave_load(gtkwave=Inject('viewer/gtkwave')):
-    gtkwave.command(
+@inject_async
+def load_after_vcd_loaded(gtkwave=Inject('viewer/gtkwave')):
+    gtkwave.instances[0].command(
         'gtkwave::/File/Read_Save_File {{fn}}')
 
+@inject_async
+def gtkwave_load(gtkwave=Inject('viewer/gtkwave')):
+    gtkwave.graph_intfs[0].vcd_loaded.connect(load_after_vcd_loaded)
+
+"""
+
+layout_load_func_tempalte = """
+@inject_async
+def layout_load(layout=Inject('viewer/layout')):
+    win = layout.current_layout
+    win.setDirection({{top_direction}})
+    win.child(0).remove()
+
+{{commands|indent(4,True)}}
+
+    list(layout.windows())[0].activate()
 """
 
 
@@ -61,12 +79,36 @@ def save_expanded(root=Inject('viewer/graph_model')):
 
 @reg_inject
 def save_gtkwave(gtkwave=Inject('viewer/gtkwave')):
-    gtkwave.command(
+    gtkwave.instances[0].command(
         f'gtkwave::/File/Write_Save_File {get_gtkwave_save_file_path()}')
 
     return load_str_template(gtkwave_load_func_template).render({
         'fn':
         get_gtkwave_save_file_path()
+    })
+
+
+def save_win_layout(name, layout):
+    res = ''
+    for i, child in enumerate(layout):
+        if isinstance(child, BufferLayout):
+            res += (f"{name}.addLayout(BufferLayout("
+                    f"parent=None, buff=layout.get_buffer_by_name("
+                    f"\"{child.buff.name}\")))\n")
+        else:
+            res += save_layout(child, name + str(i))
+            res += f"{name}.addLayout({name + str(i)})\n"
+
+    return res
+
+
+@reg_inject
+def save_layout(layout=Inject('viewer/layout')):
+    return load_str_template(layout_load_func_tempalte).render({
+        'commands':
+        save_win_layout('win', layout.current_layout),
+        'top_direction':
+        str(layout.current_layout.direction()).partition('.')[2]
     })
 
 
@@ -77,6 +119,8 @@ def save():
         f.write(save_expanded())
 
         f.write(save_gtkwave())
+
+        f.write(save_layout())
 
         f.write(save_file_epilog)
 

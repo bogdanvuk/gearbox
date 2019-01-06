@@ -8,7 +8,7 @@ from pygears.rtl.gear import rtl_from_gear_port
 from typing import NamedTuple
 from .gtkwave_intf import GtkWaveWindow
 from .graph import GraphVisitor
-from .main_window import active_buffer, Buffer
+from .layout import active_buffer, Buffer
 from pygears.sim.modules.verilator import SimVerilated
 import fnmatch
 import os
@@ -233,6 +233,14 @@ class GtkWaveBuffer(Buffer):
         main.add_buffer(self)
         # main.add_buffer(self.name, self.window.widget)
 
+    def activate(self):
+        super().activate()
+        # self.instance.gtkwave_win.setKeyboardGrabEnabled(True)
+
+    def deactivate(self):
+        super().deactivate()
+        # self.instance.gtkwave_win.setKeyboardGrabEnabled(False)
+
     @property
     def view(self):
         return self.instance.widget
@@ -354,7 +362,9 @@ class GtkWaveGraphIntf(QtCore.QObject):
         if not self.loaded:
             ret = self.gtkwave_intf.command(
                 f'gtkwave::loadFile {self.vcd_map.vcd_fn}')
+
             if "File load failure" not in ret:
+                self.gtkwave_intf.command(f'gtkwave::setZoomFactor -7')
                 self.loaded = True
             else:
                 return False
@@ -363,6 +373,9 @@ class GtkWaveGraphIntf(QtCore.QObject):
             self.vcd_loaded.emit()
 
         self.gtkwave_intf.command(f'gtkwave::reLoadFile')
+
+        # self.gtkwave_intf.command("gtkwave::/View/Show_Toolbar 0")
+        # self.gtkwave_intf.command("gtkwave::/View/Dynamic_Resize 0")
 
         signal_names = list(self.pipe_collect.rtl_intfs.values())
 

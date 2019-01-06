@@ -77,7 +77,7 @@ class Sniper:
             for n in node._nodes:
                 yield n
                 if not n.collapsed:
-                    yield from self.get_visible_objs(n)
+                    yield from self.get_visible_objs(n, objtype)
 
         if (objtype is None) or (objtype is Pipe):
             for p in node.pipes:

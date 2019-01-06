@@ -3,7 +3,7 @@ import inspect
 from PySide2.QtCore import Qt
 from PySide2 import QtWidgets, QtGui, QtCore
 from pygears.conf import Inject, reg_inject, registry, inject_async, bind
-from .main_window import active_buffer, BufferLayout
+from .layout import active_buffer, BufferLayout
 from functools import wraps, partial
 from .node_search import node_search_completer
 from .pipe import Pipe
@@ -12,7 +12,7 @@ import os
 
 
 class Interactive:
-    def __init__(self, message=None, completer=None):
+    def __init__(self, message=None, completer=lambda: None):
         self.message = message
         self.completer = completer
 
@@ -252,11 +252,7 @@ class BufferCompleter(QtWidgets.QCompleter):
         self.setModel(model)
 
     def get_result(self, text):
-        for b in self.layout.buffers:
-            if b.name == text:
-                return b
-        else:
-            return None
+        return self.layout.get_buffer_by_name(text)
 
 
 @shortcut(None, (Qt.Key_B, Qt.Key_B))
@@ -329,7 +325,7 @@ def split_vertically(layout=Inject('viewer/layout')):
     window = layout.active_window()
     new_window = window.split_vertically()
     for b in layout.buffers:
-        if not b.active:
+        if not b.visible:
             new_window.place_buffer(b)
             return
 
@@ -344,8 +340,8 @@ def window_right(main=Inject('viewer/main')):
             return go_leftmost_down(window.child(0))
 
     def go_right(window, pos):
-        if (window.size >
-                1) and (window.direction == QtWidgets.QBoxLayout.LeftToRight):
+        if (window.size > 1) and (
+                window.direction() == QtWidgets.QBoxLayout.LeftToRight):
             if pos < window.size - 1:
                 return go_leftmost_down(window.child(pos + 1))
 
@@ -354,6 +350,52 @@ def window_right(main=Inject('viewer/main')):
             return go_right(parent, parent.child_index(window))
 
     window = go_right(main.buffers.active_window(), 0)
+    window.activate()
+
+
+@shortcut(None, (Qt.Key_W, Qt.Key_J))
+@reg_inject
+def window_down(main=Inject('viewer/main')):
+    def go_topmost_down(window):
+        if isinstance(window, BufferLayout):
+            return window
+        else:
+            return go_topmost_down(window.child(0))
+
+    def go_down(window, pos):
+        if (window.size > 1) and (
+                window.direction() == QtWidgets.QBoxLayout.TopToBottom):
+            if pos < window.size - 1:
+                return go_topmost_down(window.child(pos + 1))
+
+        else:
+            parent = window.parent
+            return go_down(parent, parent.child_index(window))
+
+    window = go_down(main.buffers.active_window(), 0)
+    window.activate()
+
+
+@shortcut(None, (Qt.Key_W, Qt.Key_K))
+@reg_inject
+def window_up(main=Inject('viewer/main')):
+    def go_bottommost_down(window):
+        if isinstance(window, BufferLayout):
+            return window
+        else:
+            return go_bottommost_down(window.child(-1))
+
+    def go_up(window, pos):
+        if (window.size > 1) and (
+                window.direction() == QtWidgets.QBoxLayout.TopToBottom):
+            if pos > 0:
+                return go_bottommost_down(window.child(pos - 1))
+
+        else:
+            parent = window.parent
+            return go_up(parent, parent.child_index(window))
+
+    window = go_up(main.buffers.active_window(), 0)
     window.activate()
 
 

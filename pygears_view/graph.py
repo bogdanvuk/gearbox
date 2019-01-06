@@ -12,7 +12,7 @@ from .port import PortItem
 from .scene import NodeScene
 from .node import NodeItem
 from .node_model import NodeModel
-from .main_window import Buffer
+from .layout import Buffer
 from .html_utils import tabulate, fontify
 
 from pygears.conf import Inject, reg_inject, bind, MayInject, registry
@@ -77,6 +77,7 @@ class Graph(QtWidgets.QGraphicsView):
         scene_pos = (scene_area / 2) * -1
         self.setScene(NodeScene(self))
         self.scene().selectionChanged.connect(self.selection_changed_slot)
+        self.setFocusPolicy(QtCore.Qt.StrongFocus)
         self.setSceneRect(scene_pos, scene_pos, scene_area, scene_area)
         self.setRenderHint(QtGui.QPainter.Antialiasing, True)
         self.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)

@@ -15,6 +15,15 @@ class Modeline(QtWidgets.QLabel):
     def sim_bridge_connect(self, sim_bridge=Inject('viewer/sim_bridge')):
         sim_bridge.sim_refresh.connect(self.update)
 
+    @reg_inject
+    def remove(self, sim_bridge=Inject('viewer/sim_bridge')):
+        sim_bridge.sim_refresh.disconnect(self.update)
+        self.setParent(None)
+        self.deleteLater()
+
+    def __del__(self):
+        print("Deleting the modeline")
+
     def update(self):
         if self.window.buff is not None:
             name = self.window.buff.name

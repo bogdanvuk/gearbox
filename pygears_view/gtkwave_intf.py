@@ -49,14 +49,11 @@ class GtkWaveProc(QtCore.QObject):
                 continue
 
             try:
-                data = ''
-                while (1):
-                    data += self.p.read_nonblocking(size=4096, timeout=0.01)
-
-            except pexpect.TIMEOUT:
-                if data:
+                data = self.p.read_nonblocking(size=4096, timeout=0.01)
+                for d in data.strip().split('\n'):
                     print(f'Unsollicited: {data}')
-                    res = re.search(r"KeyPress:(\d+),(\d+)", data.strip())
+                    res = re.search(r"KeyPress:(\d+),(\d+)", d)
+
                     if not res:
                         continue
 
@@ -80,6 +77,15 @@ class GtkWaveProc(QtCore.QObject):
                         modifiers += QtCore.Qt.ALT
 
                     self.key_press.emit(key, modifiers)
+
+                    self.gtkwave_thread.eventDispatcher().processEvents(
+                        QtCore.QEventLoop.AllEvents)
+
+                # while (1):
+                #     data += self.p.read_nonblocking(size=4096, timeout=0.001)
+
+            except pexpect.TIMEOUT:
+                pass
 
     def command(self, cmd, cmd_id):
         self.cmd_id = cmd_id
@@ -153,11 +159,20 @@ class GtkWaveWindow(QtCore.QObject):
         app.postEvent(
             graph, QtGui.QKeyEvent(QtGui.QKeyEvent.KeyPress, key, modifiers))
 
+        app.processEvents(QtCore.QEventLoop.AllEvents)
+
+        app.postEvent(
+            graph, QtGui.QKeyEvent(QtGui.QKeyEvent.KeyRelease, key, modifiers))
+
+        app.processEvents(QtCore.QEventLoop.AllEvents)
+
     @reg_inject
     def window_up(self, version, pid, window_id, graph=Inject('viewer/graph')):
         print(f'GtkWave started: {version}, {pid}, {window_id}')
         self.window_id = window_id
         self.gtkwave_win = QtGui.QWindow.fromWinId(window_id)
+        self.gtkwave_win.setFlags(QtCore.Qt.FramelessWindowHint)
         self.widget = QtWidgets.QWidget.createWindowContainer(self.gtkwave_win)
+        self.widget.setFocusPolicy(QtCore.Qt.StrongFocus)
 
         self.initialized.emit()
