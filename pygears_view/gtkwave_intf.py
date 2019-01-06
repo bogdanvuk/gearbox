@@ -9,6 +9,7 @@ from PySide2 import QtWidgets, QtGui, QtCore
 
 class GtkWaveProc(QtCore.QObject):
 
+    key_press = QtCore.Signal(int, int)
     window_up = QtCore.Signal(str, int, int)
     response = QtCore.Signal(str, int)
 
@@ -17,6 +18,7 @@ class GtkWaveProc(QtCore.QObject):
         self.gtkwave_thread = QtCore.QThread()
         self.moveToThread(self.gtkwave_thread)
         self.exiting = False
+        self.cmd_id = None
         self.gtkwave_thread.started.connect(self.run)
         self.gtkwave_thread.finished.connect(self.quit)
         self.gtkwave_thread.start()
@@ -24,7 +26,7 @@ class GtkWaveProc(QtCore.QObject):
     def run(self):
         local_dir = os.path.abspath(os.path.dirname(__file__))
         script_fn = os.path.join(local_dir, "gtkwave.tcl")
-        self.p = pexpect.spawnu(f'gtkwave -W -N -T {script_fn}')
+        self.p = pexpect.spawnu(f'gtkwave -W -T {script_fn}')
         self.p.setecho(False)
         self.p.expect('%')
         version = re.search(r"GTKWave Analyzer v(\d{1}\.\d{1}.\d{2})",
@@ -39,12 +41,57 @@ class GtkWaveProc(QtCore.QObject):
 
         self.window_up.emit(version, self.p.pid, int(window_id, 16))
 
+        while (1):
+            self.gtkwave_thread.eventDispatcher().processEvents(
+                QtCore.QEventLoop.AllEvents)
+
+            if self.cmd_id is not None:
+                continue
+
+            try:
+                data = ''
+                while (1):
+                    data += self.p.read_nonblocking(size=4096, timeout=0.01)
+
+            except pexpect.TIMEOUT:
+                if data:
+                    print(f'Unsollicited: {data}')
+                    res = re.search(r"KeyPress:(\d+),(\d+)", data.strip())
+                    if not res:
+                        continue
+
+                    print(res.group(1), res.group(2))
+                    native_modifiers, native_key = int(res.group(1)), int(
+                        res.group(2))
+
+                    modifiers = 0
+                    key = native_key
+                    if chr(key).islower():
+                        key = ord(chr(key).upper())
+
+                    key = native_key_map.get(key, key)
+
+                    if native_modifiers & 0x4:
+                        modifiers += QtCore.Qt.CTRL
+
+                    if native_modifiers & 0x1:
+                        modifiers += QtCore.Qt.SHIFT
+
+                    if native_modifiers & 0x8:
+                        modifiers += QtCore.Qt.ALT
+
+                    self.key_press.emit(key, modifiers)
+
+                    print(f'Unsollicited: {(key, modifiers)}')
+
     def command(self, cmd, cmd_id):
+        self.cmd_id = cmd_id
         self.p.send(cmd + '\n')
         print(f'GtkWave: {cmd}')
         self.p.expect('%')
         print(f'GtkWave: {self.p.before.strip()}')
         self.response.emit(self.p.before.strip(), cmd_id)
+        self.cmd_id = None
 
     def quit(self):
         self.p.close()
@@ -74,65 +121,6 @@ native_key_map = {
 }
 
 
-class GtkWaveXevProc(QtCore.QObject):
-
-    key_press = QtCore.Signal(int, int)
-
-    def __init__(self, window_id, parent=None):
-        super().__init__(parent)
-        self.window_id = window_id
-        self.xev_thread = QtCore.QThread()
-        self.moveToThread(self.xev_thread)
-        self.xev_thread.started.connect(self.run)
-        self.xev_thread.start()
-
-    def run(self):
-        # cmd = ['xev', '-id', str(self.window_id), '-event', 'keyboard']
-        cmd = f'xev -id {self.window_id} -event keyboard'
-        # print(f"Running xev with: {' '.join(cmd)}")
-        # print(f"Running xev with: {cmd}")
-        import subprocess
-        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True)
-        key_press = False
-        for line in proc.stdout:
-            line = line.decode()
-            # print(line, end='')
-            if line.startswith("KeyPress"):
-                key_press = True
-            elif key_press and line.strip().startswith("state"):
-                # print(line)
-
-                res = re.search(
-                    r"state 0x([0-9a-fA-F]+).*keysym 0x([0-9a-fA-F]+).*",
-                    line.strip())
-                # print(res)
-                # print(res.group(1), res.group(2))
-                native_modifiers, native_key = int(res.group(1), 16), int(
-                    res.group(2), 16)
-
-                modifiers = 0
-                key = native_key
-                if chr(key).islower():
-                    key = ord(chr(key).upper())
-
-                key = native_key_map.get(key, key)
-
-                if native_modifiers & 0x4:
-                    modifiers += QtCore.Qt.CTRL
-
-                if native_modifiers & 0x1:
-                    modifiers += QtCore.Qt.SHIFT
-
-                if native_modifiers & 0x8:
-                    modifiers += QtCore.Qt.ALT
-
-                self.key_press.emit(key, modifiers)
-                key_press = False
-
-    def quit(self):
-        self.xev_thread.quit()
-
-
 class GtkWaveWindow(QtCore.QObject):
     send_command = QtCore.Signal(str, int)
     initialized = QtCore.Signal()
@@ -140,6 +128,7 @@ class GtkWaveWindow(QtCore.QObject):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.proc = GtkWaveProc()
+        self.proc.key_press.connect(self.key_press)
         self.proc.window_up.connect(self.window_up)
         self.send_command.connect(self.proc.command)
         QtWidgets.QApplication.instance().aboutToQuit.connect(self.proc.quit)
@@ -173,10 +162,5 @@ class GtkWaveWindow(QtCore.QObject):
         self.window_id = window_id
         self.gtkwave_win = QtGui.QWindow.fromWinId(window_id)
         self.widget = QtWidgets.QWidget.createWindowContainer(self.gtkwave_win)
-
-        self.xev_proc = GtkWaveXevProc(window_id)
-        QtWidgets.QApplication.instance().aboutToQuit.connect(
-            self.xev_proc.quit)
-        self.xev_proc.key_press.connect(self.key_press)
 
         self.initialized.emit()

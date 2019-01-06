@@ -338,7 +338,7 @@ class GtkWaveGraphIntf(QtCore.QObject):
 
         commands.append('select_trace_by_name {' + intf_name + '}')
         commands.append('gtkwave::/Edit/Toggle_Group_Open|Close')
-        self.gtkwave_intf.command('\n'.join(commands))
+        self.gtkwave_intf.command(commands)
 
     def update_rtl_intf(self, pipe, wave_status):
         if wave_status == '1 0':
