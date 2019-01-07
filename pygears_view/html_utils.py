@@ -12,12 +12,18 @@ def tabulate(table, style=""):
     return '\n'.join(res)
 
 
-def fontify(s, color=None, bold=False):
-    style = ''
-    if color:
-        style += f' color={color}'
+def fontify(s, bold=False, **style):
+    style = ';'.join([f'{k.replace("_", "-")}:{v}' for k, v in style.items()])
+
+    if style:
+        style_expr = f' style="{style}"'
+    else:
+        style_expr = ''
 
     if bold:
-        s = f'<b>{s}<\b>'
+        s = f'<b>{s}</b>'
 
-    return f'<font{style}>{s}</font>'
+    res = f'<span{style_expr}>{s}</span>'
+    print(f'Fontify: {res}')
+
+    return res

@@ -145,7 +145,7 @@ class GtkWaveWindow(QtCore.QObject):
 
     def command(self, cmd):
         if isinstance(cmd, list):
-            cmd = 'if {1} {' + '\n'.join(cmd) + '}'
+            cmd = 'if {1} {\n' + '\n'.join(cmd) + '\n}'
 
         cmd_block = GtkWaveCmdBlock()
         resp = cmd_block.command(cmd, self)

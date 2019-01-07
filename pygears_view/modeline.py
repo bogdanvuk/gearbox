@@ -36,14 +36,18 @@ class Modeline(QtWidgets.QLabel):
 
         win_id = self.window.win_id
         if self.window.active:
-            win_num = fontify(f'{win_id}:', color='"darkorchid"', bold=True)
+            win_num = fontify(
+                f'{win_id}:',
+                background_color='#d4a649',
+                color='darkorchid',
+                bold=True)
         else:
             win_num = f'{win_id}:'
 
         table = [[
-            ('style="padding-right: 10px;"', win_num),
+            ('style="padding-right: 5px;"', win_num),
             ('style="padding-right: 20px;"',
-             fontify(name, color='"darkorchid"', bold=True)),
+             fontify(name, color='darkorchid', bold=True)),
             ('', f'Timestep: {timestep}'),
         ]]
         tbl = tabulate(table)

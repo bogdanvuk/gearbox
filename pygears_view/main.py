@@ -51,7 +51,7 @@ def main(pipe=None, layers=Inject('viewer/layers')):
         safe_bind('viewer/sim_bridge_pipe', pipe)
 
     app = QtWidgets.QApplication(sys.argv)
-    app.setFont(QtGui.QFont("DejaVu Sans Mono", 13))
+    app.setFont(QtGui.QFont("DejaVu Sans Mono", 11))
 
     main_window = MainWindow()
 

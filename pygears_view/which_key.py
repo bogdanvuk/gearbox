@@ -30,6 +30,10 @@ class WhichKey(QLabel):
         self.prefixes = []
         self.current_prefix = []
         self.prefix_detected = False
+        self.timer = QtCore.QTimer()
+        self.timer.setInterval(1000)
+        self.timer.timeout.connect(self.show)
+        self.timer.setSingleShot(True)
 
     @reg_inject
     def is_prefix(self, key, main=Inject('viewer/main')):
@@ -49,7 +53,7 @@ class WhichKey(QLabel):
             if self.is_prefix(event.key()):
                 self.current_prefix.append(event.key())
                 print(f"Prefix extended: {self.current_prefix}")
-                self.show()
+                self.timer.start()
                 self.prefix_detected = True
         elif event.type() == QtCore.QEvent.KeyRelease:
             if self.current_prefix and (not self.prefix_detected):
@@ -128,7 +132,7 @@ class WhichKey(QLabel):
         table = [[] for _ in range(row_num)]
         for i, key_name in enumerate(sorted(which_key_string)):
 
-            shortcut_string = (html_utils.fontify(key_name, '"darkorchid"') +
+            shortcut_string = (html_utils.fontify(key_name, color='darkorchid') +
                                f' &#8594; {which_key_string[key_name]}')
 
             table[i % row_num].append((f'width={max_width}', shortcut_string))
@@ -137,6 +141,7 @@ class WhichKey(QLabel):
         super().show()
 
     def cancel(self):
+        self.timer.stop()
         self.current_prefix.clear()
         self.hide()
         self.prefix_detected = False

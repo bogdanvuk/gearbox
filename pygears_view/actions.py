@@ -189,17 +189,17 @@ def node_up(graph=Inject('viewer/graph')):
 
 @shortcut('gtkwave', Qt.Key_J)
 def trace_down():
-    active_buffer().command('trace_down')
+    active_buffer().instance.command('trace_down')
 
 
 @shortcut('gtkwave', Qt.Key_K)
 def trace_up():
-    active_buffer().command('trace_up')
+    active_buffer().instance.command('trace_up')
 
 
 @shortcut('gtkwave', Qt.Key_Return)
 def trace_toggle():
-    active_buffer().command('gtkwave::/Edit/Toggle_Group_Open|Close')
+    active_buffer().instance.command('gtkwave::/Edit/Toggle_Group_Open|Close')
 
 
 @shortcut('graph', Qt.Key_J)
@@ -486,12 +486,11 @@ def time_search(
 
 
 @inject_async
-def graph_gtkwave_select_sync(
-        graph=Inject('viewer/graph'),
-        gtkwave_status=Inject('viewer/gtkwave_status')):
+def graph_gtkwave_select_sync(graph=Inject('viewer/graph')):
     bind('viewer/graph_gtkwave_select_sync', GraphGtkwaveSelectSync(graph))
 
 
+# TODO: broken when using gtkwave save file
 class GraphGtkwaveSelectSync(QtCore.QObject):
     @reg_inject
     def __init__(self, graph=Inject('viewer/graph')):
@@ -500,26 +499,24 @@ class GraphGtkwaveSelectSync(QtCore.QObject):
     @reg_inject
     def selection_changed(self, selected, gtkwave=Inject('viewer/gtkwave')):
 
-        selected_wave_pipes = []
+        selected_wave_pipes = {}
         for s in selected:
-            wave_intf = gtkwave.pipes_on_wave.get(s, None)
+            gtkwave_intf = gtkwave.pipe_gtkwave_intf(s)
+            if gtkwave_intf:
+                if gtkwave_intf not in selected_wave_pipes:
+                    selected_wave_pipes[gtkwave_intf] = []
+            else:
+                continue
+
+            wave_intf = gtkwave_intf.pipes_on_wave.get(s, None)
             if wave_intf:
-                selected_wave_pipes.append(wave_intf)
+                selected_wave_pipes[gtkwave_intf].append(wave_intf)
 
-        gtkwave.command('gtkwave::/Edit/UnHighlight_All')
-        if selected_wave_pipes:
-            gtkwave.command('gtkwave::highlightSignalsFromList {' +
-                            " ".join(selected_wave_pipes) + '}')
-
-            gtkwave.command('gtkwave::getTraceFlagsFromName {' +
-                            " ".join(selected_wave_pipes) + '}')
-
-
-@inject_async
-def graph_gtkwave_select_sync(
-        graph=Inject('viewer/graph'),
-        gtkwave_status=Inject('viewer/gtkwave_status')):
-    bind('viewer/graph_gtkwave_select_sync', GraphGtkwaveSelectSync(graph))
+        for intf, wave_list in selected_wave_pipes.items():
+            intf.gtkwave_intf.command([
+                'gtkwave::/Edit/UnHighlight_All',
+                f'gtkwave::highlightSignalsFromList {{{" ".join(wave_list)}}}'
+            ])
 
 
 def zoom_in(graph):
