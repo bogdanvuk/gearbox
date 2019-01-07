@@ -36,7 +36,7 @@ class Buffer:
         pass
 
 
-class BufferLayout(QtWidgets.QVBoxLayout):
+class Window(QtWidgets.QVBoxLayout):
     @reg_inject
     def __init__(self, parent=None, buff=None):
         super().__init__()
@@ -102,16 +102,12 @@ class BufferLayout(QtWidgets.QVBoxLayout):
         else:
             view = self.placeholder
 
-        self.insertWidget(0, view, 1)
+        self.insertWidget(0, view, stretch=1)
         view.show()
 
         self.buff = buff
         self.buff.show(self)
         self.activate()
-
-    @property
-    def size(self):
-        return 1
 
     @property
     @reg_inject
@@ -139,7 +135,7 @@ class BufferLayout(QtWidgets.QVBoxLayout):
 
 
 def child_iter(layout):
-    for i in range(layout.size):
+    for i in range(layout.count()):
         yield layout.child(i)
 
 
@@ -155,14 +151,14 @@ class WindowLayout(QtWidgets.QBoxLayout):
         self.setMargin(0)
         self.setContentsMargins(0, 0, 0, 0)
 
-        self.size = 0
-
         for i in range(size):
-            self.addLayout(BufferLayout())
+            self.addLayout(Window())
+
+        self.equalize_stretch()
 
     @property
     def current(self):
-        for i in range(self.size):
+        for i in range(self.count()):
             ret = self.itemAt(i).layout().current
             if ret:
                 return ret
@@ -178,7 +174,8 @@ class WindowLayout(QtWidgets.QBoxLayout):
         win_id = self.parent.child_win_id(self)
 
         if self.child_index(child) is None:
-            import pdb; pdb.set_trace()
+            import pdb
+            pdb.set_trace()
 
         for i in range(self.child_index(child)):
             win_id += self.child(i).win_num
@@ -187,7 +184,7 @@ class WindowLayout(QtWidgets.QBoxLayout):
 
     def windows(self):
         for child in self:
-            if isinstance(child, BufferLayout):
+            if isinstance(child, Window):
                 yield child
             else:
                 yield from child.windows()
@@ -195,7 +192,7 @@ class WindowLayout(QtWidgets.QBoxLayout):
     @property
     def win_num(self):
         win_cnt = 0
-        for i in range(self.size):
+        for i in range(self.count()):
             win_cnt += self.child(i).win_num()
         return win_cnt
 
@@ -204,26 +201,32 @@ class WindowLayout(QtWidgets.QBoxLayout):
 
     def child(self, index):
         if index == -1:
-            index = self.size - 1
+            index = self.count() - 1
 
         return self.itemAt(index).layout()
 
     def child_index(self, child):
-        for i in range(self.size):
+        for i in range(self.count()):
             if self.itemAt(i).layout() is child:
                 return i
 
     def addLayout(self, layout):
-        super().addLayout(layout, 1)
+        super().addLayout(layout)
         layout.parent = self
-        self.size += 1
-        if isinstance(layout, BufferLayout):
+        self.equalize_stretch()
+        if isinstance(layout, Window):
             layout.modeline.update()
 
+        print("Stretch: ", [self.stretch(i) for i in range(self.count())])
+
+    def equalize_stretch(self):
+        for i in range(self.count()):
+            self.setStretch(i, round(100 / self.count()))
+
     def insert_child(self, pos):
-        self.size += 1
-        child = BufferLayout(self)
-        self.insertLayout(pos, child, 1)
+        child = Window(self)
+        self.insertLayout(pos, child)
+        self.equalize_stretch()
         child.modeline.update()
         return child
 
@@ -231,7 +234,6 @@ class WindowLayout(QtWidgets.QBoxLayout):
     def remove_child(self, child, layout=Inject('viewer/layout')):
         pos = self.child_index(child)
         self.removeItem(self.itemAt(pos))
-        self.size -= 1
         layout.current_window = None
 
     def split_horizontally(self, child):
@@ -240,7 +242,7 @@ class WindowLayout(QtWidgets.QBoxLayout):
 
     def split_vertically(self, child):
         if (self.direction() !=
-                QtWidgets.QBoxLayout.TopToBottom) and (self.size == 1):
+                QtWidgets.QBoxLayout.TopToBottom) and (self.count() == 1):
             self.setDirection(QtWidgets.QBoxLayout.TopToBottom)
 
         if (self.direction() == QtWidgets.QBoxLayout.TopToBottom):
@@ -316,11 +318,11 @@ class BufferStack(QtWidgets.QStackedLayout):
         self.buffers.append(buf)
 
         def find_empty_position(layout):
-            if isinstance(layout, BufferLayout):
+            if isinstance(layout, Window):
                 if layout.buff is None:
                     return layout
             else:
-                for i in range(layout.size):
+                for i in range(layout.count()):
                     buff = find_empty_position(layout.child(i))
                     if buff is not None:
                         return buff

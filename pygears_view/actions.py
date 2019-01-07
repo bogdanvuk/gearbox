@@ -3,11 +3,13 @@ import inspect
 from PySide2.QtCore import Qt
 from PySide2 import QtWidgets, QtGui, QtCore
 from pygears.conf import Inject, reg_inject, registry, inject_async, bind
-from .layout import active_buffer, BufferLayout
+from .layout import active_buffer, Window, WindowLayout
 from functools import wraps, partial
 from .node_search import node_search_completer
+from .main_window import Shortcut
 from .pipe import Pipe
 from .saver import save
+from .utils import trigger
 import os
 
 
@@ -319,7 +321,7 @@ def split_horizontally(main=Inject('viewer/main')):
     window.split_horizontally()
 
 
-@shortcut(None, (Qt.Key_W, Qt.Key_Minus))
+@shortcut(None, (Qt.Key_W, Qt.Key_Underscore))
 @reg_inject
 def split_vertically(layout=Inject('viewer/layout')):
     window = layout.active_window()
@@ -334,15 +336,15 @@ def split_vertically(layout=Inject('viewer/layout')):
 @reg_inject
 def window_right(main=Inject('viewer/main')):
     def go_leftmost_down(window):
-        if isinstance(window, BufferLayout):
+        if isinstance(window, Window):
             return window
         else:
             return go_leftmost_down(window.child(0))
 
     def go_right(window, pos):
-        if (window.size > 1) and (
-                window.direction() == QtWidgets.QBoxLayout.LeftToRight):
-            if pos < window.size - 1:
+        if (isinstance(window, WindowLayout) and (window.count() > 1)
+                and (window.direction() == QtWidgets.QBoxLayout.LeftToRight)):
+            if pos < window.count() - 1:
                 return go_leftmost_down(window.child(pos + 1))
 
         else:
@@ -350,22 +352,53 @@ def window_right(main=Inject('viewer/main')):
             return go_right(parent, parent.child_index(window))
 
     window = go_right(main.buffers.active_window(), 0)
-    window.activate()
+    if window:
+        window.activate()
+
+
+def change_perc_size(window, diff):
+    parent = window.parent
+    index = parent.child_index(window)
+
+    prev_stretch = parent.stretch(index)
+    cur_stretch = prev_stretch + diff
+    prev_remain_stretch = 100 - prev_stretch
+    remain_stretch = 100 - cur_stretch
+
+    parent.setStretch(index, cur_stretch)
+
+    for i in range(parent.count()):
+        if i != index:
+            prev_stretch = parent.stretch(i)
+            parent.setStretch(
+                i, round(prev_remain_stretch / prev_stretch * remain_stretch))
+
+
+@shortcut(None, (Qt.Key_W, Qt.Key_Plus))
+@reg_inject
+def increase_height(layout=Inject('viewer/layout')):
+    change_perc_size(layout.active_window(), +3)
+
+
+@shortcut(None, (Qt.Key_W, Qt.Key_Minus))
+@reg_inject
+def decrease_height(layout=Inject('viewer/layout')):
+    change_perc_size(layout.active_window(), -3)
 
 
 @shortcut(None, (Qt.Key_W, Qt.Key_J))
 @reg_inject
 def window_down(main=Inject('viewer/main')):
     def go_topmost_down(window):
-        if isinstance(window, BufferLayout):
+        if isinstance(window, Window):
             return window
         else:
             return go_topmost_down(window.child(0))
 
     def go_down(window, pos):
-        if (window.size > 1) and (
-                window.direction() == QtWidgets.QBoxLayout.TopToBottom):
-            if pos < window.size - 1:
+        if (isinstance(window, WindowLayout) and (window.count() > 1)
+                and (window.direction() == QtWidgets.QBoxLayout.TopToBottom)):
+            if pos < window.count() - 1:
                 return go_topmost_down(window.child(pos + 1))
 
         else:
@@ -373,21 +406,22 @@ def window_down(main=Inject('viewer/main')):
             return go_down(parent, parent.child_index(window))
 
     window = go_down(main.buffers.active_window(), 0)
-    window.activate()
+    if window:
+        window.activate()
 
 
 @shortcut(None, (Qt.Key_W, Qt.Key_K))
 @reg_inject
 def window_up(main=Inject('viewer/main')):
     def go_bottommost_down(window):
-        if isinstance(window, BufferLayout):
+        if isinstance(window, Window):
             return window
         else:
             return go_bottommost_down(window.child(-1))
 
     def go_up(window, pos):
-        if (window.size > 1) and (
-                window.direction() == QtWidgets.QBoxLayout.TopToBottom):
+        if (isinstance(window, WindowLayout) and (window.count() > 1)
+                and (window.direction() == QtWidgets.QBoxLayout.TopToBottom)):
             if pos > 0:
                 return go_bottommost_down(window.child(pos - 1))
 
@@ -396,7 +430,9 @@ def window_up(main=Inject('viewer/main')):
             return go_up(parent, parent.child_index(window))
 
     window = go_up(main.buffers.active_window(), 0)
-    window.activate()
+
+    if window:
+        window.activate()
 
 
 @shortcut('graph', Qt.Key_P)
@@ -406,6 +442,28 @@ def send_to_wave(
 
     for pipe in graph.selected_pipes():
         gtkwave.show_pipe(pipe)
+
+
+class ShortcutRepeat(QtCore.QObject):
+    def __init__(self, main):
+        super().__init__()
+        self.last_shortcut = None
+        main.shortcut_triggered.connect(self.shortcut_triggered)
+        self.repeat_shortcut = Shortcut(
+            domain=None, key=Qt.Key_Period, callback=self.repeat)
+
+    def repeat(self):
+        if self.last_shortcut:
+            self.last_shortcut.activated.emit()
+
+    def shortcut_triggered(self, shortcut):
+        if shortcut is not self.repeat_shortcut:
+            self.last_shortcut = shortcut
+
+
+@inject_async
+def create_shortcut_repeater(main=Inject('viewer/main')):
+    bind('viewer/shortcut_repeater', ShortcutRepeat(main))
 
 
 # @shortcut('graph', Qt.Key_L)

@@ -53,7 +53,11 @@ class WhichKey(QLabel):
             if self.is_prefix(event.key()):
                 self.current_prefix.append(event.key())
                 print(f"Prefix extended: {self.current_prefix}")
-                self.timer.start()
+                if self.isVisible():
+                    self.show()
+                else:
+                    self.timer.start()
+
                 self.prefix_detected = True
         elif event.type() == QtCore.QEvent.KeyRelease:
             if self.current_prefix and (not self.prefix_detected):
@@ -93,7 +97,10 @@ class WhichKey(QLabel):
                 key = key[0:1]
                 # continue
 
-            keys = QKeySequence(*key).toString().split('+')
+            if key[0] == QtCore.Qt.Key_Plus:
+                keys = ['+']
+            else:
+                keys = QKeySequence(*key).toString().split('+')
 
             try:
                 shift_id = keys.index('Shift')
@@ -107,7 +114,7 @@ class WhichKey(QLabel):
             except ValueError:
                 ctrl_id = None
 
-            if shift_id is None:
+            if shift_id is None and keys[0].isalpha():
                 keys[0] = keys[0].lower()
 
             if ctrl_id is not None:

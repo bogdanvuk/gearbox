@@ -1,6 +1,7 @@
 from PySide2 import QtCore, QtWidgets, QtGui
 from pygears.conf import PluginBase, registry, safe_bind, reg_inject, Inject
 
+from functools import partial
 from .minibuffer import Minibuffer
 from .layout import BufferStack
 
@@ -8,22 +9,25 @@ from .layout import BufferStack
 class Shortcut(QtCore.QObject):
     @reg_inject
     def __init__(self, domain, key, callback, main=Inject('viewer/main')):
+        super().__init__()
+
         if not isinstance(key, tuple):
             key = (key, )
 
         self._qshortcut = QtWidgets.QShortcut(QtGui.QKeySequence(*key), main)
         # self._qshortcut.activated.connect(callback)
-        self._qshortcut.activated.connect(self.activated)
+        self._qshortcut.activated.connect(self.activated_slot)
         self._qshortcut.activatedAmbiguously.connect(main.shortcut_prefix)
+        self.activated = self._qshortcut.activated
         # self._qshortcut.setContext(QtCore.Qt.ApplicationShortcut)
         # self._qshortcut.setWhatsThis(callback.__name__)
-        main.shortcuts.append(self)
+        main.add_shortcut(self)
         self.domain = domain
         self.key = key
         self.callback = callback
         main.domain_changed.connect(self.domain_changed)
 
-    def activated(self):
+    def activated_slot(self):
         # self._qshortcut.setEnabled(False)
         # self.callback()
         # QtWidgets.QApplication.instance().processEvents()
@@ -48,10 +52,10 @@ class MainWindow(QtWidgets.QMainWindow):
 
     key_cancel = QtCore.Signal()
     domain_changed = QtCore.Signal(str)
+    shortcut_triggered = QtCore.Signal(object)
 
     def __init__(self, sim_pipe=None, parent=None):
         super().__init__(parent)
-        safe_bind('viewer/main', self)
 
         desktop = QtWidgets.QDesktopWidget()
         desktop_frame = desktop.availableGeometry(self)
@@ -65,6 +69,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.vbox.setSpacing(0)
         self.vbox.setMargin(0)
         self.vbox.setContentsMargins(0, 0, 0, 0)
+
+        safe_bind('viewer/main', self)
 
         self.buffers = BufferStack(main=self)
         self.vbox.addLayout(self.buffers)
@@ -81,10 +87,17 @@ class MainWindow(QtWidgets.QMainWindow):
         self.setCentralWidget(mainWidget)
 
         self._init_actions()
-        self._nodes = []
 
         for domain, key, callback in registry('viewer/shortcuts'):
             Shortcut(domain, key, callback)
+
+    def add_shortcut(self, shortcut):
+        self.shortcuts.append(shortcut)
+        shortcut.activated.connect(partial(self.shortcut_trigger, shortcut))
+
+    def shortcut_trigger(self, shortcut):
+        print(f'triggered: {shortcut}')
+        self.shortcut_triggered.emit(shortcut)
 
     def _init_actions(self):
         QtWidgets.QShortcut(
@@ -102,7 +115,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.key_cancel.emit()
 
     def shortcut_prefix(self):
-        print("Prefix!")
+        print("Ambiguous shortcut!")
 
     def change_domain(self, domain):
         self.domain_changed.emit(domain)

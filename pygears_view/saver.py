@@ -3,12 +3,12 @@ from pygears.conf import Inject, reg_inject, MayInject
 from .graph import GraphVisitor
 from jinja2 import Environment, BaseLoader
 from pygears.core.hier_node import HierYielderBase
-from .layout import BufferLayout
+from .layout import Window
 
 save_file_prolog = """
 from pygears.conf import Inject, reg_inject, MayInject, inject_async
 from pygears_view.utils import trigger
-from pygears_view.layout import BufferLayout, WindowLayout
+from pygears_view.layout import Window, WindowLayout
 from PySide2 import QtWidgets
 """
 
@@ -91,8 +91,8 @@ def save_gtkwave(gtkwave=Inject('viewer/gtkwave')):
 def save_win_layout(name, layout):
     res = ''
     for i, child in enumerate(layout):
-        if isinstance(child, BufferLayout):
-            res += (f"{name}.addLayout(BufferLayout("
+        if isinstance(child, Window):
+            res += (f"{name}.addLayout(Window("
                     f"parent=None, buff=layout.get_buffer_by_name("
                     f"\"{child.buff.name}\")))\n")
         else:
