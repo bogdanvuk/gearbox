@@ -52,7 +52,7 @@ class GtkWaveProc(QtCore.QObject):
             try:
                 data = self.p.read_nonblocking(size=4096, timeout=0.01)
                 for d in data.strip().split('\n'):
-                    print(f'Unsollicited: {data}')
+                    # print(f'Unsollicited: {data}')
                     res = re.search(r"KeyPress:(\d+),(\d+)", d)
 
                     if not res:
@@ -101,7 +101,6 @@ class GtkWaveProc(QtCore.QObject):
         self.cmd_id = None
 
     def quit(self):
-        print("Quiting GTKWAVE")
         self.p.close()
         self.gtkwave_thread.quit()
 
@@ -178,13 +177,13 @@ class GtkWaveWindow(QtCore.QObject):
         app = QtWidgets.QApplication.instance()
         # app.postEvent(
         #     graph, QtGui.QKeyEvent(QtGui.QKeyEvent.KeyPress, key, modifiers))
-        print(f'key: {(key, modifiers, text)} -> {app.focusWidget()}')
+        # print(f'key: {(key, modifiers, text)} -> {app.focusWidget()}')
         app.postEvent(
             app.focusWidget(),
             QtGui.QKeyEvent(QtGui.QKeyEvent.ShortcutOverride, key, modifiers,
                             text))
 
-        print(f'key: {(key, modifiers, text)} -> {app.focusWidget()}')
+        # print(f'key: {(key, modifiers, text)} -> {app.focusWidget()}')
         app.processEvents(QtCore.QEventLoop.AllEvents)
 
         app.postEvent(
