@@ -3,23 +3,14 @@ from .node_abstract import AbstractNodeItem
 from .port import PortItem
 
 from .pipe import Pipe
-from .constants import (IN_PORT, OUT_PORT, NODE_SEL_COLOR,
-                        NODE_SEL_BORDER_COLOR, Z_VAL_NODE, Z_VAL_PIPE)
+from .constants import NODE_SEL_COLOR, NODE_SEL_BORDER_COLOR, Z_VAL_NODE
 
 from pygears.core.port import InPort
 from pygears.conf import reg_inject, Inject
 
 import pygraphviz as pgv
 from . import gv_utils
-from grandalf.layouts import SugiyamaLayout
-from grandalf.graphs import Vertex, Edge, Graph
-from grandalf.routing import EdgeViewer
 
-
-class defaultview:
-    def __init__(self, w, h):
-        self.w = h
-        self.h = w
 
 
 def inst_children(node):
@@ -772,56 +763,6 @@ class NodeItem(AbstractNodeItem):
 
         # self.layout_graph.draw('proba.png')
         # self.layout_graph.draw('proba.dot')
-
-        # if self.model.name == '/ref_model':
-        #     self.layout_graph.draw('proba.dot')
-
-        # all_vertices = {**self.layout_vertices, **all_port_vertices}
-        # g = Graph(list(all_vertices.values()), self.layout_edges)
-
-        # for node, v in self.layout_vertices.items():
-        #     if hasattr(node, 'layout'):
-        #         node.layout()
-        #     v.view = defaultview(node.width, node.height)
-
-        # # sug = DigcoLayout(g.C[0])
-        # sug = SugiyamaLayout(g.C[0])
-
-        # # sug.init_all(roots=self.layout_dummy_vertices[0:1])
-        # sug.init_all(optimize=True)
-        # # sug.xspace = 20
-        # sug.yspace = 50
-
-        # # sug.route_edge = route_with_rounded_corners
-        # sug.draw(5)
-        # sug.draw_edges()
-
-        # for v in self.layout_dummy_vertices:
-        #     print(vars(v.view))
-
-        # self.layers = []
-        # for layer in sug.layers:
-        #     layer = [
-        #         v.data for v in layer if getattr(v, 'data', None) and (
-        #             not isinstance(v.data, PortItem))
-        #     ]
-        #     if layer:
-        #         self.layers.append(layer)
-
-        # padding = 40
-        # x_min = min(
-        #     v.view.xy[1] - v.view.h / 2 for v in self.layout_vertices.values())
-
-        # y_min = min(
-        #     v.view.xy[0] - v.view.w / 2 for v in self.layout_vertices.values())
-
-        # for n, v in self.layout_vertices.items():
-        #     n.set_pos(v.view.xy[1] - x_min - v.view.h / 2 + padding,
-        #               v.view.xy[0] - y_min - v.view.w / 2 + padding)
-
-        # for n, v in all_port_vertices.items():
-        #     v.view.xy = (v.view.xy[1] - x_min + padding,
-        #                  v.view.xy[0] - y_min + padding)
 
         def gv_point_load(point):
             return tuple(float(num) for num in point.split(',')[-2:])

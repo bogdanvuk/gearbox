@@ -17,7 +17,7 @@ setup(
     license='MIT',
 
     python_requires='>=3.6.0',
-    install_requires=['pygears', 'pexpect', 'PySide2', 'grandalf'],
+    install_requires=['pygears', 'pexpect', 'PySide2', 'pygraphviz'],
 
     packages=find_packages(exclude=['examples*', 'docs']),
     package_data={'': ['*.json', '.spacemacs']},
