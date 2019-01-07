@@ -99,6 +99,13 @@ def save_win_layout(name, layout):
             res += save_layout(child, name + str(i))
             res += f"{name}.addLayout({name + str(i)})\n"
 
+    streches = [layout.stretch(i) for i in range(layout.count())]
+
+    res += f"""
+for i, s in enumerate({streches}):
+    {name}.setStretch(i, s)
+"""
+
     return res
 
 
