@@ -257,7 +257,7 @@ class BufferCompleter(QtWidgets.QCompleter):
 
 @shortcut(None, (Qt.Key_B, Qt.Key_B))
 @reg_inject
-def next_buffer(
+def select_buffer(
         buff=Interactive('buffer: ', BufferCompleter),
         layout=Inject('viewer/layout')):
 
@@ -468,6 +468,9 @@ def node_search(
 @reg_inject
 def time_search(
         time=Interactive('Time: '), sim_bridge=Inject('viewer/sim_bridge')):
+
+    if time is None:
+        return
 
     time = int(time)
 

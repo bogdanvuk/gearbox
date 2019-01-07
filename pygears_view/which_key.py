@@ -57,9 +57,7 @@ class WhichKey(QLabel):
                 self.prefix_detected = True
         elif event.type() == QtCore.QEvent.KeyRelease:
             if self.current_prefix and (not self.prefix_detected):
-                print("Cancel from eventFilter")
                 self.cancel()
-                print("Cancelled")
 
             self.prefix_detected = False
 

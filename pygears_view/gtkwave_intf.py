@@ -9,7 +9,7 @@ from PySide2 import QtWidgets, QtGui, QtCore
 
 class GtkWaveProc(QtCore.QObject):
 
-    key_press = QtCore.Signal(int, int)
+    key_press = QtCore.Signal(int, int, str)
     window_up = QtCore.Signal(str, int, int)
     response = QtCore.Signal(str, int)
 
@@ -61,28 +61,31 @@ class GtkWaveProc(QtCore.QObject):
                         res.group(2))
 
                     modifiers = 0
+                    text = ''
                     key = native_key
-                    if chr(key).islower():
-                        key = ord(chr(key).upper())
+
+                    if key < 127:
+                        text = chr(key)
+
+                        if chr(key).islower():
+                            key = ord(chr(key).upper())
 
                     key = native_key_map.get(key, key)
 
                     if native_modifiers & 0x4:
                         modifiers += QtCore.Qt.CTRL
 
-                    if native_modifiers & 0x1:
+                    if ((native_modifiers & 0x1)
+                            and (key > 127 or chr(key).isalpha())):
                         modifiers += QtCore.Qt.SHIFT
 
                     if native_modifiers & 0x8:
                         modifiers += QtCore.Qt.ALT
 
-                    self.key_press.emit(key, modifiers)
+                    self.key_press.emit(key, modifiers, text)
 
                     self.gtkwave_thread.eventDispatcher().processEvents(
                         QtCore.QEventLoop.AllEvents)
-
-                # while (1):
-                #     data += self.p.read_nonblocking(size=4096, timeout=0.001)
 
             except pexpect.TIMEOUT:
                 pass
@@ -97,6 +100,7 @@ class GtkWaveProc(QtCore.QObject):
         self.cmd_id = None
 
     def quit(self):
+        print("Quiting GTKWAVE")
         self.p.close()
         self.gtkwave_thread.quit()
 
@@ -120,7 +124,23 @@ class GtkWaveCmdBlock(QtCore.QEventLoop):
 
 
 native_key_map = {
-    65293: 16777220  # Key_Return
+    0xff08: QtCore.Qt.Key_Backspace,
+    0xff09: QtCore.Qt.Key_Tab,
+    0xff0b: QtCore.Qt.Key_Clear,
+    0xff0d: QtCore.Qt.Key_Return,
+    0xff13: QtCore.Qt.Key_Pause,
+    0xff14: QtCore.Qt.Key_ScrollLock,
+    0xff15: QtCore.Qt.Key_SysReq,
+    0xff1b: QtCore.Qt.Key_Escape,
+    0xffff: QtCore.Qt.Key_Delete,
+    0xff50: QtCore.Qt.Key_Home,
+    0xff51: QtCore.Qt.Key_Left,
+    0xff52: QtCore.Qt.Key_Up,
+    0xff53: QtCore.Qt.Key_Right,
+    0xff54: QtCore.Qt.Key_Down,
+    0xff55: QtCore.Qt.Key_PageUp,
+    0xff56: QtCore.Qt.Key_PageDown,
+    0xff57: QtCore.Qt.Key_End,
 }
 
 
@@ -152,17 +172,32 @@ class GtkWaveWindow(QtCore.QObject):
         return resp
 
     @reg_inject
-    def key_press(self, key, modifiers, graph=Inject('viewer/graph')):
-        # print(modifiers, QtGui.QKeySequence(key).toString())
-        print(modifiers, key)
+    # def key_press(self, key, modifiers, graph=Inject('viewer/graph')):
+    def key_press(self, key, modifiers, text, main=Inject('viewer/main')):
         app = QtWidgets.QApplication.instance()
+        # app.postEvent(
+        #     graph, QtGui.QKeyEvent(QtGui.QKeyEvent.KeyPress, key, modifiers))
+        print(f'key: {(key, modifiers, text)} -> {app.focusWidget()}')
         app.postEvent(
-            graph, QtGui.QKeyEvent(QtGui.QKeyEvent.KeyPress, key, modifiers))
+            app.focusWidget(),
+            QtGui.QKeyEvent(QtGui.QKeyEvent.ShortcutOverride, key, modifiers,
+                            text))
 
+        print(f'key: {(key, modifiers, text)} -> {app.focusWidget()}')
         app.processEvents(QtCore.QEventLoop.AllEvents)
 
         app.postEvent(
-            graph, QtGui.QKeyEvent(QtGui.QKeyEvent.KeyRelease, key, modifiers))
+            app.focusWidget(),
+            QtGui.QKeyEvent(QtGui.QKeyEvent.KeyPress, key, modifiers, text))
+
+        app.processEvents(QtCore.QEventLoop.AllEvents)
+
+        # app.postEvent(
+        #     graph, QtGui.QKeyEvent(QtGui.QKeyEvent.KeyRelease, key, modifiers))
+        app.postEvent(
+            # main.centralWidget(),
+            app.focusWidget(),
+            QtGui.QKeyEvent(QtGui.QKeyEvent.KeyRelease, key, modifiers, text))
 
         app.processEvents(QtCore.QEventLoop.AllEvents)
 

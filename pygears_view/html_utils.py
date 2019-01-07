@@ -24,6 +24,4 @@ def fontify(s, bold=False, **style):
         s = f'<b>{s}</b>'
 
     res = f'<span{style_expr}>{s}</span>'
-    print(f'Fontify: {res}')
-
     return res
