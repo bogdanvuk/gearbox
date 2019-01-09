@@ -45,6 +45,10 @@ class PyGearsView(PyGearsBridgeServer):
             main()
 
 
+def focus_changed(old, new):
+    print(f'Changed focus from {old} -> {new}')
+
+
 @reg_inject
 def main(pipe=None, layers=Inject('viewer/layers')):
     if pipe:
@@ -59,6 +63,7 @@ def main(pipe=None, layers=Inject('viewer/layers')):
         l()
 
     main_window.show()
+    app.focusChanged.connect(focus_changed)
     app.exec_()
 
 

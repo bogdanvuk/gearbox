@@ -212,20 +212,3 @@ class PortItem(QtWidgets.QGraphicsItem):
     def delete(self):
         for pipe in self.connected_pipes:
             pipe.delete()
-
-    def connect_to(self, port):
-        if not port:
-            for pipe in self.connected_pipes:
-                pipe.delete()
-            return
-        if self.scene():
-            viewer = self.scene().viewer()
-            return viewer.establish_connection(self, port)
-
-    def disconnect_from(self, port):
-        port_types = {IN_PORT: 'output_port', OUT_PORT: 'input_port'}
-        for pipe in self.connected_pipes:
-            connected_port = getattr(pipe, port_types[self.port_type])
-            if connected_port == port:
-                pipe.delete()
-                break

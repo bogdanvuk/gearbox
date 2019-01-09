@@ -5,56 +5,11 @@ from .port import PortItem
 from .pipe import Pipe
 from .constants import NODE_SEL_COLOR, NODE_SEL_BORDER_COLOR, Z_VAL_NODE
 
-from pygears.core.port import InPort
+from pygears.rtl.port import InPort
 from pygears.conf import reg_inject, Inject
 
 import pygraphviz as pgv
 from . import gv_utils
-
-
-
-def inst_children(node):
-    child_node_map = {}
-
-    for child in node.model.child:
-
-        graph_node = NodeItem(child, node)
-
-        child_node_map[child] = graph_node
-
-    for child, graph_node in child_node_map.items():
-        child = graph_node.model
-
-        if child.child:
-            graph_node.collapse()
-
-        for port in child.in_ports:
-            producer = port.producer.producer
-
-            if producer.gear is node.model:
-                src_port = node.inputs[producer.index]
-                dest_port = graph_node.inputs[port.index]
-                node.connect(src_port, dest_port)
-
-        for port in child.out_ports:
-            for consumer in port.consumer.consumers:
-
-                if consumer.gear is node.model:
-                    consumer_graph_node = node
-                else:
-                    consumer_graph_node = child_node_map.get(consumer.gear)
-
-                if consumer_graph_node:
-                    src_port = graph_node.outputs[port.index]
-
-                    if isinstance(consumer, InPort):
-                        dest_port = consumer_graph_node.inputs[consumer.index]
-                    else:
-                        dest_port = consumer_graph_node.outputs[consumer.index]
-
-                    node.connect(src_port, dest_port)
-
-    return child_node_map
 
 
 def hier_expand(node, padding=40):
@@ -318,24 +273,6 @@ class NodeItem(AbstractNodeItem):
 
     def set_pos(self, x=0.0, y=0.0):
         self.setPos(x, y)
-        # print(f'Pos {self.model.name}: {self.pos}')
-        # if not self.hierarchical:
-        #     return
-
-        # padding = 40
-        # x_min = min(
-        #     v.view.xy[1] - v.view.h / 2 for v in self.layout_vertices.values())
-
-        # y_min = min(
-        #     v.view.xy[0] - v.view.w / 2 for v in self.layout_vertices.values())
-
-        # for n, v in self.layout_vertices.items():
-        #     # n.set_pos(x + v.view.xy[1] - x_min - v.view.h / 2 + padding,
-        #     #           y + v.view.xy[0] - y_min - v.view.w / 2 + padding)
-        #     # n.set_pos(v.view.xy[1] - x_min - v.view.h / 2 + padding,
-        #     #           v.view.xy[0] - y_min - v.view.w / 2 + padding)
-        #     n.set_pos(v.view.xy[1] - x_min - v.view.h / 2 + padding,
-        #               v.view.xy[0] - y_min - v.view.w / 2 + padding)
 
     def _hide_single_port_labels(self):
         for port, text in self._input_items.items():
@@ -654,17 +591,22 @@ class NodeItem(AbstractNodeItem):
 
         self._nodes.append(node)
 
-    def connect(self, port1, port2):
-        node1 = port1.node
-        node2 = port2.node
+    # def connect(self, port1, port2):
+    #     node1 = port1.node
+    #     node2 = port2.node
 
-        pipe = Pipe(port1, port2, parent=self)
+    #     pipe = Pipe(port1, port2, parent=self)
+
+    def add_pipe(self, pipe):
         if self.parent is not None:
             pipe.setParentItem(self)
         else:
             self.graph.scene().addItem(pipe)
 
         self.pipes.append(pipe)
+
+        node1 = pipe.output_port.parentItem()
+        node2 = pipe.input_port.parentItem()
 
         if (node2 is not self) and (node1 is not self):
             self.layout_graph.add_edge(

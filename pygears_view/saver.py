@@ -10,6 +10,7 @@ from pygears.conf import Inject, reg_inject, MayInject, inject_async
 from pygears_view.utils import trigger
 from pygears_view.layout import Window, WindowLayout
 from PySide2 import QtWidgets
+from functools import partial
 """
 
 expand_func_template = """
@@ -32,14 +33,30 @@ expand()
 
 gtkwave_load_func_template = """
 
-@inject_async
-def load_after_vcd_loaded(gtkwave=Inject('viewer/gtkwave')):
-    gtkwave.instances[0].command(
-        'gtkwave::/File/Read_Save_File {{fn}}')
+@reg_inject
+def load_after_vcd_loaded(index, gtkwave=Inject('viewer/gtkwave')):
+    intf = gtkwave.instances[index]
+
+{% for i, intf in enumerate(intfs) %}
+    if index == {{i}}:
+{% for pipe in enumerate(intf) %}
+    graph_model['{{name}}'].view.expand()
+{% endfor %}
+{% endfor %}
+
+    if index == 0:
+        intf.command(
+            'gtkwave::/File/Read_Save_File /tools/home/pygears_view/build/gtkwave.gtkw'
+        )
+
 
 @inject_async
 def gtkwave_load(gtkwave=Inject('viewer/gtkwave')):
-    gtkwave.graph_intfs[0].vcd_loaded.connect(load_after_vcd_loaded)
+    for i, intf in enumerate(gtkwave.graph_intfs):
+        if intf.loaded:
+            load_after_vcd_loaded(i)
+        else:
+            intf.vcd_loaded.connect(partial(load_after_vcd_loaded, i))
 
 """
 

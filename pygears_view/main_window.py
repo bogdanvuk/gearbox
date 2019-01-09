@@ -96,6 +96,10 @@ class MainWindow(QtWidgets.QMainWindow):
         for domain, key, callback in registry('viewer/shortcuts'):
             Shortcut(domain, key, callback)
 
+    # def event(self, event):
+    #     print(f'Event: {event.type()}')
+    #     return super().event(event)
+
     def add_shortcut(self, shortcut):
         self.shortcuts.append(shortcut)
         shortcut.activated.connect(partial(self.shortcut_trigger, shortcut))
