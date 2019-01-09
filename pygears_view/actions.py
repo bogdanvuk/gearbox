@@ -6,7 +6,7 @@ from pygears.conf import Inject, reg_inject, registry, inject_async, bind
 from .layout import active_buffer, Window, WindowLayout
 from functools import wraps, partial
 from .node_search import node_search_completer
-from .main_window import Shortcut
+from .main_window import Shortcut, message
 from .pipe import Pipe
 from .saver import save
 from .utils import trigger
@@ -440,8 +440,11 @@ def window_up(main=Inject('viewer/main')):
 def send_to_wave(
         graph=Inject('viewer/graph'), gtkwave=Inject('viewer/gtkwave')):
 
+    added = []
     for pipe in graph.selected_pipes():
-        gtkwave.show_pipe(pipe)
+        added.append(gtkwave.show_pipe(pipe))
+
+    message('Waves added: ' + ' '.join(added))
 
 
 class ShortcutRepeat(QtCore.QObject):

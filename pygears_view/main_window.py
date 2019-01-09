@@ -48,6 +48,11 @@ class Shortcut(QtCore.QObject):
             self._qshortcut.setEnabled(False)
 
 
+@reg_inject
+def message(message, minibuffer=Inject('viewer/minibuffer')):
+    minibuffer.message(message)
+
+
 class MainWindow(QtWidgets.QMainWindow):
 
     key_cancel = QtCore.Signal()

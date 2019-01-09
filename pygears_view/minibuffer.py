@@ -12,21 +12,32 @@ class Minibuffer(QtCore.QObject):
     def __init__(self):
         super().__init__()
         self.view = QtWidgets.QHBoxLayout()
-        self.message = QtWidgets.QLabel()
+        self.msgLabel = QtWidgets.QLabel()
         self.input_box = InputBox()
-        self.view.addWidget(self.message)
+        self.view.addWidget(self.msgLabel)
         self.view.addWidget(self.input_box)
         self.view.setSpacing(0)
         self.view.setContentsMargins(0, 0, 0, 0)
 
-        self.message.setStyleSheet(STYLE_MINIBUFFER)
-        self.message.setMargin(0)
-        self.message.setVisible(False)
+        self.msgLabel.setStyleSheet(STYLE_MINIBUFFER)
+        self.msgLabel.setMargin(0)
+        self.msgLabel.setVisible(False)
 
         self.input_box.tab_key_event.connect(self.tab_key_event)
         self.input_box.cancel.connect(self.cancel)
         self.input_box.textEdited.connect(self._singled_out)
         self.input_box.returnPressed.connect(self._on_search_submitted)
+
+        self.timer = QtCore.QTimer()
+        self.timer.setInterval(3000)
+        self.timer.timeout.connect(self.message_cleanup)
+        self.timer.setSingleShot(True)
+
+    def message(self, message):
+        self.timer.stop()
+        self.msgLabel.setText(message)
+        self.msgLabel.show()
+        self.timer.start()
 
     def complete_cont(self, message=None, completer=None, text=''):
         try:
@@ -35,13 +46,13 @@ class Minibuffer(QtCore.QObject):
             pass
 
         if message:
-            self.message.setMaximumWidth(self.message.parentWidget().width())
-            self.message.setText(message)
-            self.message.adjustSize()
+            self.msgLabel.setMaximumWidth(self.msgLabel.parentWidget().width())
+            self.msgLabel.setText(message)
+            self.msgLabel.adjustSize()
             # QLabel commes with a padding that is hard to remove, so two
             # pixels are removed by hand
-            self.message.setMaximumWidth(self.message.width() - 2)
-            self.message.show()
+            self.msgLabel.setMaximumWidth(self.msgLabel.width() - 2)
+            self.msgLabel.show()
         else:
             self.input_box.setTextMargins(2, 0, 0, 0)
 
@@ -75,6 +86,7 @@ class Minibuffer(QtCore.QObject):
         main.change_domain('minibuffer')
         self.input_box.setDisabled(False)
 
+        self.timer.stop()
         self.start.emit()
 
         self.complete_cont(message, completer)
@@ -108,7 +120,10 @@ class Minibuffer(QtCore.QObject):
         self.input_box.setDisabled(True)
         self.input_box.parentWidget().clearFocus()
 
-        self.message.setVisible(False)
+        self.message_cleanup()
+
+    def message_cleanup(self):
+        self.msgLabel.setVisible(False)
 
     def _on_search_submitted(self, index=0):
         if self._completer and hasattr(self._completer, 'get_result'):

@@ -346,6 +346,8 @@ class GtkWaveGraphIntf(QtCore.QObject):
         commands.append('gtkwave::/Edit/Toggle_Group_Open|Close')
         self.gtkwave_intf.command(commands)
 
+        return intf_name
+
     def update_rtl_intf(self, pipe, wave_status):
         if wave_status == '1 0':
             status = 'active'
