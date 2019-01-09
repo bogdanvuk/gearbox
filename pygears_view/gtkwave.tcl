@@ -30,9 +30,6 @@ set TR_TTRANSLATED          [expr 1 << 28]
 set TR_POPCNT               [expr 1 << 29]
 set TR_FPDECSHIFT           [expr 1 << 30]
 
-gtkwave::/View/Dynamic_Resize 0
-gtkwave::/View/Show_Toolbar 0
-
 proc list_signals {} {
     set nfacs [ gtkwave::getNumFacs ]
     for {set i 0} {$i < $nfacs } {incr i} {

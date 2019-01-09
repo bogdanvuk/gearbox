@@ -206,8 +206,6 @@ class GtkWaveWindow(QtCore.QObject):
         print(f'GtkWave started: {version}, {pid}, {window_id}')
         self.window_id = window_id
         self.gtkwave_win = QtGui.QWindow.fromWinId(window_id)
-        self.gtkwave_win.setFlags(QtCore.Qt.FramelessWindowHint)
         self.widget = QtWidgets.QWidget.createWindowContainer(self.gtkwave_win)
-        self.widget.setFocusPolicy(QtCore.Qt.StrongFocus)
 
         self.initialized.emit()

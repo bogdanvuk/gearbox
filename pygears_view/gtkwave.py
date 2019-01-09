@@ -364,6 +364,7 @@ class GtkWaveGraphIntf(QtCore.QObject):
                 f'gtkwave::loadFile {self.vcd_map.vcd_fn}')
 
             if "File load failure" not in ret:
+                self.gtkwave_intf.command(f'gtkwave::stripGUI')
                 self.gtkwave_intf.command(f'gtkwave::setZoomFactor -7')
                 self.loaded = True
             else:
