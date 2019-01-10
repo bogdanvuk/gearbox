@@ -48,6 +48,7 @@ class Pipe(QtWidgets.QGraphicsPathItem):
         self._highlight = False
         self._input_port = input_port
         self._output_port = output_port
+        self.model = model
         self.layout_path = []
         self.status = "empty"
 

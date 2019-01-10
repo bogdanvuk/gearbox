@@ -20,9 +20,14 @@ def active_intf():
 
 
 class VerilatorVCDMap:
-    def __init__(self, sim_module, gtkwave_intf):
+    @reg_inject
+    def __init__(self,
+                 sim_module,
+                 gtkwave_intf,
+                 rtl_map=Inject('rtl/gear_node_map')):
         self.gtkwave_intf = gtkwave_intf
         self.sim_module = sim_module
+        self.rtl_node = rtl_map[self.sim_module.gear]
         self.path_prefix = '.'.join(['TOP', sim_module.wrap_name])
         self.pipe_signals = {}
         self.signal_name_map = {}
@@ -67,60 +72,15 @@ class VerilatorVCDMap:
             self.signal_name_map = self.make_relative_signal_name_map(
                 self.path_prefix, self.gtkwave_intf.command('list_signals'))
 
+        if not self.rtl_node.is_descendent(pipe.model.intf):
+            return
+
+        pipe_name_stem = pipe.model.name[len(self.rtl_node.parent.name) + 1:]
+        pipe_name_stem = pipe_name_stem.replace('/', '.')
+
         signals = fnmatch.filter(self.signal_name_map.keys(),
-                                 self.pipe_rtl_intf(pipe).name + '_*')
+                                 pipe_name_stem + '_*')
         return [self.signal_name_map[s] for s in signals]
-
-
-# class VerilatorWave:
-#     @reg_inject
-#     def __init__(self, sim_module):
-#         self.signal_name_map = {}
-#         self.sim_module = sim_module
-#         self.path_prefix = '.'.join(['TOP', sim_module.wrap_name])
-#         self.gtkwave_intf = GtkWave()
-#         self.gtkwave_intf.initialized.connect(self.load)
-#         self.loaded = False
-
-#     def load(self, main=Inject('viewer/main')):
-#         main.add_buffer(
-#             f'gtkwave - {self.sim_module.name}', self.gtkwave_intf.widget)
-
-#     def load_vcd(self):
-#         verilator_vcd = self.sim_module.trace_fn
-#         ret = self.gtkwave_intf.command(f'gtkwave::loadFile {verilator_vcd}')
-#         if "File load failure" not in ret:
-#             self.loaded = True
-#         else:
-#             return False
-
-#         self.signal_name_map = self.make_relative_signal_name_map(
-#             self.path_prefix, self.gtkwave_intf.command('list_signals'))
-#         self.gtkwave_intf.command(f'gtkwave::setZoomFactor -7')
-
-#         return True
-
-#     def intf_basename(self, rtl_intf):
-#         return f'{self.path_prefix}.{rtl_intf.name}'
-
-#     def make_relative_signal_name_map(self, path_prefix, signal_list):
-#         signal_name_map = {}
-#         for sig_name in signal_list.split('\n'):
-#             sig_name = sig_name.strip()
-
-#             basename = re.search(
-#                 fr"{path_prefix}\.({self.sim_module.svmod.sv_inst_name}\..*)",
-#                 sig_name)
-
-#             if basename:
-#                 signal_name_map[basename.group(1)] = sig_name
-
-#         return signal_name_map
-
-#     def get_signals_for_intf(self, rtl_intf):
-#         signals = fnmatch.filter(self.signal_name_map.keys(),
-#                                  rtl_intf.name + '_*')
-#         return [self.signal_name_map[s] for s in signals]
 
 
 @reg_inject

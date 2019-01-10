@@ -1,5 +1,6 @@
 from .graph import GraphVisitor
 from pygears.conf import Inject, reg_inject
+from pygears.rtl.gear import gear_from_rtl_port
 
 
 class GraphPipeCollector(GraphVisitor):
@@ -11,7 +12,8 @@ class GraphPipeCollector(GraphVisitor):
     def pipe(self, pipe):
         if pipe not in self.py_intfs:
             try:
-                self.sim_activity.get_port_status(pipe.model)
+                port = pipe.model.intf.producer
+                self.sim_activity.get_port_status(gear_from_rtl_port(port))
                 self.py_intfs.add(pipe)
                 return
             except:

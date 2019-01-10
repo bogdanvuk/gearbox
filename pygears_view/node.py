@@ -161,23 +161,8 @@ class NodeItem(AbstractNodeItem):
         self.layout_inport_vertices = {}
         self.layout_outport_vertices = {}
 
-        # if parent is not None:
-        #     for port in model.in_ports + model.out_ports:
-        #         self._add_port(port)
-
         self.collapsed = False if parent is None else True
         self.layers = []
-
-        # First add node to the scene, so that all pipes can be rendered in the
-        # inst_children() procedure
-        # if self.parent is not None:
-        #     self.parent.add_node(self)
-
-        # self.child_node_map = inst_children(self)
-
-        # if parent is not None:
-        #     for node in self._nodes:
-        #         node.hide()
 
     def setup_done(self):
         self._hide_single_port_labels()
@@ -188,20 +173,6 @@ class NodeItem(AbstractNodeItem):
 
     def mouseDoubleClickEvent(self, event):
         self.auto_resize()
-
-    # def mousePressEvent(self, event):
-    #     if event.button() == QtCore.Qt.MouseButton.LeftButton:
-    #         pos = event.scenePos()
-    #         rect = QtCore.QRectF(pos.x() - 5, pos.y() - 5, 10, 10)
-    #         item = self.scene().items(rect)[0]
-
-    #         # if isinstance(item, (PortItem, Pipe)):
-    #         #     self.setFlag(self.ItemIsMovable, False)
-    #         #     return
-    #         # if self.selected:
-    #         #     return
-
-    #         self.selected = True
 
     def mouseReleaseEvent(self, event):
         super().mouseReleaseEvent(event)
