@@ -124,9 +124,6 @@ def save_expanded(root=Inject('viewer/graph_model')):
 
 @reg_inject
 def save_gtkwave(gtkwave=Inject('viewer/gtkwave')):
-    # gtkwave.instances[0].command(
-    #     f'gtkwave::/File/Write_Save_File {get_gtkwave_save_file_path()}')
-
     return load_str_template(gtkwave_load_func_template).render({
         'intfs':
         gtkwave.graph_intfs
@@ -181,7 +178,3 @@ def save():
 def get_save_file_path(outdir=MayInject('sim/artifact_dir')):
     return os.path.abspath(os.path.join(outdir, 'pygears_view_save.py'))
 
-
-@reg_inject
-def get_gtkwave_save_file_path(outdir=MayInject('sim/artifact_dir')):
-    return os.path.abspath(os.path.join(outdir, 'gtkwave.gtkw'))

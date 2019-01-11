@@ -469,11 +469,6 @@ def create_shortcut_repeater(main=Inject('viewer/main')):
     bind('viewer/shortcut_repeater', ShortcutRepeat(main))
 
 
-# @shortcut('graph', Qt.Key_L)
-# def list_waves():
-#     list_signal_names()
-
-
 @shortcut('graph', Qt.Key_Slash)
 @reg_inject
 def node_search(
@@ -498,31 +493,6 @@ def node_search(
         node = node[basename]
 
     graph.select(node.view)
-
-    # try:
-    #     node = graph.top[node_name]
-    # except KeyError:
-    #     pass
-
-    # try:
-    #     node_path = find_node_by_path(graph.top, text)
-    #     for node in node_path[:-1]:
-    #         node.expand()
-    # except:
-    #     for node in graph.selected_nodes():
-    #         node.setSelected(False)
-    #     return
-
-    # for node in graph.selected_nodes():
-    #     node.setSelected(False)
-
-    # node_path[-1].setSelected(True)
-    # graph.ensureVisible(node_path[-1])
-
-    # print(resp)
-
-    # minibuffer.complete(
-    #     message=f'{model.name}/', completer=node_search_completer(model))
 
 
 @shortcut('graph', Qt.Key_Colon)
@@ -565,14 +535,14 @@ class GraphGtkwaveSelectSync(QtCore.QObject):
 
         selected_wave_pipes = {}
         for s in selected:
-            gtkwave_intf = gtkwave.pipe_gtkwave_intf(s)
+            gtkwave_intf = gtkwave.pipe_gtkwave_intf(s.model)
             if gtkwave_intf:
                 if gtkwave_intf not in selected_wave_pipes:
                     selected_wave_pipes[gtkwave_intf] = []
             else:
                 continue
 
-            wave_intf = gtkwave_intf.pipes_on_wave.get(s, None)
+            wave_intf = gtkwave_intf.pipes_on_wave.get(s.model, None)
             if wave_intf:
                 selected_wave_pipes[gtkwave_intf].append(wave_intf)
 
@@ -583,51 +553,15 @@ class GraphGtkwaveSelectSync(QtCore.QObject):
             ])
 
 
-def zoom_in(graph):
+@shortcut('graph', (Qt.Key_Z, Qt.Key_Plus))
+@reg_inject
+def zoom_in(graph=Inject('viewer/graph')):
     zoom = graph.get_zoom() + 0.1
     graph.set_zoom(zoom)
 
 
-def zoom_out(graph):
+@shortcut('graph', (Qt.Key_Z, Qt.Key_Minus))
+@reg_inject
+def zoom_out(graph=Inject('viewer/graph')):
     zoom = graph.get_zoom() - 0.2
     graph.set_zoom(zoom)
-
-
-def open_session(graph):
-    current = graph.current_session()
-    viewer = graph.viewer()
-    file_path = viewer.load_dialog(current)
-    if file_path:
-        graph.load_session(file_path)
-
-
-def save_session(graph):
-    current = graph.current_session()
-    if current:
-        graph.save_session(current)
-        msg = 'Session layout saved:\n{}'.format(current)
-        viewer = graph.viewer()
-        viewer.message_dialog(msg, title='Session Saved')
-    else:
-        save_session_as(graph)
-
-
-def save_session_as(graph):
-    current = graph.current_session()
-    viewer = graph.viewer()
-    file_path = viewer.save_dialog(current)
-    if file_path:
-        graph.save_session(file_path)
-
-
-def clear_session(graph):
-    viewer = graph.viewer()
-    if viewer.question_dialog('Clear Session', 'Clear Current Session?'):
-        graph.clear_session()
-
-
-def clear_undo(graph):
-    viewer = graph.viewer()
-    msg = 'Clear all undo history, Are you sure?'
-    if viewer.question_dialog('Clear Undo History', msg):
-        graph.undo_stack().clear()
