@@ -105,11 +105,11 @@ class Signals(NamedTuple):
 
 class GraphPipeCollector(HierVisitorBase):
     def __init__(self, vcd_map):
-        self.rtl_intfs = {}
+        self.vcd_pipes = {}
         self.vcd_map = vcd_map
 
     def PipeModel(self, pipe):
-        if pipe not in self.rtl_intfs:
+        if pipe not in self.vcd_pipes:
             try:
                 all_sigs = self.vcd_map.get_signals_for_pipe(pipe)
                 # print(f'Pipe: {pipe} ({rtl_intf.name}) -> {all_sigs}')
@@ -121,7 +121,7 @@ class GraphPipeCollector(HierVisitorBase):
                         break
 
                 if stem:
-                    self.rtl_intfs[pipe] = stem
+                    self.vcd_pipes[pipe] = stem
             except:
                 pass
 
@@ -218,7 +218,7 @@ class GtkWaveGraphIntf(QtCore.QObject):
         self.pipes_on_wave = {}
 
     def has_pipe_wave(self, pipe):
-        return pipe in self.pipe_collect.rtl_intfs
+        return pipe in self.pipe_collect.vcd_pipes
 
     def show_pipe(self, pipe):
 
@@ -309,6 +309,7 @@ class GtkWaveGraphIntf(QtCore.QObject):
         else:
             status = 'empty'
 
+        print(f'Updating {pipe.name}({pipe.view.isVisible()}) to {status}')
         pipe.set_status(status)
 
     def update(self):
@@ -327,20 +328,23 @@ class GtkWaveGraphIntf(QtCore.QObject):
 
         self.gtkwave_intf.command(f'gtkwave::reLoadFile')
 
-        # self.gtkwave_intf.command("gtkwave::/View/Show_Toolbar 0")
-        # self.gtkwave_intf.command("gtkwave::/View/Dynamic_Resize 0")
+        signal_names = [(pipe, name)
+                        for pipe, name in self.pipe_collect.vcd_pipes.items()
+                        if pipe.view.isVisible()]
 
-        signal_names = list(self.pipe_collect.rtl_intfs.values())
+        # signal_names = list(self.pipe_collect.vcd_pipes.values())
 
-        ret = self.gtkwave_intf.command(
-            f'get_values [list {" ".join(signal_names)}]')
-        self.rtl_status = ret.split('\n')
-        # self.gtkwave.command(f'list_values [list {" ".join(signal_names)}]')
+        for i in range(0, len(signal_names), 20):
 
-        # assert len(self.rtl_status) == len(self.pipe_collect.rtl_intfs)
-        if len(self.rtl_status) != len(self.pipe_collect.rtl_intfs):
-            return
+            cur_slice = slice(i, min(len(signal_names), i + 20))
+            cur_names = signal_names[cur_slice]
 
-        for wave_status, rtl_intf in zip(self.rtl_status,
-                                         self.pipe_collect.rtl_intfs):
-            self.update_rtl_intf(rtl_intf, wave_status.strip())
+            ret = self.gtkwave_intf.command(
+                f'get_values [list {" ".join(s[1] for s in cur_names)}]'
+            )
+            rtl_status = ret.split('\n')
+
+            assert len(rtl_status) == (cur_slice.stop - cur_slice.start)
+
+            for wave_status, (pipe, _) in zip(rtl_status, cur_names):
+                self.update_rtl_intf(pipe, wave_status.strip())

@@ -50,53 +50,55 @@ class GtkWaveProc(QtCore.QObject):
                 continue
 
             try:
-                data = self.p.read_nonblocking(size=4096, timeout=0.01)
-                for d in data.strip().split('\n'):
-                    # print(f'Unsollicited: {data}')
-                    res = re.search(r"KeyPress:(\d+),(\d+)", d)
-
-                    if not res:
-                        continue
-
-                    native_modifiers, native_key = int(res.group(1)), int(
-                        res.group(2))
-
-                    modifiers = 0
-                    text = ''
-                    key = native_key
-
-                    if key < 127:
-                        text = chr(key)
-
-                        if chr(key).islower():
-                            key = ord(chr(key).upper())
-
-                    key = native_key_map.get(key, key)
-
-                    if native_modifiers & 0x4:
-                        modifiers += QtCore.Qt.CTRL
-
-                    if ((native_modifiers & 0x1)
-                            and (key > 127 or chr(key).isalpha())):
-                        modifiers += QtCore.Qt.SHIFT
-
-                    if native_modifiers & 0x8:
-                        modifiers += QtCore.Qt.ALT
-
-                    self.key_press.emit(key, modifiers, text)
-
-                    self.gtkwave_thread.eventDispatcher().processEvents(
-                        QtCore.QEventLoop.AllEvents)
-
+                data = ''
+                while True:
+                    data += self.p.read_nonblocking(size=4096, timeout=0.01)
             except pexpect.TIMEOUT:
                 pass
+
+            for d in data.strip().split('\n'):
+                # print(f'Unsollicited: {data}')
+                res = re.search(r"KeyPress:(\d+),(\d+)", d)
+
+                if not res:
+                    continue
+
+                native_modifiers, native_key = int(res.group(1)), int(
+                    res.group(2))
+
+                modifiers = 0
+                text = ''
+                key = native_key
+
+                if key < 127:
+                    text = chr(key)
+
+                    if chr(key).islower():
+                        key = ord(chr(key).upper())
+
+                key = native_key_map.get(key, key)
+
+                if native_modifiers & 0x4:
+                    modifiers += QtCore.Qt.CTRL
+
+                if ((native_modifiers & 0x1)
+                        and (key > 127 or chr(key).isalpha())):
+                    modifiers += QtCore.Qt.SHIFT
+
+                if native_modifiers & 0x8:
+                    modifiers += QtCore.Qt.ALT
+
+                self.key_press.emit(key, modifiers, text)
+
+                self.gtkwave_thread.eventDispatcher().processEvents(
+                    QtCore.QEventLoop.AllEvents)
 
     def command(self, cmd, cmd_id):
         self.cmd_id = cmd_id
         self.p.send(cmd + '\n')
-        print(f'GtkWave: {cmd}')
+        # print(f'GtkWave: {cmd}')
         self.p.expect('%')
-        print(f'GtkWave: {self.p.before.strip()}')
+        # print(f'GtkWave: {self.p.before.strip()}')
         self.response.emit(self.p.before.strip(), cmd_id)
         self.cmd_id = None
 

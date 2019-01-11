@@ -55,7 +55,8 @@ class Pipe(QtWidgets.QGraphicsPathItem):
     def __str__(self):
         return self.model.name
 
-    __repr__ = __str__
+    def __repr__(self):
+        return f'{type(self)}({str(self)})'
 
     def set_status(self, status):
         self.status = status

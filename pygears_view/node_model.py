@@ -85,7 +85,7 @@ class NodeModel(NamedHierNode):
 
     @property
     def hierarchical(self):
-        return bool(self.gear.child)
+        return bool(self.gear.is_hierarchical)
 
     def setup_view(self):
 
