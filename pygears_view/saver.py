@@ -31,36 +31,63 @@ save_file_epilog = """
 expand()
 """
 
+# gtkwave_load_func_template = """
+
+# @reg_inject
+# def load_after_vcd_loaded(index, gtkwave=Inject('viewer/gtkwave')):
+#     intf = gtkwave.instances[index]
+
+# {% for i, intf in enumerate(intfs) %}
+#     if index == {{i}}:
+# {% for pipe in enumerate(intf) %}
+#     graph_model['{{name}}'].view.expand()
+# {% endfor %}
+# {% endfor %}
+
+#     if index == 0:
+#         intf.command(
+#             'gtkwave::/File/Read_Save_File /tools/home/pygears_view/build/gtkwave.gtkw'
+#         )
+
+# @inject_async
+# def gtkwave_load(gtkwave=Inject('viewer/gtkwave')):
+#     for i, intf in enumerate(gtkwave.graph_intfs):
+#         if intf.loaded:
+#             load_after_vcd_loaded(i)
+#         else:
+#             intf.vcd_loaded.connect(partial(load_after_vcd_loaded, i))
+
+# """
+
 gtkwave_load_func_template = """
 
 @reg_inject
-def load_after_vcd_loaded(index, gtkwave=Inject('viewer/gtkwave')):
-    intf = gtkwave.instances[index]
+def load_after_vcd_loaded(
+        graph_model=Inject('viewer/graph_model'),
+        gtkwave=Inject('viewer/gtkwave')):
 
-{% for i, intf in enumerate(intfs) %}
-    if index == {{i}}:
-{% for pipe in enumerate(intf) %}
-    graph_model['{{name}}'].view.expand()
+    if any(not intf.loaded for intf in gtkwave.graph_intfs):
+        return
+
+{% for intf in intfs %}
+{% for pipe in intf.pipes_on_wave %}
+    gtkwave.show_pipe(graph_model["{{pipe.name}}"])
 {% endfor %}
 {% endfor %}
-
-    if index == 0:
-        intf.command(
-            'gtkwave::/File/Read_Save_File /tools/home/pygears_view/build/gtkwave.gtkw'
-        )
 
 
 @inject_async
 def gtkwave_load(gtkwave=Inject('viewer/gtkwave')):
     for i, intf in enumerate(gtkwave.graph_intfs):
         if intf.loaded:
-            load_after_vcd_loaded(i)
+            load_after_vcd_loaded()
         else:
-            intf.vcd_loaded.connect(partial(load_after_vcd_loaded, i))
+            intf.vcd_loaded.connect(load_after_vcd_loaded)
 
 """
 
 layout_load_func_tempalte = """
+
 @inject_async
 def layout_load(layout=Inject('viewer/layout')):
     win = layout.current_layout
@@ -70,6 +97,7 @@ def layout_load(layout=Inject('viewer/layout')):
 {{commands|indent(4,True)}}
 
     list(layout.windows())[0].activate()
+
 """
 
 
@@ -96,12 +124,12 @@ def save_expanded(root=Inject('viewer/graph_model')):
 
 @reg_inject
 def save_gtkwave(gtkwave=Inject('viewer/gtkwave')):
-    gtkwave.instances[0].command(
-        f'gtkwave::/File/Write_Save_File {get_gtkwave_save_file_path()}')
+    # gtkwave.instances[0].command(
+    #     f'gtkwave::/File/Write_Save_File {get_gtkwave_save_file_path()}')
 
     return load_str_template(gtkwave_load_func_template).render({
-        'fn':
-        get_gtkwave_save_file_path()
+        'intfs':
+        gtkwave.graph_intfs
     })
 
 

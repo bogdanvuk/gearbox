@@ -41,7 +41,7 @@ class VerilatorVCDMap:
         return self.sim_module.trace_fn
 
     def pipe_basename(self, pipe):
-        pipe_name_stem = pipe.model.name[len(self.rtl_node.parent.name) + 1:]
+        pipe_name_stem = pipe.name[len(self.rtl_node.parent.name) + 1:]
         return pipe_name_stem.replace('/', '.')
 
     def make_relative_signal_name_map(self, path_prefix, signal_list):
@@ -66,7 +66,7 @@ class VerilatorVCDMap:
             self.signal_name_map = self.make_relative_signal_name_map(
                 self.path_prefix, self.gtkwave_intf.command('list_signals'))
 
-        if not self.rtl_node.is_descendent(pipe.model.intf):
+        if not self.rtl_node.is_descendent(pipe.intf):
             return
 
         signals = fnmatch.filter(self.signal_name_map.keys(),
@@ -103,12 +103,12 @@ class Signals(NamedTuple):
     valid: str
 
 
-class GraphPipeCollector(GraphVisitor):
+class GraphPipeCollector(HierVisitorBase):
     def __init__(self, vcd_map):
         self.rtl_intfs = {}
         self.vcd_map = vcd_map
 
-    def pipe(self, pipe):
+    def PipeModel(self, pipe):
         if pipe not in self.rtl_intfs:
             try:
                 all_sigs = self.vcd_map.get_signals_for_pipe(pipe)
@@ -228,7 +228,7 @@ class GtkWaveGraphIntf(QtCore.QObject):
         prefix = (
             self.vcd_map.path_prefix + '.' + self.vcd_map.pipe_basename(pipe))
 
-        intf_name = pipe.model.name.replace('.', '/')
+        intf_name = pipe.name.replace('.', '/')
         status_sig = intf_name + '_state'
         valid_sig = prefix + '_valid'
         ready_sig = prefix + '_ready'
@@ -321,9 +321,9 @@ class GtkWaveGraphIntf(QtCore.QObject):
 
             self.gtkwave_intf.command(f'gtkwave::stripGUI')
             self.gtkwave_intf.command(f'gtkwave::setZoomFactor -7')
-            self.pipe_collect.visit(self.graph.view)
-            self.vcd_loaded.emit()
+            self.pipe_collect.visit(self.graph)
             self.loaded = True
+            self.vcd_loaded.emit()
 
         self.gtkwave_intf.command(f'gtkwave::reLoadFile')
 

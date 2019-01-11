@@ -442,7 +442,7 @@ def send_to_wave(
 
     added = []
     for pipe in graph.selected_pipes():
-        added.append(gtkwave.show_pipe(pipe))
+        added.append(gtkwave.show_pipe(pipe.model))
 
     message('Waves added: ' + ' '.join(added))
 

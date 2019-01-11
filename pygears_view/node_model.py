@@ -31,6 +31,9 @@ class PipeModel(NamedHierNode):
         self.view = Pipe(output_port, input_port, parent.view, self)
         self.parent.view.add_pipe(self.view)
 
+    def set_status(self, status):
+        self.view.set_status(status)
+
     @property
     def name(self):
         return self.intf.name
