@@ -40,15 +40,9 @@ class VerilatorVCDMap:
     def vcd_fn(self):
         return self.sim_module.trace_fn
 
-    def pipe_rtl_intf(self, pipe):
-        rtl_port = rtl_from_gear_port(pipe.output_port.model)
-        if rtl_port is None:
-            return None
-
-        return rtl_port.consumer
-
     def pipe_basename(self, pipe):
-        return f'{self.path_prefix}.{self.pipe_rtl_intf(pipe).name}'
+        pipe_name_stem = pipe.model.name[len(self.rtl_node.parent.name) + 1:]
+        return pipe_name_stem.replace('/', '.')
 
     def make_relative_signal_name_map(self, path_prefix, signal_list):
         signal_name_map = {}
@@ -75,11 +69,8 @@ class VerilatorVCDMap:
         if not self.rtl_node.is_descendent(pipe.model.intf):
             return
 
-        pipe_name_stem = pipe.model.name[len(self.rtl_node.parent.name) + 1:]
-        pipe_name_stem = pipe_name_stem.replace('/', '.')
-
         signals = fnmatch.filter(self.signal_name_map.keys(),
-                                 pipe_name_stem + '_*')
+                                 self.pipe_basename(pipe) + '_*')
         return [self.signal_name_map[s] for s in signals]
 
 
@@ -234,10 +225,10 @@ class GtkWaveGraphIntf(QtCore.QObject):
         struct_sigs = collections.defaultdict(dict)
         sig_names = []
 
-        prefix = self.vcd_map.pipe_basename(pipe)
+        prefix = (
+            self.vcd_map.path_prefix + '.' + self.vcd_map.pipe_basename(pipe))
 
-        rtl_intf = self.vcd_map.pipe_rtl_intf(pipe)
-        intf_name = rtl_intf.name.replace('.', '/')
+        intf_name = pipe.model.name.replace('.', '/')
         status_sig = intf_name + '_state'
         valid_sig = prefix + '_valid'
         ready_sig = prefix + '_ready'
