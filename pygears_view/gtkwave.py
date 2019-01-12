@@ -309,7 +309,6 @@ class GtkWaveGraphIntf(QtCore.QObject):
         else:
             status = 'empty'
 
-        print(f'Updating {pipe.name}({pipe.view.isVisible()}) to {status}')
         pipe.set_status(status)
 
     def update(self):

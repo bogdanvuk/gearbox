@@ -76,7 +76,10 @@ class WhichKey(QLabel):
     #                 self.prefixes[s.key[0]] = s
 
     @reg_inject
-    def show(self, main=Inject('viewer/main')):
+    def show(self,
+             main=Inject('viewer/main'),
+             domain=Inject('viewer/domain'),
+             prefixes=Inject('viewer/prefixes')):
 
         which_key_string = {}
         for s in main.shortcuts:
@@ -123,13 +126,26 @@ class WhichKey(QLabel):
             key_name = "-".join(keys)
 
             if not key_group:
-                which_key_string[key_name] = s.callback.__name__
+                which_key_string[key_name] = (s.callback.__name__,
+                                              s.callback.__name__)
             else:
-                which_key_string[key_name] = 'group'
+                group_name = prefixes.get((domain,
+                                           tuple(self.current_prefix) + key))
+                if not group_name:
+                    group_name = prefixes.get(
+                        (None, tuple(self.current_prefix) + key))
+
+                if not group_name:
+                    group_name = 'group'
+
+                which_key_string[key_name] = (group_name,
+                                              html_utils.fontify(
+                                                  group_name,
+                                                  color='darkorchid'))
 
         max_width = max(
             self.fontMetrics().horizontalAdvance(f'{key_name} -> {s}')
-            for key_name, s in which_key_string.items())
+            for key_name, (s, _) in which_key_string.items())
 
         row_size = self.parentWidget().width() // max_width
         row_num = math.ceil(len(which_key_string) / row_size)
@@ -137,8 +153,9 @@ class WhichKey(QLabel):
         table = [[] for _ in range(row_num)]
         for i, key_name in enumerate(sorted(which_key_string)):
 
-            shortcut_string = (html_utils.fontify(key_name, color='darkorchid') +
-                               f' &#8594; {which_key_string[key_name]}')
+            shortcut_string = (
+                html_utils.fontify(key_name, color='darkorchid') +
+                f' &#8594; {which_key_string[key_name][1]}')
 
             table[i % row_num].append((f'width={max_width}', shortcut_string))
 

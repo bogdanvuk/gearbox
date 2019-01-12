@@ -6,7 +6,7 @@ from pygears.conf import Inject, reg_inject, registry, inject_async, bind
 from .layout import active_buffer, Window, WindowLayout
 from functools import wraps, partial
 from .node_search import node_search_completer
-from .main_window import Shortcut, message
+from .main_window import Shortcut, message, register_prefix
 from .pipe import Pipe
 from .saver import save
 from .utils import trigger
@@ -151,6 +151,9 @@ def get_node_layer(node):
         return None
 
 
+register_prefix('graph', Qt.Key_Z, 'zoom')
+
+
 @shortcut('graph', (Qt.Key_Z, Qt.Key_Z))
 @reg_inject
 def zoom_selected(graph=Inject('viewer/graph')):
@@ -257,6 +260,9 @@ class BufferCompleter(QtWidgets.QCompleter):
         return self.layout.get_buffer_by_name(text)
 
 
+register_prefix(None, Qt.Key_B, 'buffers')
+
+
 @shortcut(None, (Qt.Key_B, Qt.Key_B))
 @reg_inject
 def select_buffer(
@@ -303,6 +309,9 @@ def proba2():
     print("Hey2!!!")
 
 
+register_prefix(None, Qt.Key_Q, 'quit')
+
+
 @shortcut(None, (Qt.Key_Q, Qt.Key_S))
 def save_layout():
     save()
@@ -312,6 +321,9 @@ def save_layout():
 @shortcut(None, (Qt.Key_Q, Qt.Key_Q))
 def quit():
     QtWidgets.QApplication.instance().quit()
+
+
+register_prefix(None, Qt.Key_W, 'window')
 
 
 @shortcut(None, (Qt.Key_W, Qt.Key_Slash))

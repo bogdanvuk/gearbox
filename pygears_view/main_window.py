@@ -1,5 +1,5 @@
 from PySide2 import QtCore, QtWidgets, QtGui
-from pygears.conf import PluginBase, registry, safe_bind, reg_inject, Inject
+from pygears.conf import PluginBase, registry, safe_bind, reg_inject, Inject, bind
 
 from functools import partial
 from .minibuffer import Minibuffer
@@ -46,6 +46,14 @@ class Shortcut(QtCore.QObject):
             self._qshortcut.setEnabled(True)
         else:
             self._qshortcut.setEnabled(False)
+
+
+@reg_inject
+def register_prefix(domain, prefix, name, prefixes=Inject('viewer/prefixes')):
+    if not isinstance(prefix, tuple):
+        prefix = (prefix, )
+
+    prefixes[(domain, prefix)] = name
 
 
 @reg_inject
@@ -127,6 +135,7 @@ class MainWindow(QtWidgets.QMainWindow):
         print("Ambiguous shortcut!")
 
     def change_domain(self, domain):
+        bind('viewer/domain', domain)
         self.domain_changed.emit(domain)
 
 
@@ -134,3 +143,4 @@ class MainWindowPlugin(PluginBase):
     @classmethod
     def bind(cls):
         safe_bind('viewer/shortcuts', [])
+        safe_bind('viewer/prefixes', {})
