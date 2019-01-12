@@ -4,6 +4,45 @@ from .stylesheet import STYLE_MINIBUFFER, STYLE_TABSEARCH_LIST
 from pygears.conf import Inject, reg_inject
 
 
+class CompleterItemDelegate(QtWidgets.QItemDelegate):
+    # based on https://stackoverflow.com/a/8036666/1504082
+    # http://doc.qt.nokia.com/4.7/qitemdelegate.html#drawDisplay
+    # http://doc.qt.nokia.com/4.7/qwidget.html#render
+    margin_x = 5
+    margin_y = 3
+
+    def drawDisplay(self, painter, option, rect, text):
+        label = self.make_label(option, text)
+        # calculate render anchor point
+        point = rect.topLeft()
+        point.setX(point.x() + self.margin_x)
+        point.setY(point.y() + self.margin_y)
+
+        label.render(
+            painter, point, renderFlags=QtWidgets.QWidget.DrawChildren)
+
+    def sizeHint(self, option, index):
+        # get text using model and index
+        text = index.model().data(index)
+        label = self.make_label(option, text)
+        return QtCore.QSize(label.width(), label.height() + self.margin_y)
+
+    def setup_label(self, label):
+        pass
+
+    def make_label(self, option, text):
+        label = QtWidgets.QLabel(text)
+
+        self.setup_label(label)
+
+        # adjust width according to widget's target width
+        label.setMinimumWidth(self.target_width - (2 * self.margin_x))
+        label.setMaximumWidth(self.target_width - self.margin_x)
+        label.setWordWrap(True)
+        label.adjustSize()
+        return label
+
+
 class Minibuffer(QtCore.QObject):
     completed = QtCore.Signal(object)
     filled = QtCore.Signal(str)

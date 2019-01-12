@@ -1,82 +1,30 @@
-from PySide2 import QtCore, QtWidgets
+from PySide2 import QtCore, QtWidgets, QtGui
 from pygears.conf import Inject, reg_inject
+from .html_utils import fontify
+from .node_model import NodeModel
+from .minibuffer import CompleterItemDelegate
 
 
-class TreeModel(QtCore.QAbstractItemModel):
-    def __init__(self, root, parent=None):
-        super(TreeModel, self).__init__(parent)
-        self.root = root
+class TaskDelegate(CompleterItemDelegate):
+    def __init__(self, node):
+        super().__init__()
+        self.node = node
 
-    def columnCount(self, parent):
-        return 1
+    def setup_label(self, label):
+        text = label.text()
+        try:
+            child = self.node[text]
 
-    def data(self, index, role=QtCore.Qt.DisplayRole):
-        if not index.isValid():
-            return None
+            if isinstance(child, NodeModel):
+                if child.hierarchical:
+                    label.setStyleSheet("color: darkorchid")
+                else:
+                    label.setStyleSheet("color: lightblue")
+            else:
+                label.setStyleSheet("color: gold")
 
-        if role == QtCore.Qt.EditRole:
-            return self.root.basename
-
-        if role != QtCore.Qt.DisplayRole:
-            return None
-
-        item = index.internalPointer()
-
-        return item.basename
-
-    def flags(self, index):
-        if not index.isValid():
-            return QtCore.Qt.NoItemFlags
-
-        return QtCore.Qt.ItemIsEnabled | QtCore.Qt.ItemIsSelectable
-
-    def headerData(self, section, orientation, role):
-        if (orientation == QtCore.Qt.Horizontal
-                and role == QtCore.Qt.DisplayRole):
-            return self.root.basename
-
-        return None
-
-    def index(self, row, column, parent):
-        if not self.hasIndex(row, column, parent):
-            return QtCore.QModelIndex()
-
-        if not parent.isValid():
-            parentItem = self.root
-        else:
-            parentItem = parent.internalPointer()
-
-        childItem = parentItem.child[row]
-        if childItem:
-            return self.createIndex(row, column, childItem)
-        else:
-            return QtCore.QModelIndex()
-
-    def parent(self, index):
-        if not index.isValid():
-            return QtCore.QModelIndex()
-
-        childItem = index.internalPointer()
-        parentItem = childItem.parent
-
-        if parentItem == self.root:
-            return QtCore.QModelIndex()
-
-        row = parentItem.parent.child.index(parentItem)
-
-        return self.createIndex(row, 0, parentItem)
-
-    def rowCount(self, parent):
-        if parent.column() > 0:
-            return 0
-
-        if not parent.isValid():
-            parentItem = self.root
-        else:
-            parentItem = parent.internalPointer()
-
-        # print(f"childCount: {parentItem.childCount()}")
-        return len(parentItem.child)
+        except KeyError:
+            label.setStyleSheet("color: rgba(255, 255, 255, 150)")
 
 
 class NodeSearchCompleter(QtWidgets.QCompleter):
@@ -103,6 +51,13 @@ class NodeSearchCompleter(QtWidgets.QCompleter):
         self.setCompletionColumn(0)
         self.setCurrentRow(0)
 
+    def complete(self):
+        print(f"Invoking complete")
+        self.delegate = TaskDelegate(self.node)
+        self.delegate.target_width = self.popup().width()
+        self.popup().setItemDelegate(self.delegate)
+        super().complete()
+
     @property
     def default_completion(self):
         if len(self.node.child) == 1:
@@ -111,6 +66,7 @@ class NodeSearchCompleter(QtWidgets.QCompleter):
             return None
 
     def get_result(self, text):
+        print(f"Forming result based on {text}")
         return self.node[text].name
 
     @reg_inject
@@ -125,6 +81,7 @@ class NodeSearchCompleter(QtWidgets.QCompleter):
             node = self.node[text]
 
         if node.child:
+            print(f"Setup model for {self.node.name}")
             self.setup_model(node)
             minibuffer.complete_cont(f'{node.name}/', self)
 
