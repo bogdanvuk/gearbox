@@ -1,6 +1,7 @@
+import os
 from .modeline import Modeline
 from pygears.conf import Inject, reg_inject, safe_bind
-from PySide2 import QtCore, QtWidgets
+from PySide2 import QtCore, QtWidgets, QtGui
 from .stylesheet import STYLE_MINIBUFFER
 
 
@@ -54,9 +55,14 @@ class Window(QtWidgets.QVBoxLayout):
 
         self.modeline = Modeline(self)
 
+        local_dir = os.path.abspath(os.path.dirname(__file__))
+
+        pixmap = QtGui.QPixmap(os.path.join(local_dir, 'logo.png'))
         self.placeholder = QtWidgets.QLabel()
+        self.placeholder.setPixmap(pixmap)
         self.placeholder.setFocusPolicy(QtCore.Qt.FocusPolicy.ClickFocus)
         self.placeholder.setStyleSheet(STYLE_MINIBUFFER)
+        self.placeholder.setAlignment(QtCore.Qt.AlignHCenter | QtCore.Qt.AlignVCenter)
 
         self.addWidget(self.placeholder, 1)
         self.addWidget(self.modeline)

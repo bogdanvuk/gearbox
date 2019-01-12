@@ -498,6 +498,9 @@ def node_search(
     node_name = get_minibuffer_input(
         message=f'{model.name}/', completer=node_search_completer(model))
 
+    if not node_name:
+        return
+
     node = graph.top.model
     for basename in node_name[1:].split('/'):
         node.view.expand()
