@@ -41,8 +41,8 @@ class Shortcut(QtCore.QObject):
         return self._qshortcut.isEnabled()
 
     def domain_changed(self, domain):
-        if (self.domain is None
-                and domain[0] != '_') or (self.domain == domain):
+        if ((self.domain is None and domain is not None and domain[0] != '_')
+                or (self.domain == domain)):
             self._qshortcut.setEnabled(True)
         else:
             self._qshortcut.setEnabled(False)
@@ -135,6 +135,7 @@ class MainWindow(QtWidgets.QMainWindow):
         print("Ambiguous shortcut!")
 
     def change_domain(self, domain):
+        print(f"Changing domain to: {domain}")
         bind('viewer/domain', domain)
         self.domain_changed.emit(domain)
 

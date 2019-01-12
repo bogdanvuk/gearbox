@@ -24,10 +24,15 @@ class Buffer:
         return self.window is not None
 
     def show(self, window):
+        if self.window:
+            self.window.remove_buffer()
+
         self.window = window
+        self.view.show()
 
     def hide(self):
         self.window = None
+        self.view.hide()
 
     def activate(self):
         self.view.setFocus(QtCore.Qt.OtherFocusReason)
@@ -40,8 +45,8 @@ class Window(QtWidgets.QVBoxLayout):
     @reg_inject
     def __init__(self, parent=None, buff=None):
         super().__init__()
-        self.buff = buff
         self.parent = parent
+        self.buff = None
 
         self.setSpacing(0)
         self.setMargin(0)
@@ -53,12 +58,19 @@ class Window(QtWidgets.QVBoxLayout):
         self.placeholder.setFocusPolicy(QtCore.Qt.FocusPolicy.ClickFocus)
         self.placeholder.setStyleSheet(STYLE_MINIBUFFER)
 
-        if buff is not None:
-            self.addWidget(self.buff.view, 1)
-        else:
-            self.addWidget(self.placeholder, 1)
-
+        self.addWidget(self.placeholder, 1)
         self.addWidget(self.modeline)
+
+        if buff is not None:
+            # self.place_buffer(buff)
+            self.placeholder.hide()
+            view = buff.view
+
+            self.insertWidget(0, view, stretch=1)
+            view.show()
+
+            self.buff = buff
+            self.buff.show(self)
 
     def split_horizontally(self):
         return self.parent.split_horizontally(self)
@@ -76,6 +88,7 @@ class Window(QtWidgets.QVBoxLayout):
         self.modeline.update()
 
     def remove(self):
+        self.remove_buffer()
         self.parent.remove_child(self)
         self.removeItem(self.itemAt(0))
         self.removeItem(self.itemAt(0))
@@ -93,14 +106,22 @@ class Window(QtWidgets.QVBoxLayout):
         layout.window_activated(self)
         self.modeline.update()
 
-    def place_buffer(self, buff, position=None):
-        self.itemAt(0).widget().hide()
-        self.removeItem(self.itemAt(0))
+    def remove_buffer(self):
+        if self.buff:
+            print(f'Removing buffer {self.buff} from window: {self.position}')
+            # If widget has not been automatically removed by some other action
+            if self.count() == 3:
+                self.removeItem(self.itemAt(0))
 
-        if buff is not None:
-            view = buff.view
-        else:
-            view = self.placeholder
+            self.placeholder.show()
+            self.buff.hide()
+            self.buff = None
+
+    def place_buffer(self, buff, position=None):
+        self.remove_buffer()
+        self.placeholder.hide()
+
+        view = buff.view
 
         self.insertWidget(0, view, stretch=1)
         view.show()
@@ -197,7 +218,7 @@ class WindowLayout(QtWidgets.QBoxLayout):
         return win_cnt
 
     def child_position(self, child):
-        return self.position + (self.child_index(child))
+        return self.position + (self.child_index(child), )
 
     def child(self, index):
         if index == -1:
@@ -356,12 +377,3 @@ class BufferStack(QtWidgets.QStackedLayout):
             return self.current.buff.name
         else:
             return None
-
-    def next_buffer(self):
-        next_id = self.currentIndex() + 1
-        if next_id >= len(self._buffers):
-            self.setCurrentIndex(0)
-        else:
-            self.setCurrentIndex(next_id)
-
-        self.main.change_domain(self.current_name)

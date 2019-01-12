@@ -53,6 +53,7 @@ class Minibuffer(QtCore.QObject):
             # pixels are removed by hand
             self.msgLabel.setMaximumWidth(self.msgLabel.width() - 2)
             self.msgLabel.show()
+            self.msgLabel.update()
         else:
             self.input_box.setTextMargins(2, 0, 0, 0)
 
@@ -68,6 +69,13 @@ class Minibuffer(QtCore.QObject):
             except AttributeError:
                 pass
 
+            QtCore.QTimer.singleShot(0.01, completer.complete)
+
+            # try:
+            #     self.start.connect(completer.complete)
+            # except AttributeError:
+            #     pass
+
             if hasattr(completer, 'default_completion'):
                 default = completer.default_completion
                 if default is not None:
@@ -77,22 +85,25 @@ class Minibuffer(QtCore.QObject):
         self.input_box.setSelection(0, len(self.input_box.text()))
         self.input_box.setFocus()
 
+        print(f"Emitting start")
+        self.start.emit()
+
     @reg_inject
     def complete(self,
                  message=None,
                  completer=None,
-                 main=Inject('viewer/main')):
-        self.previous_domain = main.buffers.current_name
+                 main=Inject('viewer/main'),
+                 domain=Inject('viewer/domain')):
+        self.previous_domain = domain
         main.change_domain('minibuffer')
         self.input_box.setDisabled(False)
 
         self.timer.stop()
-        self.start.emit()
 
         self.complete_cont(message, completer)
 
-        if self._completer:
-            self._completer.complete()
+        # if self._completer:
+        #     self._completer.complete()
 
     def _singled_out(self, text):
         if not self._completer:
@@ -109,11 +120,13 @@ class Minibuffer(QtCore.QObject):
         self.prev_text_len = len(text)
 
     def cancel(self):
+        print(f"Cancel emitted")
         if self.input_box.isEnabled():
             self.cleanup(None)
 
     @reg_inject
     def cleanup(self, result, main=Inject('viewer/main')):
+        print(f"Cleaning up")
         self.completed.emit(result)
         main.change_domain(self.previous_domain)
         self.input_box.setText('')
@@ -126,6 +139,7 @@ class Minibuffer(QtCore.QObject):
         self.msgLabel.setVisible(False)
 
     def _on_search_submitted(self, index=0):
+        print(f'InputBox Return pressed')
         if self._completer and hasattr(self._completer, 'get_result'):
             result = self._completer.get_result(self.input_box.text())
         else:
@@ -144,8 +158,14 @@ class Minibuffer(QtCore.QObject):
     def tab_key_event(self):
         prefix = os.path.commonprefix(list(self.completions()))
         self.input_box.setText(prefix)
+
+        if not self._completer:
+            return
+
         if (self._completer.completionCount() == 1):
             self.filled.emit(prefix)
+        else:
+            self.start.emit()
 
 
 class InputBox(QtWidgets.QLineEdit):
@@ -158,18 +178,33 @@ class InputBox(QtWidgets.QLineEdit):
         self.setAttribute(QtCore.Qt.WA_MacShowFocusRect, 0)
         self.setStyleSheet(STYLE_MINIBUFFER)
         self.setDisabled(True)
+        # self.setFocusPolicy(QtCore.Qt.ClickFocus)
         # self.hide()
 
     def focusOutEvent(self, event):
-        self.cancel.emit()
+        if event.reason() != QtCore.Qt.FocusReason.PopupFocusReason:
+            print(f"Focus out of the InputBox: {event.reason()}")
+            self.cancel.emit()
+
         super().focusOutEvent(event)
 
     def event(self, event):
+        # print(f'InputBox event: {event.type()}')
+
+        # if (event.type() in [
+        #         QtCore.QEvent.KeyRelease, QtCore.QEvent.ShortcutOverride
+        # ]):
+        #     if (event.key() == QtCore.Qt.Key_Tab
+        #             and event.modifiers() == QtCore.Qt.NoModifier):
+        #         print(f'Tab other')
+        #         return True
+
         if event.type() == QtCore.QEvent.KeyPress:
             if (event.key() == QtCore.Qt.Key_Tab
                     and event.modifiers() == QtCore.Qt.NoModifier):
+                print(f'Tab event')
                 self.tab_key_event.emit()
-                return False
+                return True
             elif (event.key() == QtCore.Qt.Key_J
                   and event.modifiers() == QtCore.Qt.ControlModifier):
                 if self.completer():
