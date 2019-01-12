@@ -186,6 +186,7 @@ class GtkWaveBuffer(Buffer):
 
     def activate(self):
         super().activate()
+        self.instance.widget.activateWindow()
         # self.instance.gtkwave_win.setKeyboardGrabEnabled(True)
 
     def deactivate(self):
@@ -260,6 +261,9 @@ class GtkWaveGraphIntf(QtCore.QObject):
                 path = sig_name_no_width.split('.')
                 place = struct_sigs
                 for p in path[:-1]:
+                    if p not in place:
+                        place[p] = {}
+
                     place = place[p]
 
                 place[path[-1]] = s

@@ -1,6 +1,7 @@
 import os
 from PySide2 import QtWidgets, QtCore
 from .stylesheet import STYLE_MINIBUFFER, STYLE_TABSEARCH_LIST
+from .layout import active_buffer
 from pygears.conf import Inject, reg_inject
 
 
@@ -171,6 +172,7 @@ class Minibuffer(QtCore.QObject):
         self.input_box.setText('')
         self.input_box.setDisabled(True)
         self.input_box.parentWidget().clearFocus()
+        active_buffer().activate()
 
         self.message_cleanup()
 

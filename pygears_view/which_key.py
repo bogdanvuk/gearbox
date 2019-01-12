@@ -31,7 +31,7 @@ class WhichKey(QLabel):
         self.current_prefix = []
         self.prefix_detected = False
         self.timer = QtCore.QTimer()
-        self.timer.setInterval(1000)
+        self.timer.setInterval(500)
         self.timer.timeout.connect(self.show)
         self.timer.setSingleShot(True)
 
@@ -52,7 +52,7 @@ class WhichKey(QLabel):
         if event.type() == QtCore.QEvent.ShortcutOverride:
             if self.is_prefix(event.key()):
                 self.current_prefix.append(event.key())
-                print(f"Prefix extended: {self.current_prefix}")
+                # print(f"Prefix extended: {self.current_prefix}")
                 if self.isVisible():
                     self.show()
                 else:

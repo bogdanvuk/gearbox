@@ -16,12 +16,18 @@ from functools import partial
 expand_func_template = """
 
 @reg_inject
-def expand(graph_model=Inject('viewer/graph_model')):
+def expand(graph_model=Inject('viewer/graph_model'), graph=Inject('viewer/graph')):
   {% if expanded %}
     {% for name in expanded %}
     graph_model['{{name}}'].view.expand()
     {% endfor %}
-  {% else %}
+  {% endif %}
+
+  {% if selected %}
+    graph.select(graph_mode['{{selected.model.name}}'].view)
+  {% endif %}
+
+  {% if (not selected) and (not expanded) %}
     pass
   {% endif %}
 
@@ -30,34 +36,6 @@ def expand(graph_model=Inject('viewer/graph_model')):
 save_file_epilog = """
 expand()
 """
-
-# gtkwave_load_func_template = """
-
-# @reg_inject
-# def load_after_vcd_loaded(index, gtkwave=Inject('viewer/gtkwave')):
-#     intf = gtkwave.instances[index]
-
-# {% for i, intf in enumerate(intfs) %}
-#     if index == {{i}}:
-# {% for pipe in enumerate(intf) %}
-#     graph_model['{{name}}'].view.expand()
-# {% endfor %}
-# {% endfor %}
-
-#     if index == 0:
-#         intf.command(
-#             'gtkwave::/File/Read_Save_File /tools/home/pygears_view/build/gtkwave.gtkw'
-#         )
-
-# @inject_async
-# def gtkwave_load(gtkwave=Inject('viewer/gtkwave')):
-#     for i, intf in enumerate(gtkwave.graph_intfs):
-#         if intf.loaded:
-#             load_after_vcd_loaded(i)
-#         else:
-#             intf.vcd_loaded.connect(partial(load_after_vcd_loaded, i))
-
-# """
 
 gtkwave_load_func_template = """
 
@@ -114,11 +92,15 @@ class GraphStatusSaver(HierYielderBase):
 
 
 @reg_inject
-def save_expanded(root=Inject('viewer/graph_model')):
+def save_expanded(
+        root=Inject('viewer/graph_model'), graph=Inject('viewer/graph')):
     expanded = list(GraphStatusSaver().visit(root))
 
     return load_str_template(expand_func_template).render({
-        'expanded': expanded
+        'expanded':
+        expanded,
+        'selected':
+        graph.selected_items()[0]
     })
 
 
@@ -177,4 +159,3 @@ def save():
 @reg_inject
 def get_save_file_path(outdir=MayInject('sim/artifact_dir')):
     return os.path.abspath(os.path.join(outdir, 'pygears_view_save.py'))
-

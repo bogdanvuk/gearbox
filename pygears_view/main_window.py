@@ -113,7 +113,6 @@ class MainWindow(QtWidgets.QMainWindow):
         shortcut.activated.connect(partial(self.shortcut_trigger, shortcut))
 
     def shortcut_trigger(self, shortcut):
-        print(f'triggered: {shortcut}')
         self.shortcut_triggered.emit(shortcut)
 
     def _init_actions(self):
@@ -135,7 +134,6 @@ class MainWindow(QtWidgets.QMainWindow):
         print("Ambiguous shortcut!")
 
     def change_domain(self, domain):
-        print(f"Changing domain to: {domain}")
         bind('viewer/domain', domain)
         self.domain_changed.emit(domain)
 

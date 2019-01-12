@@ -79,7 +79,7 @@ class Graph(QtWidgets.QGraphicsView):
         scene_pos = (scene_area / 2) * -1
         self.setScene(NodeScene(self))
         self.scene().selectionChanged.connect(self.selection_changed_slot)
-        self.setFocusPolicy(QtCore.Qt.StrongFocus)
+        # self.setFocusPolicy(QtCore.Qt.ClickFocus)
         self.setSceneRect(scene_pos, scene_pos, scene_area, scene_area)
         self.setRenderHint(QtGui.QPainter.Antialiasing, True)
         self.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)

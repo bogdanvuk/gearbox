@@ -510,7 +510,7 @@ def node_search(
     graph.select(node.view)
 
 
-@shortcut('graph', Qt.Key_Colon)
+@shortcut(None, Qt.Key_Colon)
 @reg_inject
 def time_search(
         time=Interactive('Time: '), sim_bridge=Inject('viewer/sim_bridge')):

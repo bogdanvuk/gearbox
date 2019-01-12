@@ -215,6 +215,7 @@ class NodeItem(AbstractNodeItem):
             obj.hide()
 
         self.collapsed = True
+        self.size_expander(self)
         self.graph.top.layout()
 
     def expand(self):
@@ -764,7 +765,7 @@ class NodeItem(AbstractNodeItem):
 
         self.layers = sorted(self.layers, key=lambda l: l.rect.left())
 
-        print(self.layers)
+        # print(self.layers)
 
         for p in self.inputs:
             p.setY(max_y - p.y() + padding)
