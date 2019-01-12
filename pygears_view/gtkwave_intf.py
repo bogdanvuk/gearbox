@@ -209,5 +209,9 @@ class GtkWaveWindow(QtCore.QObject):
         self.window_id = window_id
         self.gtkwave_win = QtGui.QWindow.fromWinId(window_id)
         self.widget = QtWidgets.QWidget.createWindowContainer(self.gtkwave_win)
+        # self.widget.setFocusPolicy(QtCore.Qt.NoFocus)
+        self.widget.setWindowFlag(QtCore.Qt.X11BypassWindowManagerHint)
+        self.widget.setWindowFlag(QtCore.Qt.BypassGraphicsProxyWidget)
+        self.widget.setWindowFlag(QtCore.Qt.BypassWindowManagerHint)
 
         self.initialized.emit()
