@@ -273,6 +273,20 @@ def select_buffer(
         layout.current_window.place_buffer(buff)
 
 
+@shortcut('graph', Qt.Key_V)
+@single_select_action
+def print_description(node, graph):
+    if isinstance(node, Pipe):
+        intf = node.model.intf
+        print(f'Interface {intf.name}: {repr(intf.dtype)}')
+    else:
+        rtl_node = node.model.gear
+        print(f'Node: {rtl_node.name}')
+        print('paremeters: ')
+        import pprint
+        pprint.pprint(rtl_node.params)
+
+
 @shortcut('graph', Qt.Key_Return)
 @single_select_action
 def toggle_expand(node, graph):

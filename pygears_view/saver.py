@@ -96,11 +96,15 @@ def save_expanded(
         root=Inject('viewer/graph_model'), graph=Inject('viewer/graph')):
     expanded = list(GraphStatusSaver().visit(root))
 
+    selected = graph.selected_items()
+    if selected:
+        selected = selected[0]
+
     return load_str_template(expand_func_template).render({
         'expanded':
         expanded,
         'selected':
-        graph.selected_items()[0]
+        selected
     })
 
 
