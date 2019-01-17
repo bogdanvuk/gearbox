@@ -393,10 +393,12 @@ class NodeItem(AbstractNodeItem):
         """
         calculate minimum node size.
         """
-        width = 0.0
-        if self._text_item.boundingRect().width() > width:
-            width = self._text_item.boundingRect().width()
+        title_width = self._text_item.boundingRect().width()
 
+        # if self.name == 'riscv':
+        #     import pdb; pdb.set_trace()
+
+        port_names_width = 0.0
         port_height = 0.0
         if self._input_items:
             input_widths = []
@@ -405,7 +407,7 @@ class NodeItem(AbstractNodeItem):
                 if text.isVisible():
                     input_width += text.boundingRect().width()
                 input_widths.append(input_width)
-            width += max(input_widths)
+            port_names_width += max(input_widths)
             port = list(self._input_items.keys())[0]
             port_height = port.boundingRect().height() * 2
         if self._output_items:
@@ -415,12 +417,13 @@ class NodeItem(AbstractNodeItem):
                 if text.isVisible():
                     output_width += text.boundingRect().width()
                 output_widths.append(output_width)
-            width += max(output_widths)
+            port_names_width += max(output_widths)
             port = list(self._output_items.keys())[0]
             port_height = port.boundingRect().height() * 2
 
         height = port_height * (max([len(self.inputs), len(self.outputs)]) + 2)
         height += 10
+        width = max(port_names_width, title_width)
 
         return width, height
 

@@ -1,7 +1,7 @@
 #!/usr/bin/python
 from PySide2 import QtGui, QtCore, QtWidgets
 
-from pygears.core.port import InPort
+from pygears.rtl.port import InPort
 from .constants import (IN_PORT, OUT_PORT, PORT_HOVER_COLOR,
                         PORT_HOVER_BORDER_COLOR, PORT_ACTIVE_COLOR,
                         PORT_ACTIVE_BORDER_COLOR, Z_VAL_PORT)
