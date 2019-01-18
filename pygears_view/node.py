@@ -144,7 +144,11 @@ class NodeItem(AbstractNodeItem):
         self.graph = graph
         self.model = model
         self.layout_graph = pgv.AGraph(
-            directed=True, rankdir='LR', splines='true', esep=1)
+            directed=True,
+            rankdir='LR',
+            splines='true',
+            strict=False,
+            concetrate=False)
 
         self.layout_pipe_map = {}
 
@@ -170,6 +174,12 @@ class NodeItem(AbstractNodeItem):
         self._width, self._height = self.collapsed_size
 
         self.post_init()
+
+        for node in self._nodes:
+            gvn = self.get_layout_node(node)
+            for i in range(len(self.outputs)):
+                self.layout_graph.add_edge(
+                    gvn, self.layout_graph.get_node(f'o{i}'), style='invis')
 
     def mouseDoubleClickEvent(self, event):
         self.auto_resize()
@@ -395,9 +405,6 @@ class NodeItem(AbstractNodeItem):
         """
         title_width = self._text_item.boundingRect().width()
 
-        # if self.name == 'riscv':
-        #     import pdb; pdb.set_trace()
-
         port_names_width = 0.0
         port_height = 0.0
         if self._input_items:
@@ -580,6 +587,10 @@ class NodeItem(AbstractNodeItem):
 
         self.pipes.append(pipe)
 
+        # if self.name == '':
+        #     import pdb
+        #     pdb.set_trace()
+
         node1 = pipe.output_port.parentItem()
         node2 = pipe.input_port.parentItem()
 
@@ -590,6 +601,7 @@ class NodeItem(AbstractNodeItem):
                 tailport=f'o{pipe.output_port.model.index}',
                 headport=f'i{pipe.input_port.model.index}',
                 key=id(pipe))
+
         elif (node2 is self):
             self.layout_graph.add_edge(
                 id(node1),
@@ -598,7 +610,7 @@ class NodeItem(AbstractNodeItem):
                 key=id(pipe))
         else:
             self.layout_graph.add_edge(
-                f'i{pipe.input_port.model.index}',
+                f'i{pipe.output_port.model.index}',
                 id(node2),
                 headport=f'i{pipe.input_port.model.index}',
                 key=id(pipe))
@@ -629,7 +641,7 @@ class NodeItem(AbstractNodeItem):
         node2 = pipe.input_port.node
 
         if node1 is self:
-            node1_id = f'i{pipe.input_port.model.index}'
+            node1_id = f'i{pipe.output_port.model.index}'
         else:
             node1_id = id(node1)
 
@@ -678,8 +690,10 @@ class NodeItem(AbstractNodeItem):
 
         self.layout_graph.layout(prog='dot')
 
-        # self.layout_graph.draw('proba.png')
-        # self.layout_graph.draw('proba.dot')
+        # if self.model.name == '/riscv':
+        if self.model.name == '':
+            self.layout_graph.draw('proba.png')
+            self.layout_graph.draw('proba.dot')
 
         def gv_point_load(point):
             return tuple(float(num) for num in point.split(',')[-2:])
@@ -697,9 +711,9 @@ class NodeItem(AbstractNodeItem):
             pos = gv_point_load(gvn.attr['pos'])
             node.set_pos(pos[0] - node.width / 2, pos[1] + node.height / 2)
 
-            if self.outputs:
-                self.layout_graph.add_edge(
-                    gvn, self.layout_graph.get_node(f'o0'), style='invis')
+            # for i in range((self.outputs)):
+            #     self.layout_graph.add_edge(
+            #         gvn, self.layout_graph.get_node(f'o{i}'), style='invis')
 
             max_y = max(max_y, (pos[1] + node.height / 2))
             max_x = max(max_x, (pos[0] + node.width / 2))

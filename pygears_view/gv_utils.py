@@ -1,16 +1,23 @@
 def create_row(in_id, out_id, height, width):
     row_template = """
 <tr>
-    <td {0} width="2" height="{2}" fixedsize="true"></td>
+    <td {0} width="10" height="{2}" fixedsize="true"></td>
     <td width="{3}" height="{2}" fixedsize="true"></td>
-    <td {1} width="2" height="{2}" fixedsize="true"></td>
+    <td {1} width="10" height="{2}" fixedsize="true"></td>
 </tr>"""
     return row_template.format(
         '' if in_id is None else f'port="i{in_id}"',
         '' if out_id is None else f'port="o{out_id}"',
         height,
-        width - 4,
+        width,
     )
+
+
+def sort_perm(l):
+    sort_l = sorted(l, key=lambda x: x.y())
+    perm_l = sorted(range(len(l)), key=lambda x: l[x].y())
+
+    return sort_l, perm_l
 
 
 def get_node_record(node):
@@ -19,8 +26,8 @@ def get_node_record(node):
 {}
 </table>>"""
 
-    input_ports = node.inputs
-    output_ports = node.outputs
+    input_ports, input_indices = sort_perm(node.inputs)
+    output_ports, output_indices = sort_perm(node.outputs)
     rows = []
 
     iin = 0
@@ -49,19 +56,22 @@ def get_node_record(node):
             rows.append(create_row(None, None, pin - cur_h, node.width))
 
             rows.append(
-                create_row(iin, None, input_ports[iin]._height, node.width))
+                create_row(input_indices[iin], None, input_ports[iin]._height,
+                           node.width))
             cur_h = pin + input_ports[iin]._height
             iin += 1
         elif pin is None or pout < pin:
             rows.append(create_row(None, None, pout - cur_h, node.width))
             rows.append(
-                create_row(None, iout, output_ports[iout]._height, node.width))
+                create_row(None, output_indices[iout],
+                           output_ports[iout]._height, node.width))
             cur_h = pout + output_ports[iout]._height
             iout += 1
         else:
             rows.append(create_row(None, None, pout - cur_h, node.width))
             rows.append(
-                create_row(iin, iout, output_ports[iout]._height, node.width))
+                create_row(input_indices[iin], output_indices[iout],
+                           output_ports[iout]._height, node.width))
             cur_h = pout + output_ports[iout]._height
             iin += 1
             iout += 1
