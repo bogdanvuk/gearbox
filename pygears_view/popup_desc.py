@@ -73,7 +73,7 @@ class PopupDesc(QtWidgets.QTextEdit):
             self.timeout_timer.setInterval(timeout)
             self.timeout_timer.start()
 
-        self.setMinimumHeight(300)
+        self.setMinimumHeight(100)
         self.setMinimumWidth(300)
         self.setText(text)
         self.adjustSize()

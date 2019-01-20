@@ -1,4 +1,5 @@
 #!/usr/bin/python
+import sys
 import inspect
 from PySide2.QtCore import Qt
 from PySide2 import QtWidgets, QtGui, QtCore
@@ -302,6 +303,16 @@ def describe_definition(node, graph):
         fn = inspect.getfile(func)
         lines, lineno = inspect.getsourcelines(func)
         describe_file(fn, lineno=slice(lineno, lineno + len(lines)))
+
+
+@shortcut('graph', (Qt.Key_D, Qt.SHIFT + Qt.Key_D))
+@single_select_action
+def describe_definition_extern(node, graph):
+    if not isinstance(node, Pipe):
+        func = node.model.definition.__wrapped__
+        fn = inspect.getfile(func)
+        _, lineno = inspect.getsourcelines(func)
+        os.system(f'emacsclient -n +{lineno} {fn}')
 
 
 @shortcut('graph', Qt.Key_Return)

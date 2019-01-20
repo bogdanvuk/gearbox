@@ -124,8 +124,8 @@ def description(main=Inject('viewer/main')):
     main.add_buffer(DescriptionBuffer(viewer, 'description'))
     bind('viewer/description', viewer)
 
-    describe_file(
-        '/tools/home/pygears_view/pygears_view/html_utils.py', lineno=15)
+    # describe_file(
+    #     '/tools/home/pygears_view/pygears_view/html_utils.py', lineno=15)
 
 
 class Description(QtWidgets.QTextEdit):
@@ -140,34 +140,45 @@ class Description(QtWidgets.QTextEdit):
         """)
         self.document().setDefaultStyleSheet(dark_theme)
 
+    def display_text(self, text):
+        self.fn = None
+        self.lineno = None
+        self.setHtml(text)
+
+    def display_file(self, fn, lineno=1):
+        with open(fn, 'r') as f:
+            contents = f.read()
+
+        self.fn = fn
+        self.lineno = lineno
+
+        if isinstance(lineno, slice):
+            hl_lines = list(range(lineno.start, lineno.stop))
+            start = lineno.start
+        else:
+            hl_lines = []
+            start = lineno
+
+        self.setHtml(
+            pygments.highlight(contents, get_lexer_for_filename(fn),
+                               HtmlFormatter(hl_lines=hl_lines)))
+        self.update()
+
+        self.moveCursor(QtGui.QTextCursor.End)
+        cursor = QtGui.QTextCursor(
+            self.document().findBlockByLineNumber(start - 1))
+
+        # cursor.movePosition(QtGui.QTextCursor.Down, QtGui.QTextCursor.KeepAnchor,
+        #                     10)
+
+        self.setTextCursor(cursor)
+
 
 @reg_inject
 def describe_text(text, desc=Inject('viewer/description')):
-    desc.setHtml(text)
+    desc.display_text(text)
 
 
 @reg_inject
 def describe_file(fn, lineno=1, desc=Inject('viewer/description')):
-    with open(fn, 'r') as f:
-        contents = f.read()
-
-    if isinstance(lineno, slice):
-        hl_lines = list(range(lineno.start, lineno.stop))
-        start = lineno.start
-    else:
-        hl_lines = []
-        start = lineno
-
-    desc.setHtml(
-        pygments.highlight(contents, get_lexer_for_filename(fn),
-                           HtmlFormatter(hl_lines=hl_lines)))
-    desc.update()
-
-    desc.moveCursor(QtGui.QTextCursor.End)
-    cursor = QtGui.QTextCursor(
-        desc.document().findBlockByLineNumber(start - 1))
-
-    # cursor.movePosition(QtGui.QTextCursor.Down, QtGui.QTextCursor.KeepAnchor,
-    #                     10)
-
-    desc.setTextCursor(cursor)
+    desc.display_file(fn, lineno)
