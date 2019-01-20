@@ -11,6 +11,7 @@ from pygears_view.graph import graph
 from pygears_view.which_key import which_key
 from pygears_view.gtkwave import gtkwave
 from pygears_view.sniper import sniper
+from pygears_view.description import description
 from pygears.conf import Inject, reg_inject, safe_bind, PluginBase, registry, bind, MayInject
 from .pygears_proxy import PyGearsBridgeServer, sim_bridge
 from .saver import get_save_file_path
@@ -82,4 +83,4 @@ class SimPlugin(PluginBase):
     @classmethod
     def bind(cls):
         safe_bind('viewer/layers',
-                  [which_key, graph, gtkwave, sniper, reloader])
+                  [which_key, graph, gtkwave, sniper, description, reloader])

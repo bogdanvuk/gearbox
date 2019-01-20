@@ -9,6 +9,7 @@ from .node_search import node_search_completer
 from .main_window import Shortcut, message, register_prefix
 from .pipe import Pipe
 from .saver import save
+from .description import describe_text
 from .utils import trigger
 import os
 
@@ -285,6 +286,22 @@ def print_description(node, graph):
         print('paremeters: ')
         import pprint
         pprint.pprint(rtl_node.params)
+
+
+@shortcut('graph', (Qt.Key_D, Qt.Key_D))
+@single_select_action
+def describe_item(node, graph):
+    describe_text(node.model.description)
+
+    # if isinstance(node, Pipe):
+    #     intf = node.model.intf
+    #     print(f'Interface {intf.name}: {repr(intf.dtype)}')
+    # else:
+    #     rtl_node = node.model.gear
+    #     print(f'Node: {rtl_node.name}')
+    #     print('paremeters: ')
+    #     import pprint
+    #     pprint.pprint(rtl_node.params)
 
 
 @shortcut('graph', Qt.Key_Return)
