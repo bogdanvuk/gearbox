@@ -1,3 +1,8 @@
+import pygments
+from pygments.lexers import get_lexer_by_name
+from pygments.formatters import HtmlFormatter
+
+
 def tabulate(table, style=""):
     res = [f'<table {style}>']
     for row in table:
@@ -25,3 +30,19 @@ def fontify(s, bold=False, **style):
 
     res = f'<span{style_expr}>{s}</span>'
     return res
+
+
+def highlight(text, language, style='emacs', add_style=True):
+    lexer = get_lexer_by_name(language)
+    html = pygments.highlight(text, lexer, HtmlFormatter(style=style))
+
+    if add_style:
+        return highlight_style(html)
+    else:
+        return html
+
+
+def highlight_style(text):
+    return '\n'.join(("<style>", HtmlFormatter().get_style_defs('.highlight'),
+                      '.highlight  { background: rgba(255, 255, 255, 0); }'
+                      "</style>", text))

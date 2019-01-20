@@ -172,7 +172,8 @@ class Minibuffer(QtCore.QObject):
         self.input_box.setText('')
         self.input_box.setDisabled(True)
         self.input_box.parentWidget().clearFocus()
-        active_buffer().activate()
+        if active_buffer():
+            active_buffer().activate()
 
         self.message_cleanup()
 

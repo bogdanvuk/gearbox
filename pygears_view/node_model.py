@@ -2,7 +2,10 @@ from pygears.core.hier_node import NamedHierNode
 from pygears.rtl.node import RTLNode
 from .node import NodeItem, hier_expand, hier_painter, node_painter
 from .pipe import Pipe
+from .html_utils import highlight, tabulate, highlight_style
+from pygears import registry
 from pygears.core.port import InPort
+from pygears.typing_common.pprint import pprint
 
 from .constants import Z_VAL_PIPE
 
@@ -33,6 +36,20 @@ class PipeModel(NamedHierNode):
 
     def set_status(self, status):
         self.view.set_status(status)
+
+    @property
+    def description(self):
+        tooltip = '<b>{}</b><br/>'.format(self.name)
+        disp = pprint.pformat(self.intf.dtype, indent=4, width=30)
+        print(disp)
+        # text = highlight(disp, 'py', style='default')
+        text = highlight(disp, 'py')
+        print(text)
+
+        tooltip += text
+        # tooltip += '<br/>{}<br/>'.format(
+        #     pprint.pformat(self.model.intf.dtype, indent=4, width=30))
+        return tooltip
 
     @property
     def name(self):
@@ -74,6 +91,49 @@ class NodeModel(NamedHierNode):
 
                     if parent is not None:
                         n.view.hide()
+
+    @property
+    def description(self):
+        tooltip = '<b>{}</b><br/><br/>'.format(self.name)
+        fmt = pprint.PrettyPrinter(indent=4, width=30).pformat
+
+        table = []
+        for name, val in self.gear.params.items():
+            row = []
+            if name == 'definition':
+                val = val.func.__name__
+                row = [('style="font-weight:bold"', name),
+                       ('style="font-weight:bold"', val)]
+            elif name not in registry('gear/params/extra').keys():
+                row = [('style="font-weight:bold"', name),
+                       ('', highlight(fmt(val), 'py', add_style=False))]
+
+            if row:
+                table.append(row)
+
+        table_style = """
+<style>
+td {
+padding-left: 10px;
+padding-right: 10px;
+}
+</style>
+        """
+
+        tooltip += table_style
+        tooltip += tabulate(table, 'style="padding-right: 10px;"')
+
+        # disp = pprint.pformat(self.intf.dtype, indent=4, width=30)
+        # from .html_utils import highlight
+        # # text = highlight(disp, 'py', style='default')
+        # text = highlight(disp, 'py')
+        # print(text)
+
+        # tooltip += text
+        # tooltip += '<br/>{}<br/>'.format(
+        #     pprint.pformat(self.model.intf.dtype, indent=4, width=30))
+        return highlight_style(tooltip)
+        # return tooltip
 
     @property
     def name(self):

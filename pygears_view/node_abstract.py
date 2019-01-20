@@ -163,7 +163,7 @@ class AbstractNodeItem(QGraphicsItem):
     @name.setter
     def name(self, name=''):
         self._properties['name'] = name
-        self.setToolTip('node: {}'.format(name))
+        # self.setToolTip('node: {}'.format(name))
 
     @property
     def properties(self):

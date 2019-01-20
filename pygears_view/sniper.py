@@ -16,7 +16,7 @@ class SnipeCodeItem(QtWidgets.QGraphicsTextItem):
     def __init__(self, text, parent=None):
         super().__init__(text, parent=parent)
         f = self.font()
-        f.setPointSize(14)
+        f.setPointSize(12)
         f.setBold(True)
         self.setFont(f)
 

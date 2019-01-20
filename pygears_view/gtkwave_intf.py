@@ -34,13 +34,18 @@ class GtkWaveProc(QtCore.QObject):
                             self.p.before).group(0)
         print(f"GtkWave {version} window")
 
-        out = subprocess.check_output(
-            'xwininfo -name "GTKWave - [no file loaded]"', shell=True)
+        # out = subprocess.check_output(
+        #     'xwininfo -name "GTKWave - [no file loaded]"', shell=True)
+        window_id = subprocess.check_output(
+            'xdotool getactivewindow', shell=True)
 
-        window_id = re.search(r"Window id: 0x([0-9a-fA-F]+)",
-                              out.decode()).group(1)
+        print(f'Window id: {window_id} -> {int(window_id)}')
 
-        self.window_up.emit(version, self.p.pid, int(window_id, 16))
+        # window_id = re.search(r"Window id: 0x([0-9a-fA-F]+)",
+        #                       out.decode()).group(1)
+
+        # self.window_up.emit(version, self.p.pid, int(window_id, 16))
+        self.window_up.emit(version, self.p.pid, int(window_id))
 
         while (1):
             self.gtkwave_thread.eventDispatcher().processEvents(

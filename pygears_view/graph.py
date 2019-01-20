@@ -75,12 +75,13 @@ class Graph(QtWidgets.QGraphicsView):
                  sim_bridge=MayInject('viewer/sim_bridge'),
                  sim_proxy=MayInject('viewer/sim_proxy')):
         super().__init__(parent)
-        scene_area = 8000.0
-        scene_pos = (scene_area / 2) * -1
+        # scene_area = 8000.0
+        # scene_pos = (scene_area / 2) * -1
         self.setScene(NodeScene(self))
         self.scene().selectionChanged.connect(self.selection_changed_slot)
-        # self.setFocusPolicy(QtCore.Qt.ClickFocus)
-        self.setSceneRect(scene_pos, scene_pos, scene_area, scene_area)
+        self.setFocusPolicy(QtCore.Qt.ClickFocus)
+        # self.setFocusPolicy(QtCore.Qt.NoFocus)
+        # self.setSceneRect(scene_pos, scene_pos, scene_area, scene_area)
         self.setRenderHint(QtGui.QPainter.Antialiasing, True)
         self.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         self.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
@@ -262,6 +263,12 @@ class Graph(QtWidgets.QGraphicsView):
         return pipes
 
     def selection_changed_slot(self):
+        selected = self.selected_items()
+        if selected:
+            if hasattr(selected[0].model, 'description'):
+                from .popup_desc import popup_desc
+                popup_desc(selected[0].model.description)
+
         self.selection_changed.emit(self.selected_items())
 
     def select(self, obj):

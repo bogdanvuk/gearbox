@@ -30,12 +30,7 @@ class Pipe(QtWidgets.QGraphicsPathItem):
     """
 
     @reg_inject
-    def __init__(
-            self,
-            output_port,
-            input_port,
-            parent,
-            model):
+    def __init__(self, output_port, input_port, parent, model):
         super().__init__(parent)
         self.parent = parent
         self.setZValue(Z_VAL_PIPE)
@@ -51,6 +46,16 @@ class Pipe(QtWidgets.QGraphicsPathItem):
         self.model = model
         self.layout_path = []
         self.status = "empty"
+        # self.set_tooltip()
+
+    def show_tooltip(self):
+        tooltip = '<b>{}</b><br/>'.format(self.model.name)
+        from pygears.typing_common.pprint import pprint
+        disp = pprint.pformat(self.model.intf.dtype, indent=4, width=30)
+        tooltip += disp.replace('\n', '<br/>')
+        # tooltip += '<br/>{}<br/>'.format(
+        #     pprint.pformat(self.model.intf.dtype, indent=4, width=30))
+        self.setToolTip(tooltip)
 
     def __str__(self):
         return self.model.name

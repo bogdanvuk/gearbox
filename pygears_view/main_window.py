@@ -66,6 +66,7 @@ class MainWindow(QtWidgets.QMainWindow):
     key_cancel = QtCore.Signal()
     domain_changed = QtCore.Signal(str)
     shortcut_triggered = QtCore.Signal(object)
+    resized = QtCore.Signal()
 
     def __init__(self, sim_pipe=None, parent=None):
         super().__init__(parent)
@@ -105,6 +106,19 @@ class MainWindow(QtWidgets.QMainWindow):
             Shortcut(domain, key, callback)
 
     # def event(self, event):
+    #     # if isinstance(event, (QtGui.QEnterEvent, QtGui.QHoverEvent)):
+    #     #     return True
+
+    #     # if (event.type() is QtCore.QEvent.Type.Leave) or (
+    #     #         event.type() is QtCore.QEvent.Type.Enter) or (
+    #     #             event.type() is QtCore.QEvent.Type.HoverMove):
+    #     #     editor = registry('viewer/editor')
+    #     #     graph = registry('viewer/graph')
+    #     #     graph.clearFocus()
+    #     #     editor.win.widget.activateWindow()
+    #     #     editor.win.widget.setFocus()
+    #     #     print(f'Set focus')
+
     #     print(f'Event: {event.type()}')
     #     return super().event(event)
 
@@ -119,6 +133,10 @@ class MainWindow(QtWidgets.QMainWindow):
         QtWidgets.QShortcut(
             QtGui.QKeySequence(QtCore.Qt.CTRL + QtCore.Qt.Key_G),
             self).activated.connect(self._key_cancel_event)
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self.resized.emit()
 
     def focusOutEvent(self, event):
         print("Focus Out")

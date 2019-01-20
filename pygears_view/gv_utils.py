@@ -1,15 +1,15 @@
 def create_row(in_id, out_id, height, width):
     row_template = """
 <tr>
-    <td {0} width="10" height="{2}" fixedsize="true"></td>
+    <td {0} width="1" height="{2}" fixedsize="true"></td>
     <td width="{3}" height="{2}" fixedsize="true"></td>
-    <td {1} width="10" height="{2}" fixedsize="true"></td>
+    <td {1} width="1" height="{2}" fixedsize="true"></td>
 </tr>"""
     return row_template.format(
         '' if in_id is None else f'port="i{in_id}"',
         '' if out_id is None else f'port="o{out_id}"',
-        height,
-        width,
+        round(height),
+        round(width),
     )
 
 
@@ -55,24 +55,20 @@ def get_node_record(node):
         if pout is None or (pin is not None and pin < pout):
             rows.append(create_row(None, None, pin - cur_h, node.width))
 
-            rows.append(
-                create_row(input_indices[iin], None, input_ports[iin]._height,
-                           node.width))
-            cur_h = pin + input_ports[iin]._height
+            rows.append(create_row(input_indices[iin], None, 1, node.width))
+            cur_h = pin + 1
             iin += 1
         elif pin is None or pout < pin:
             rows.append(create_row(None, None, pout - cur_h, node.width))
-            rows.append(
-                create_row(None, output_indices[iout],
-                           output_ports[iout]._height, node.width))
-            cur_h = pout + output_ports[iout]._height
+            rows.append(create_row(None, output_indices[iout], 1, node.width))
+            cur_h = pout + 1
             iout += 1
         else:
             rows.append(create_row(None, None, pout - cur_h, node.width))
             rows.append(
-                create_row(input_indices[iin], output_indices[iout],
-                           output_ports[iout]._height, node.width))
-            cur_h = pout + output_ports[iout]._height
+                create_row(input_indices[iin], output_indices[iout], 1,
+                           node.width))
+            cur_h = pout + 1
             iin += 1
             iout += 1
 

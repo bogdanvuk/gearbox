@@ -144,11 +144,7 @@ class NodeItem(AbstractNodeItem):
         self.graph = graph
         self.model = model
         self.layout_graph = pgv.AGraph(
-            directed=True,
-            rankdir='LR',
-            splines='true',
-            strict=False,
-            concetrate=False)
+            directed=True, rankdir='LR', splines='true', strict=False)
 
         self.layout_pipe_map = {}
 
@@ -352,10 +348,7 @@ class NodeItem(AbstractNodeItem):
         return super(NodeItem, self).itemChange(change, value)
 
     def _tooltip_disable(self, state):
-        tooltip = '<b>{}</b>'.format(self._properties['name'])
-        if state:
-            tooltip += ' <font color="red"><b>(DISABLED)</b></font>'
-        tooltip += '<br/>{}<br/>'.format(self._properties['type'])
+        tooltip = '<b>{}</b>'.format(self.model.name)
         self.setToolTip(tooltip)
 
     def _set_text_color(self, color):
@@ -540,7 +533,7 @@ class NodeItem(AbstractNodeItem):
         # set text color when node is initialized.
         self._set_text_color(self.text_color)
         # set the tooltip
-        self._tooltip_disable(self.disabled)
+        # self._tooltip_disable(self.disabled)
 
         # setup node layout
         # =================
@@ -676,8 +669,14 @@ class NodeItem(AbstractNodeItem):
             except KeyError:
                 pass
 
-            gvn.attr['label'] = gv_utils.get_node_record(node).replace(
-                '\n', '')
+            # gvn.attr['label'] = gv_utils.get_node_record(node).replace(
+            #     '\n', '')
+            node_layout = gv_utils.get_node_record(node)
+            # print('-' * 60)
+            # print(f'Node layout for {node.model.name}')
+            # print('-' * 60)
+            # print(node_layout)
+            gvn.attr['label'] = node_layout.replace('\n', '')
 
         # for i in range(len(self.inputs)):
         #     gvn = self.layout_graph.get_node(f'i{i}')
@@ -691,9 +690,9 @@ class NodeItem(AbstractNodeItem):
         self.layout_graph.layout(prog='dot')
 
         # if self.model.name == '/riscv':
-        if self.model.name == '':
-            self.layout_graph.draw('proba.png')
-            self.layout_graph.draw('proba.dot')
+        #     # if self.model.name == '':
+        #     self.layout_graph.draw('proba.png')
+        #     self.layout_graph.draw('proba.dot')
 
         def gv_point_load(point):
             return tuple(float(num) for num in point.split(',')[-2:])
