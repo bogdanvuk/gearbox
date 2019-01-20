@@ -1,6 +1,9 @@
 from PySide2 import QtWidgets, QtGui
 from .layout import Buffer
 from pygears.conf import Inject, reg_inject, bind, MayInject, registry
+import pygments
+from pygments.lexers import get_lexer_for_filename
+from pygments.formatters import HtmlFormatter
 
 dark_theme = """
 /* Dracula Theme v1.2.5
@@ -17,7 +20,7 @@ dark_theme = """
  * @author Zeno Rocha <hi@zenorocha.com>
  */
 
- .highlight .hll { background-color: #f1fa8c }
+ .highlight .hll { background-color: rgba(150, 150, 150, 50) }
  .highlight .c { color: #6272a4 } /* Comment */
  .highlight .err { color: #f8f8f2 } /* Error */
  .highlight .g { color: #f8f8f2 } /* Generic */
@@ -112,14 +115,17 @@ class DescriptionBuffer(Buffer):
 def description(main=Inject('viewer/main')):
     viewer = Description()
 
-#     viewer.setHtml("""
-# <div class="highlight">
-# <pre><span class="k">print</span> <span class="s">&quot;Hello World&quot;</span></pre>
-# </div>
-#     """)
+    #     viewer.setHtml("""
+    # <div class="highlight">
+    # <pre><span class="k">print</span> <span class="s">&quot;Hello World&quot;</span></pre>
+    # </div>
+    #     """)
 
     main.add_buffer(DescriptionBuffer(viewer, 'description'))
     bind('viewer/description', viewer)
+
+    describe_file(
+        '/tools/home/pygears_view/pygears_view/html_utils.py', lineno=15)
 
 
 class Description(QtWidgets.QTextEdit):
@@ -129,6 +135,7 @@ class Description(QtWidgets.QTextEdit):
         self.setStyleSheet("""
         color: rgba(255, 255, 255, 150);
         background-color: rgba(35, 35, 35, 255);
+        selection-background-color: rgba(150, 150, 150, 70);
         inset grey;
         """)
         self.document().setDefaultStyleSheet(dark_theme)
@@ -139,6 +146,28 @@ def describe_text(text, desc=Inject('viewer/description')):
     desc.setHtml(text)
 
 
-# @reg_inject
-# def describe_file(fn, desc=Inject('viewer/description')):
-#     desc.setHtml(text)
+@reg_inject
+def describe_file(fn, lineno=1, desc=Inject('viewer/description')):
+    with open(fn, 'r') as f:
+        contents = f.read()
+
+    if isinstance(lineno, slice):
+        hl_lines = list(range(lineno.start, lineno.stop))
+        start = lineno.start
+    else:
+        hl_lines = []
+        start = lineno
+
+    desc.setHtml(
+        pygments.highlight(contents, get_lexer_for_filename(fn),
+                           HtmlFormatter(hl_lines=hl_lines)))
+    desc.update()
+
+    desc.moveCursor(QtGui.QTextCursor.End)
+    cursor = QtGui.QTextCursor(
+        desc.document().findBlockByLineNumber(start - 1))
+
+    # cursor.movePosition(QtGui.QTextCursor.Down, QtGui.QTextCursor.KeepAnchor,
+    #                     10)
+
+    desc.setTextCursor(cursor)

@@ -9,7 +9,7 @@ from .node_search import node_search_completer
 from .main_window import Shortcut, message, register_prefix
 from .pipe import Pipe
 from .saver import save
-from .description import describe_text
+from .description import describe_text, describe_file
 from .utils import trigger
 import os
 
@@ -288,20 +288,20 @@ def print_description(node, graph):
         pprint.pprint(rtl_node.params)
 
 
-@shortcut('graph', (Qt.Key_D, Qt.Key_D))
+@shortcut('graph', (Qt.Key_D, Qt.Key_O))
 @single_select_action
 def describe_item(node, graph):
     describe_text(node.model.description)
 
-    # if isinstance(node, Pipe):
-    #     intf = node.model.intf
-    #     print(f'Interface {intf.name}: {repr(intf.dtype)}')
-    # else:
-    #     rtl_node = node.model.gear
-    #     print(f'Node: {rtl_node.name}')
-    #     print('paremeters: ')
-    #     import pprint
-    #     pprint.pprint(rtl_node.params)
+
+@shortcut('graph', (Qt.Key_D, Qt.Key_D))
+@single_select_action
+def describe_definition(node, graph):
+    if not isinstance(node, Pipe):
+        func = node.model.definition.__wrapped__
+        fn = inspect.getfile(func)
+        lines, lineno = inspect.getsourcelines(func)
+        describe_file(fn, lineno=slice(lineno, lineno + len(lines)))
 
 
 @shortcut('graph', Qt.Key_Return)
@@ -455,6 +455,30 @@ def window_up(main=Inject('viewer/main')):
 
     window = go_up(main.buffers.active_window(), 0)
 
+    if window:
+        window.activate()
+
+
+@shortcut(None, (Qt.Key_W, Qt.Key_L))
+@reg_inject
+def window_right(main=Inject('viewer/main')):
+    def go_leftmost_down(window):
+        if isinstance(window, Window):
+            return window
+        else:
+            return go_leftmost_down(window.child(0))
+
+    def go_right(window, pos):
+        if (isinstance(window, WindowLayout) and (window.count() > 1)
+                and (window.direction() == QtWidgets.QBoxLayout.LeftToRight)):
+            if pos < window.count() - 1:
+                return go_leftmost_down(window.child(pos + 1))
+
+        else:
+            parent = window.parent
+            return go_right(parent, parent.child_index(window))
+
+    window = go_right(main.buffers.active_window(), 0)
     if window:
         window.activate()
 

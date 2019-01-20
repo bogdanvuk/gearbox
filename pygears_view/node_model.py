@@ -99,6 +99,10 @@ class NodeModel(NamedHierNode):
                         n.view.hide()
 
     @property
+    def definition(self):
+        return self.gear.params['definition'].func
+
+    @property
     def description(self):
         tooltip = '<b>{}</b><br/><br/>'.format(self.name)
         fmt = pprint.PrettyPrinter(indent=4, width=30).pformat
