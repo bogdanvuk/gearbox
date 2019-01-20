@@ -68,6 +68,7 @@ class Graph(QtWidgets.QGraphicsView):
     selection_changed = QtCore.Signal(list)
     node_selected = QtCore.Signal(str)
     sim_refresh = QtCore.Signal()
+    resized = QtCore.Signal()
 
     @reg_inject
     def __init__(self,
@@ -82,6 +83,8 @@ class Graph(QtWidgets.QGraphicsView):
         self.setFocusPolicy(QtCore.Qt.ClickFocus)
         # self.setFocusPolicy(QtCore.Qt.NoFocus)
         # self.setSceneRect(scene_pos, scene_pos, scene_area, scene_area)
+        self.setSizePolicy(QtWidgets.QSizePolicy.Ignored,
+                           QtWidgets.QSizePolicy.Ignored)
         self.setRenderHint(QtGui.QPainter.Antialiasing, True)
         self.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         self.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
@@ -393,6 +396,10 @@ class Graph(QtWidgets.QGraphicsView):
         else:
             rect = self._combined_rect(nodes)
             self.centerOn(rect.center().x(), rect.center().y())
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self.resized.emit()
 
     def get_pipe_layout(self):
         return self._pipe_layout

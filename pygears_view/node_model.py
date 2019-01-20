@@ -1,13 +1,24 @@
+import inspect
 from pygears.core.hier_node import NamedHierNode
 from pygears.rtl.node import RTLNode
 from .node import NodeItem, hier_expand, hier_painter, node_painter
 from .pipe import Pipe
 from .html_utils import highlight, tabulate, highlight_style
 from pygears import registry
+from pygears.core.partial import Partial
 from pygears.core.port import InPort
 from pygears.typing_common.pprint import pprint
+from pygears.typing import is_type
 
 from .constants import Z_VAL_PIPE
+
+
+def pprint_Partial(printer, object, stream, indent, allowance, context, level):
+    stream.write(object.func.__name__)
+    stream.write('()')
+
+
+pprint.PrettyPrinter._dispatch[Partial.__repr__] = pprint_Partial
 
 
 class PipeModel(NamedHierNode):
@@ -41,14 +52,9 @@ class PipeModel(NamedHierNode):
     def description(self):
         tooltip = '<b>{}</b><br/>'.format(self.name)
         disp = pprint.pformat(self.intf.dtype, indent=4, width=30)
-        print(disp)
-        # text = highlight(disp, 'py', style='default')
-        text = highlight(disp, 'py')
-        print(text)
+        text = highlight(disp, 'py', add_style=False)
 
         tooltip += text
-        # tooltip += '<br/>{}<br/>'.format(
-        #     pprint.pformat(self.model.intf.dtype, indent=4, width=30))
         return tooltip
 
     @property
@@ -104,6 +110,9 @@ class NodeModel(NamedHierNode):
                 val = val.func.__name__
                 row = [('style="font-weight:bold"', name),
                        ('style="font-weight:bold"', val)]
+            elif inspect.isclass(val) and not is_type(val):
+                val = val.__name__
+                row = [('style="font-weight:bold"', name), ('', val)]
             elif name not in registry('gear/params/extra').keys():
                 row = [('style="font-weight:bold"', name),
                        ('', highlight(fmt(val), 'py', add_style=False))]
@@ -132,8 +141,8 @@ padding-right: 10px;
         # tooltip += text
         # tooltip += '<br/>{}<br/>'.format(
         #     pprint.pformat(self.model.intf.dtype, indent=4, width=30))
-        return highlight_style(tooltip)
-        # return tooltip
+        # return highlight_style(tooltip)
+        return tooltip
 
     @property
     def name(self):
