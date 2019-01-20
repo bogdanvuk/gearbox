@@ -61,8 +61,11 @@ class Window(QtWidgets.QVBoxLayout):
         self.placeholder = QtWidgets.QLabel()
         self.placeholder.setPixmap(pixmap)
         self.placeholder.setFocusPolicy(QtCore.Qt.FocusPolicy.ClickFocus)
+        self.placeholder.setSizePolicy(QtWidgets.QSizePolicy.Ignored,
+                                       QtWidgets.QSizePolicy.Ignored)
         self.placeholder.setStyleSheet(STYLE_MINIBUFFER)
-        self.placeholder.setAlignment(QtCore.Qt.AlignHCenter | QtCore.Qt.AlignVCenter)
+        self.placeholder.setAlignment(QtCore.Qt.AlignHCenter
+                                      | QtCore.Qt.AlignVCenter)
 
         self.addWidget(self.placeholder, 1)
         self.addWidget(self.modeline)
@@ -248,6 +251,7 @@ class WindowLayout(QtWidgets.QBoxLayout):
 
     def equalize_stretch(self):
         for i in range(self.count()):
+            print("Equal stretch: ", round(100 / self.count()))
             self.setStretch(i, round(100 / self.count()))
 
     def insert_child(self, pos):
@@ -264,8 +268,13 @@ class WindowLayout(QtWidgets.QBoxLayout):
         layout.current_window = None
 
     def split_horizontally(self, child):
-        pos = self.child_index(child)
-        self.insert_child(pos + 1)
+        if (self.direction() !=
+                QtWidgets.QBoxLayout.LeftToRight) and (self.count() == 1):
+            self.setDirection(QtWidgets.QBoxLayout.LeftToRight)
+
+        if (self.direction() == QtWidgets.QBoxLayout.LeftToRight):
+            pos = self.child_index(child)
+            return self.insert_child(pos + 1)
 
     def split_vertically(self, child):
         if (self.direction() !=
