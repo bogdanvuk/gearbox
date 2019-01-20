@@ -342,9 +342,14 @@ register_prefix(None, Qt.Key_W, 'window')
 
 @shortcut(None, (Qt.Key_W, Qt.Key_Slash))
 @reg_inject
-def split_horizontally(main=Inject('viewer/main')):
-    window = main.buffers.active_window()
-    window.split_horizontally()
+def split_horizontally(layout=Inject('viewer/layout')):
+    window = layout.active_window()
+    new_window = window.split_horizontally()
+
+    for b in layout.buffers:
+        if not b.visible:
+            new_window.place_buffer(b)
+            return
 
 
 @shortcut(None, (Qt.Key_W, Qt.Key_Underscore))
@@ -356,30 +361,6 @@ def split_vertically(layout=Inject('viewer/layout')):
         if not b.visible:
             new_window.place_buffer(b)
             return
-
-
-@shortcut(None, (Qt.Key_W, Qt.Key_L))
-@reg_inject
-def window_right(main=Inject('viewer/main')):
-    def go_leftmost_down(window):
-        if isinstance(window, Window):
-            return window
-        else:
-            return go_leftmost_down(window.child(0))
-
-    def go_right(window, pos):
-        if (isinstance(window, WindowLayout) and (window.count() > 1)
-                and (window.direction() == QtWidgets.QBoxLayout.LeftToRight)):
-            if pos < window.count() - 1:
-                return go_leftmost_down(window.child(pos + 1))
-
-        else:
-            parent = window.parent
-            return go_right(parent, parent.child_index(window))
-
-    window = go_right(main.buffers.active_window(), 0)
-    if window:
-        window.activate()
 
 
 def change_perc_size(window, diff):
@@ -457,6 +438,30 @@ def window_up(main=Inject('viewer/main')):
 
     window = go_up(main.buffers.active_window(), 0)
 
+    if window:
+        window.activate()
+
+
+@shortcut(None, (Qt.Key_W, Qt.Key_H))
+@reg_inject
+def window_left(main=Inject('viewer/main')):
+    def go_rightmost_down(window):
+        if isinstance(window, Window):
+            return window
+        else:
+            return go_rightmost_down(window.child(-1))
+
+    def go_left(window, pos):
+        if (isinstance(window, WindowLayout) and (window.count() > 1)
+                and (window.direction() == QtWidgets.QBoxLayout.LeftToRight)):
+            if pos > 0:
+                return go_rightmost_down(window.child(pos - 1))
+
+        else:
+            parent = window.parent
+            return go_left(parent, parent.child_index(window))
+
+    window = go_left(main.buffers.active_window(), 0)
     if window:
         window.activate()
 
