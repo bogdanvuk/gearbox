@@ -24,7 +24,7 @@ def expand(graph_model=Inject('viewer/graph_model'), graph=Inject('viewer/graph'
   {% endif %}
 
   {% if selected %}
-    graph.select(graph_mode['{{selected.model.name}}'].view)
+    graph.select(graph_model['{{selected.model.name}}'].view)
   {% endif %}
 
   {% if (not selected) and (not expanded) %}

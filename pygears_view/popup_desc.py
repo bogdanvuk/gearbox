@@ -55,7 +55,10 @@ class PopupDesc(QtWidgets.QTextEdit):
         # self.setMinimumHeight(min(content_height, self.max_height))
         self.setMinimumHeight(content_height)
 
-        self.setMinimumWidth(min(content_width, self.max_width))
+        # print(content_width)
+        if content_width < self.max_width:
+            self.setMinimumWidth(content_width)
+
         self.reposition()
         self.delay_timer.stop()
 

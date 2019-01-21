@@ -10,7 +10,7 @@ from .node_search import node_search_completer
 from .main_window import Shortcut, message, register_prefix
 from .pipe import Pipe
 from .saver import save
-from .description import describe_text, describe_file
+from .description import describe_text, describe_file, describe_trace
 from .utils import trigger
 import os
 
@@ -293,6 +293,52 @@ def print_description(node, graph):
 @single_select_action
 def describe_item(node, graph):
     describe_text(node.model.description)
+
+
+@shortcut('graph', (Qt.Key_D, Qt.Key_I))
+@single_select_action
+def describe_inst(node, graph):
+    if not isinstance(node, Pipe):
+        describe_trace(node.model.gear.gear.trace)
+
+
+@shortcut('description', Qt.Key_J)
+@reg_inject
+def line_down(desc=Inject('viewer/description')):
+    desc.moveCursor(QtGui.QTextCursor.Down)
+
+
+@shortcut('description', Qt.Key_K)
+@reg_inject
+def line_up(desc=Inject('viewer/description')):
+    desc.moveCursor(QtGui.QTextCursor.Up)
+
+
+@shortcut('description', Qt.Key_N)
+@reg_inject
+def trace_next(desc=Inject('viewer/description')):
+    if desc.trace is not None:
+        if desc.trace_pos > 0:
+            desc.set_trace_pos(desc.trace_pos - 1)
+
+
+@shortcut('description', Qt.Key_P)
+@reg_inject
+def trace_prev(desc=Inject('viewer/description')):
+    if desc.trace is not None:
+        if desc.trace_pos < len(desc.trace) - 1:
+            desc.set_trace_pos(desc.trace_pos + 1)
+
+
+@shortcut('description', Qt.Key_E)
+@reg_inject
+def open_external(desc=Inject('viewer/description')):
+    if desc.fn is not None:
+        lineno = desc.lineno
+        if isinstance(lineno, slice):
+            lineno = lineno.start
+
+        os.system(f'emacsclient -n +{lineno} {desc.fn}')
 
 
 @shortcut('graph', (Qt.Key_D, Qt.Key_D))

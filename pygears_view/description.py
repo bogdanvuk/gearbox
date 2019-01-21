@@ -140,10 +140,25 @@ class Description(QtWidgets.QTextEdit):
         """)
         self.document().setDefaultStyleSheet(dark_theme)
 
-    def display_text(self, text):
+    def clean(self):
         self.fn = None
         self.lineno = None
+        self.trace = None
+        self.trace_pos = None
+
+    def display_text(self, text):
+        self.clean()
         self.setHtml(text)
+
+    def display_trace(self, trace):
+        self.clean()
+        self.trace = trace
+        self.set_trace_pos(0)
+
+    def set_trace_pos(self, pos):
+        self.trace_pos = pos
+        frame, lineno = self.trace[self.trace_pos]
+        self.display_file(frame.f_code.co_filename, slice(lineno, lineno + 1))
 
     def display_file(self, fn, lineno=1):
         with open(fn, 'r') as f:
@@ -182,3 +197,8 @@ def describe_text(text, desc=Inject('viewer/description')):
 @reg_inject
 def describe_file(fn, lineno=1, desc=Inject('viewer/description')):
     desc.display_file(fn, lineno)
+
+
+@reg_inject
+def describe_trace(trace, desc=Inject('viewer/description')):
+    desc.display_trace(trace)
