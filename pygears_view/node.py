@@ -223,6 +223,7 @@ class NodeItem(AbstractNodeItem):
         self.collapsed = True
         self.size_expander(self)
         self.graph.top.layout()
+        self.graph.ensureVisible(self)
 
     def expand(self):
         if not self.collapsed or not self.hierarchical:

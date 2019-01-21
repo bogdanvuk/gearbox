@@ -1,7 +1,9 @@
 import inspect
 from pygears.core.hier_node import NamedHierNode
+from pygears.conf import reg_inject, Inject
 from pygears.rtl.node import RTLNode
 from .node import NodeItem, hier_expand, hier_painter, node_painter
+from pygears.sim.modules.cosim_base import CosimBase
 from .pipe import Pipe
 from .html_utils import highlight, tabulate, highlight_style
 from pygears import registry
@@ -36,11 +38,16 @@ class PipeModel(NamedHierNode):
             output_port = parent[output_port_model.node.basename].view.outputs[
                 output_port_model.index]
 
-        if input_port_model.node is parent.gear:
-            input_port = parent.view.outputs[input_port_model.index]
-        else:
-            input_port = parent[input_port_model.node.basename].view.inputs[
-                input_port_model.index]
+        try:
+            if input_port_model.node is parent.gear:
+                input_port = parent.view.outputs[input_port_model.index]
+            else:
+                input_port = parent[input_port_model.node.
+                                    basename].view.inputs[input_port_model.
+                                                          index]
+        except KeyError:
+            import pdb
+            pdb.set_trace()
 
         self.view = Pipe(output_port, input_port, parent.view, self)
         self.parent.view.add_pipe(self.view)
@@ -71,6 +78,8 @@ class NodeModel(NamedHierNode):
         super().__init__(parent=parent)
 
         self.gear = gear
+
+        print(self.name, ': ', self.rtl_source)
         self.view = NodeItem(
             gear.basename,
             parent=(None if parent is None else parent.view),
@@ -99,30 +108,54 @@ class NodeModel(NamedHierNode):
                         n.view.hide()
 
     @property
+    @reg_inject
+    def rtl_source(self, svgen_map=Inject('svgen/map')):
+        if self.gear not in svgen_map:
+            return None
+
+        svmod = svgen_map[self.gear]
+        if not svmod.is_generated:
+            return svmod.sv_impl_path
+
+    @property
     def definition(self):
         return self.gear.params['definition'].func
 
     @property
     def description(self):
         tooltip = '<b>{}</b><br/><br/>'.format(self.name)
-        fmt = pprint.PrettyPrinter(indent=4, width=30).pformat
+        pp = pprint.PrettyPrinter(indent=4, width=30)
+        fmt = pp.pformat
+
+        def _pprint_list(self, object, stream, indent, allowance, context,
+                         level):
+            if len(object) > 5:
+                object = object[:5] + ['...']
+
+            pprint.PrettyPrinter._pprint_list(self, object, stream, indent,
+                                              allowance, context, level)
+
+        pp._dispatch[list.__repr__] = _pprint_list
 
         table = []
         for name, val in self.gear.params.items():
-            row = []
+            name_style = 'style="font-weight:bold" nowrap'
+            val_style = ''
+
             if name == 'definition':
                 val = val.func.__name__
-                row = [('style="font-weight:bold"', name),
-                       ('style="font-weight:bold"', val)]
+                val_style = 'style="font-weight:bold"'
             elif inspect.isclass(val) and not is_type(val):
                 val = val.__name__
-                row = [('style="font-weight:bold"', name), ('', val)]
             elif name not in registry('gear/params/extra').keys():
-                row = [('style="font-weight:bold"', name),
-                       ('', highlight(fmt(val), 'py', add_style=False))]
+                # if isinstance(val, (list, tuple)) and len(val) > 5:
+                #     val = fmt(val[:2]) + '\n...'
 
-            if row:
-                table.append(row)
+                val = highlight(fmt(val), 'py', add_style=False)
+            else:
+                continue
+
+            table.append([(name_style, name), (val_style, val)])
 
         table_style = """
 <style>

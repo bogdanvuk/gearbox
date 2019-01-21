@@ -448,12 +448,12 @@ class Graph(QtWidgets.QGraphicsView):
 
         def box(node):
             box = node.boundingRect()
-            box.moveTo(node.pos())
+            box.moveTo(node.mapToScene(node.pos()))
             return box
 
         rect = reduce(lambda x, y: x.united(y), map(box, nodes))
         self.fitInView(rect, QtCore.Qt.KeepAspectRatio)
-        super().centerOn(rect.center())
+        # self.centerOn(rect.center())
 
         if self.get_zoom() > 0.1:
             self.reset_zoom()
