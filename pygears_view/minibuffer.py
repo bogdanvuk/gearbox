@@ -1,6 +1,6 @@
 import os
 from PySide2 import QtWidgets, QtCore
-from .stylesheet import STYLE_MINIBUFFER, STYLE_TABSEARCH_LIST
+from .stylesheet import STYLE_MINIBUFFER, STYLE_TABSEARCH_LIST, STYLE_MINIBUFFER_MESSAGE
 from .layout import active_buffer
 from pygears.conf import Inject, reg_inject
 
@@ -59,7 +59,8 @@ class Minibuffer(QtCore.QObject):
         self.view.setSpacing(0)
         self.view.setContentsMargins(0, 0, 0, 0)
 
-        self.msgLabel.setStyleSheet(STYLE_MINIBUFFER)
+        self.msgLabel.setStyleSheet(STYLE_MINIBUFFER_MESSAGE)
+        # self.msgLabel.setStyleSheet(STYLE_MINIBUFFER)
         self.msgLabel.setMargin(0)
         self.msgLabel.setVisible(False)
 
@@ -75,9 +76,18 @@ class Minibuffer(QtCore.QObject):
 
     def message(self, message):
         self.timer.stop()
-        self.msgLabel.setText(message)
-        self.msgLabel.show()
+        self._show_message(message)
         self.timer.start()
+
+    def _show_message(self, message):
+        self.msgLabel.setMaximumWidth(self.msgLabel.parentWidget().width())
+        self.msgLabel.setText(message)
+        self.msgLabel.adjustSize()
+        # QLabel commes with a padding that is hard to remove, so two
+        # pixels are removed by hand
+        self.msgLabel.setMaximumWidth(self.msgLabel.width() - 7)
+        self.msgLabel.show()
+        self.msgLabel.update()
 
     def complete_cont(self, message=None, completer=None, text=''):
         try:
@@ -86,14 +96,7 @@ class Minibuffer(QtCore.QObject):
             pass
 
         if message:
-            self.msgLabel.setMaximumWidth(self.msgLabel.parentWidget().width())
-            self.msgLabel.setText(message)
-            self.msgLabel.adjustSize()
-            # QLabel commes with a padding that is hard to remove, so two
-            # pixels are removed by hand
-            self.msgLabel.setMaximumWidth(self.msgLabel.width() - 2)
-            self.msgLabel.show()
-            self.msgLabel.update()
+            self._show_message(message)
         else:
             self.input_box.setTextMargins(2, 0, 0, 0)
 

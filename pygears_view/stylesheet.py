@@ -58,6 +58,14 @@ selection-background-color: rgba(70, 70, 70, 255);
 selection-color: rgba(255, 255, 255, 150);
 '''
 
+STYLE_MINIBUFFER_MESSAGE = '''
+border-radius: 0px;
+padding-left: 10px;
+margin: 0px;
+color: rgba(255, 255, 255, 150);
+background: rgba(35, 35, 35, 255);
+'''
+
 STYLE_WHICH_KEY = '''
 padding: 2px;
 margin: 0px;
