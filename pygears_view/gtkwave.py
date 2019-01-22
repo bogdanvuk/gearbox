@@ -1,15 +1,16 @@
 from PySide2 import QtCore
 from functools import partial
 import collections
-from pygears.core.hier_node import HierVisitorBase
 
+from pygears.sim.modules import SimVerilated
+from .node_model import find_cosim_modules
+from pygears.core.hier_node import HierVisitorBase
 from pygears.conf import Inject, reg_inject, MayInject, bind
 from pygears.rtl.gear import rtl_from_gear_port
 from typing import NamedTuple
 from .gtkwave_intf import GtkWaveWindow
 from .graph import GraphVisitor
 from .layout import active_buffer, Buffer
-from pygears.sim.modules.verilator import SimVerilated
 import fnmatch
 import os
 import re
@@ -74,24 +75,6 @@ class VerilatorVCDMap:
         return [self.signal_name_map[s] for s in signals]
 
 
-@reg_inject
-def find_verilated_modules(top=Inject('gear/hier_root')):
-    class VerilatedVisitor(HierVisitorBase):
-        @reg_inject
-        def __init__(self, sim_map=Inject('sim/map')):
-            self.sim_map = sim_map
-            self.verilated_modules = []
-
-        def Gear(self, module):
-            if isinstance(self.sim_map.get(module, None), SimVerilated):
-                self.verilated_modules.append(self.sim_map[module])
-                return True
-
-    v = VerilatedVisitor()
-    v.visit(top)
-    return v.verilated_modules
-
-
 def gtkwave():
     status = GtkWave()
     bind('viewer/gtkwave', status)
@@ -141,7 +124,10 @@ class GtkWave:
         self.instances = []
         self.buffers = []
 
-        for m in find_verilated_modules():
+        for m in find_cosim_modules():
+            if not isinstance(m, SimVerilated):
+                continue
+
             instance = GtkWaveWindow()
             vcd_map = VerilatorVCDMap(m, instance)
             intf = GtkWaveGraphIntf(
@@ -343,8 +329,7 @@ class GtkWaveGraphIntf(QtCore.QObject):
             cur_names = signal_names[cur_slice]
 
             ret = self.gtkwave_intf.command(
-                f'get_values [list {" ".join(s[1] for s in cur_names)}]'
-            )
+                f'get_values [list {" ".join(s[1] for s in cur_names)}]')
             rtl_status = ret.split('\n')
 
             assert len(rtl_status) == (cur_slice.stop - cur_slice.start)

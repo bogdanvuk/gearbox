@@ -1,4 +1,8 @@
 import inspect
+import os
+import functools
+from pygears.sim.modules import SimVerilated, SimSocket
+from pygears.core.hier_node import HierVisitorBase
 from pygears.core.hier_node import NamedHierNode
 from pygears.conf import reg_inject, Inject
 from pygears.rtl.node import RTLNode
@@ -21,6 +25,26 @@ def pprint_Partial(printer, object, stream, indent, allowance, context, level):
 
 
 pprint.PrettyPrinter._dispatch[Partial.__repr__] = pprint_Partial
+
+
+@functools.lru_cache()
+@reg_inject
+def find_cosim_modules(top=Inject('gear/hier_root')):
+    class CosimVisitor(HierVisitorBase):
+        @reg_inject
+        def __init__(self, sim_map=Inject('sim/map')):
+            self.sim_map = sim_map
+            self.cosim_modules = []
+
+        def Gear(self, module):
+            if isinstance(
+                    self.sim_map.get(module, None), (SimVerilated, SimSocket)):
+                self.cosim_modules.append(self.sim_map[module])
+                return True
+
+    v = CosimVisitor()
+    v.visit(top)
+    return v.cosim_modules
 
 
 class PipeModel(NamedHierNode):
@@ -114,7 +138,11 @@ class NodeModel(NamedHierNode):
             return None
 
         svmod = svgen_map[self.gear]
-        if not svmod.is_generated:
+        if svmod.is_generated:
+            for m in find_cosim_modules():
+                if m.rtlnode.is_descendent(self.gear):
+                    return os.path.join(m.outdir, svmod.sv_file_name)
+        else:
             return svmod.sv_impl_path
 
     @property
