@@ -3,9 +3,10 @@ from functools import partial
 import collections
 
 from pygears.sim.modules import SimVerilated
+from pygears.sim import timestep
 from .node_model import find_cosim_modules
 from pygears.core.hier_node import HierVisitorBase
-from pygears.conf import Inject, reg_inject, MayInject, bind
+from pygears.conf import Inject, reg_inject, MayInject, bind, registry
 from pygears.rtl.gear import rtl_from_gear_port
 from typing import NamedTuple
 from .gtkwave_intf import GtkWaveWindow
@@ -128,7 +129,7 @@ class GtkWave:
             if not isinstance(m, SimVerilated):
                 continue
 
-            instance = GtkWaveWindow()
+            instance = GtkWaveWindow(m.shmid)
             vcd_map = VerilatorVCDMap(m, instance)
             intf = GtkWaveGraphIntf(
                 vcd_map, instance, graph=graph[m.gear.name[1:]])
@@ -203,6 +204,8 @@ class GtkWaveGraphIntf(QtCore.QObject):
         self.loaded = False
         self.pipe_collect = GraphPipeCollector(vcd_map)
         self.pipes_on_wave = {}
+        self.should_update = False
+        self.updating = False
 
     def has_pipe_wave(self, pipe):
         return pipe in self.pipe_collect.vcd_pipes
@@ -257,8 +260,6 @@ class GtkWaveGraphIntf(QtCore.QObject):
         commands.append('gtkwave::addSignalsFromList {' + " ".join(sig_names) +
                         '}')
 
-        print(sig_names)
-
         def dfs(name, lvl):
             if isinstance(lvl, dict):
                 selected = []
@@ -301,27 +302,30 @@ class GtkWaveGraphIntf(QtCore.QObject):
 
         pipe.set_status(status)
 
-    def update(self):
-        if not self.loaded:
-            ret = self.gtkwave_intf.command(
-                f'gtkwave::loadFile {self.vcd_map.vcd_fn}')
+    @property
+    def cmd_id(self):
+        return id(self) & 0xffff
 
-            if "File load failure" in ret:
-                return False
+    def gtkwave_resp(self, ret, cmd_id):
+        if cmd_id != self.cmd_id:
+            return
 
-            self.gtkwave_intf.command(f'gtkwave::stripGUI')
-            self.gtkwave_intf.command(f'gtkwave::setZoomFactor -7')
-            self.pipe_collect.visit(self.graph)
-            self.loaded = True
-            self.vcd_loaded.emit()
+        ts = timestep()
+        if ts is None:
+            ts = 0
 
-        self.gtkwave_intf.command(f'gtkwave::reLoadFile')
+        gtkwave_timestep = int(ret) // 10
+        self.gtkwave_intf.response.disconnect(self.gtkwave_resp)
+
+        if ts - gtkwave_timestep > 1000:
+            self.should_update = False
+            self.gtkwave_intf.response.connect(self.gtkwave_resp)
+            self.gtkwave_intf.command_nb(f'gtkwave::nop', self.cmd_id)
+            return
 
         signal_names = [(pipe, name)
                         for pipe, name in self.pipe_collect.vcd_pipes.items()
                         if pipe.view.isVisible()]
-
-        # signal_names = list(self.pipe_collect.vcd_pipes.values())
 
         for i in range(0, len(signal_names), 20):
 
@@ -332,7 +336,38 @@ class GtkWaveGraphIntf(QtCore.QObject):
                 f'get_values [list {" ".join(s[1] for s in cur_names)}]')
             rtl_status = ret.split('\n')
 
-            assert len(rtl_status) == (cur_slice.stop - cur_slice.start)
+            # assert len(rtl_status) == (cur_slice.stop - cur_slice.start)
+            if len(rtl_status) != (cur_slice.stop - cur_slice.start):
+                continue
 
             for wave_status, (pipe, _) in zip(rtl_status, cur_names):
                 self.update_rtl_intf(pipe, wave_status.strip())
+
+        if self.should_update:
+            self.should_update = False
+            self.gtkwave_intf.response.connect(self.gtkwave_resp)
+            self.gtkwave_intf.command_nb(f'gtkwave::nop', self.cmd_id)
+        else:
+            self.updating = False
+
+    def update(self):
+        if not self.loaded:
+            # ret = self.gtkwave_intf.command(
+            #     f'gtkwave::loadFile {self.vcd_map.vcd_fn}')
+
+            # if "File load failure" in ret:
+            #     return False
+
+            self.gtkwave_intf.command(f'gtkwave::stripGUI')
+            self.gtkwave_intf.command(f'gtkwave::setZoomFactor -7')
+            self.pipe_collect.visit(self.graph)
+            self.loaded = True
+            self.vcd_loaded.emit()
+
+        if not self.updating:
+            self.should_update = False
+            self.updating = True
+            self.gtkwave_intf.response.connect(self.gtkwave_resp)
+            self.gtkwave_intf.command_nb(f'gtkwave::nop', self.cmd_id)
+        else:
+            self.should_update = True

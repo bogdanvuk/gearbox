@@ -103,7 +103,6 @@ class NodeModel(NamedHierNode):
 
         self.gear = gear
 
-        print(self.name, ': ', self.rtl_source)
         self.view = NodeItem(
             gear.basename,
             parent=(None if parent is None else parent.view),
@@ -141,7 +140,12 @@ class NodeModel(NamedHierNode):
         if svmod.is_generated:
             for m in find_cosim_modules():
                 if m.rtlnode.is_descendent(self.gear):
-                    return os.path.join(m.outdir, svmod.sv_file_name)
+                    file_names = svmod.sv_file_name
+                    if not isinstance(file_names, tuple):
+                        file_names = (file_names, )
+
+                    for fn in file_names:
+                        return os.path.join(m.outdir, fn)
         else:
             return svmod.sv_impl_path
 

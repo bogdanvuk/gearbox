@@ -370,6 +370,15 @@ def describe_rtl_source(node, graph):
             describe_file(rtl_source)
 
 
+@shortcut('graph', (Qt.Key_D, Qt.Key_R))
+@single_select_action
+def describe_rtl_inst(node, graph):
+    if not isinstance(node, Pipe):
+        rtl_source = node.model.rtl_source
+        if rtl_source:
+            describe_file(rtl_source)
+
+
 @shortcut('graph', Qt.Key_Return)
 @single_select_action
 def toggle_expand(node, graph):

@@ -247,11 +247,8 @@ class WindowLayout(QtWidgets.QBoxLayout):
         if isinstance(layout, Window):
             layout.modeline.update()
 
-        print("Stretch: ", [self.stretch(i) for i in range(self.count())])
-
     def equalize_stretch(self):
         for i in range(self.count()):
-            print("Equal stretch: ", round(100 / self.count()))
             self.setStretch(i, round(100 / self.count()))
 
     def insert_child(self, pos):

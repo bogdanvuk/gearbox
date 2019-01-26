@@ -15,6 +15,8 @@ from pygears_view.description import description
 from pygears.conf import Inject, reg_inject, safe_bind, PluginBase, registry, bind, MayInject
 from .pygears_proxy import PyGearsBridgeServer, sim_bridge
 from .saver import get_save_file_path
+from .node_model import find_cosim_modules
+from pygears.sim.modules import SimVerilated
 
 
 class PyGearsView(PyGearsBridgeServer):
@@ -31,6 +33,12 @@ class PyGearsView(PyGearsBridgeServer):
         if live:
             registry('viewer/layers').insert(0, sim_bridge)
 
+    def before_setup(self, sim):
+        for m in find_cosim_modules():
+            if isinstance(m, SimVerilated):
+                m.vcd_fifo = True
+                m.shmidcat = True
+
     @reg_inject
     def before_run(self, sim, outdir=Inject('sim/artifact_dir')):
         if self.live:
@@ -44,10 +52,6 @@ class PyGearsView(PyGearsBridgeServer):
     def after_cleanup(self, sim):
         if not self.live:
             main()
-
-
-def focus_changed(old, new):
-    print(f'Changed focus from {old} -> {new}')
 
 
 @reg_inject
@@ -64,7 +68,6 @@ def main(pipe=None, layers=Inject('viewer/layers')):
         l()
 
     main_window.show()
-    app.focusChanged.connect(focus_changed)
     app.exec_()
 
 

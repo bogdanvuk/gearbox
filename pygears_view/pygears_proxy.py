@@ -2,7 +2,7 @@ import queue
 import time
 import sys
 from PySide2 import QtCore, QtWidgets
-from pygears.conf import Inject, reg_inject, safe_bind
+from pygears.conf import Inject, reg_inject, safe_bind, bind
 from pygears.sim.extens.sim_extend import SimExtend
 
 
@@ -31,7 +31,7 @@ class PyGearsBridgeServer(SimExtend):
 
 
 def sim_bridge():
-    sim_bridge = PyGearsClient()
+    sim_bridge = PyGearsClient(refresh_interval=2000)
     safe_bind('viewer/sim_bridge', sim_bridge)
 
 
@@ -48,6 +48,7 @@ class PyGearsClient(QtCore.QObject):
                  parent=None):
         super().__init__(parent)
 
+        bind('viewer/refresh_interval', refresh_interval)
         self.plugin = plugin
         self.refresh_interval = refresh_interval
         self.loop = QtCore.QEventLoop(self)

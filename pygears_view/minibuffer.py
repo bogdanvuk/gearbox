@@ -128,7 +128,6 @@ class Minibuffer(QtCore.QObject):
         self.input_box.setSelection(0, len(self.input_box.text()))
         self.input_box.setFocus()
 
-        print(f"Emitting start")
         self.start.emit()
 
     @reg_inject
@@ -163,13 +162,11 @@ class Minibuffer(QtCore.QObject):
         self.prev_text_len = len(text)
 
     def cancel(self):
-        print(f"Cancel emitted")
         if self.input_box.isEnabled():
             self.cleanup(None)
 
     @reg_inject
     def cleanup(self, result, main=Inject('viewer/main')):
-        print(f"Cleaning up")
         self.completed.emit(result)
         main.change_domain(self.previous_domain)
         self.input_box.setText('')
@@ -184,7 +181,6 @@ class Minibuffer(QtCore.QObject):
         self.msgLabel.setVisible(False)
 
     def _on_search_submitted(self, index=0):
-        print(f'InputBox Return pressed')
         if self._completer and hasattr(self._completer, 'get_result'):
             result = self._completer.get_result(self.input_box.text())
         else:
@@ -228,7 +224,6 @@ class InputBox(QtWidgets.QLineEdit):
 
     def focusOutEvent(self, event):
         if event.reason() != QtCore.Qt.FocusReason.PopupFocusReason:
-            print(f"Focus out of the InputBox: {event.reason()}")
             self.cancel.emit()
 
         super().focusOutEvent(event)
@@ -247,7 +242,6 @@ class InputBox(QtWidgets.QLineEdit):
         if event.type() == QtCore.QEvent.KeyPress:
             if (event.key() == QtCore.Qt.Key_Tab
                     and event.modifiers() == QtCore.Qt.NoModifier):
-                print(f'Tab event')
                 self.tab_key_event.emit()
                 return True
             elif (event.key() == QtCore.Qt.Key_J

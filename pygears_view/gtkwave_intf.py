@@ -13,9 +13,10 @@ class GtkWaveProc(QtCore.QObject):
     window_up = QtCore.Signal(str, int, int)
     response = QtCore.Signal(str, int)
 
-    def __init__(self, parent=None):
+    def __init__(self, trace_fn, parent=None):
         super().__init__(parent)
         self.gtkwave_thread = QtCore.QThread()
+        self.trace_fn = trace_fn
         self.moveToThread(self.gtkwave_thread)
         self.exiting = False
         self.cmd_id = None
@@ -24,10 +25,21 @@ class GtkWaveProc(QtCore.QObject):
         self.gtkwave_thread.start()
 
     def run(self):
+        # self.shmid_proc = subprocess.Popen(
+        #     f'tail -f -n +1 {self.trace_fn} | shmidcat',
+        #     shell=True,
+        #     stdout=subprocess.PIPE)
+
+        # vcd_shr_obj = self.shmid_proc.stdout.readline().decode().strip()
+        print(f'Shared mem addr: {self.trace_fn}')
+
         local_dir = os.path.abspath(os.path.dirname(__file__))
         script_fn = os.path.join(local_dir, "gtkwave.tcl")
         gtkwaverc_fn = os.path.join(local_dir, "gtkwaverc")
-        self.p = pexpect.spawnu(f'gtkwave -W -r {gtkwaverc_fn} -T {script_fn}')
+
+        print(f'gtkwave -W -I -T {script_fn} {self.trace_fn}')
+        self.p = pexpect.spawnu(
+            f'gtkwave -W -I -r {gtkwaverc_fn} -T {script_fn} {self.trace_fn}')
         self.p.setecho(False)
         self.p.expect('%')
         version = re.search(r"GTKWave Analyzer v(\d{1}\.\d{1}.\d{2})",
@@ -51,8 +63,8 @@ class GtkWaveProc(QtCore.QObject):
             self.gtkwave_thread.eventDispatcher().processEvents(
                 QtCore.QEventLoop.AllEvents)
 
-            if self.cmd_id is not None:
-                continue
+            # if self.cmd_id is not None:
+            #     continue
 
             try:
                 data = ''
@@ -101,14 +113,26 @@ class GtkWaveProc(QtCore.QObject):
     def command(self, cmd, cmd_id):
         self.cmd_id = cmd_id
         self.p.send(cmd + '\n')
-        # print(f'GtkWave: {cmd}')
-        self.p.expect('%')
+        try:
+            # print(f'GtkWave: {cmd}')
+            self.p.expect('%')
+        except pexpect.TIMEOUT:
+            print("timeout")
+            print(self.p.buffer)
+            return
+
+        resp = '\n'.join([
+            d for d in self.p.before.strip().split('\n')
+            if not d.startswith("KeyPress")
+        ])
+
         # print(f'GtkWave: {self.p.before.strip()}')
-        self.response.emit(self.p.before.strip(), cmd_id)
+        self.response.emit(resp, cmd_id)
         self.cmd_id = None
 
     def quit(self):
         self.p.close()
+        # self.shmid_proc.terminate()
         self.gtkwave_thread.quit()
 
 
@@ -155,26 +179,34 @@ class GtkWaveWindow(QtCore.QObject):
     send_command = QtCore.Signal(str, int)
     initialized = QtCore.Signal()
 
-    def __init__(self, parent=None):
+    def __init__(self, trace_fn, parent=None):
         super().__init__(parent)
-        self.proc = GtkWaveProc()
+        self.proc = GtkWaveProc(trace_fn)
         self.proc.key_press.connect(self.key_press)
         self.proc.window_up.connect(self.window_up)
         self.send_command.connect(self.proc.command)
+        self.response = self.proc.response
+
         QtWidgets.QApplication.instance().aboutToQuit.connect(self.proc.quit)
 
     @property
     def domain(self):
         return 'gtkwave'
 
-    def command_nb(self, cmd):
-        self.send_command.emit(cmd, 0)
+    def command_nb(self, cmd, cmd_id=0):
+        self.send_command.emit(cmd, cmd_id)
 
     def command(self, cmd):
         if isinstance(cmd, list):
             cmd = 'if {1} {\n' + '\n'.join(cmd) + '\n}'
 
         cmd_block = GtkWaveCmdBlock()
+        # from traceback import walk_stack, print_stack
+        # stack_len = len(list(walk_stack(f=None)))
+        # print(f'Stack len: {len(list(walk_stack(f=None)))}')
+        # if stack_len > 10:
+        #     print_stack()
+
         resp = cmd_block.command(cmd, self)
         return resp
 
