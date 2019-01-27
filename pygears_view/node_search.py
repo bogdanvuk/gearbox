@@ -47,16 +47,20 @@ class NodeSearchCompleter(QtWidgets.QCompleter):
         model.setStringList(completion_list)
 
         self.setModel(model)
-        self.setCompletionPrefix('')
         self.setCompletionColumn(0)
         self.setCurrentRow(0)
 
     def complete(self):
-        print(f"Invoking complete")
         self.delegate = TaskDelegate(self.node)
         self.delegate.target_width = self.popup().width()
         self.popup().setItemDelegate(self.delegate)
         super().complete()
+
+    def setCompletionPrefix(self, prefix):
+        if (len(prefix) > 0) and (prefix[-1] == '/'):
+            self.filled(prefix[:-1])
+
+        super().setCompletionPrefix(prefix)
 
     @property
     def default_completion(self):
@@ -66,13 +70,10 @@ class NodeSearchCompleter(QtWidgets.QCompleter):
             return None
 
     def get_result(self, text):
-        print(f"Forming result based on {text}")
         return self.node[text].name
 
     @reg_inject
     def filled(self, text, minibuffer=Inject('viewer/minibuffer')):
-        print(f"Try looking for {text} inside {self.node.name}")
-
         if text == '..':
             node = self.node.parent
         elif text == '/':
@@ -81,7 +82,6 @@ class NodeSearchCompleter(QtWidgets.QCompleter):
             node = self.node[text]
 
         if node.child:
-            print(f"Setup model for {self.node.name}")
             self.setup_model(node)
             minibuffer.complete_cont(f'{node.name}/', self)
 

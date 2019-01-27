@@ -100,6 +100,10 @@ class Minibuffer(QtCore.QObject):
         else:
             self.input_box.setTextMargins(2, 0, 0, 0)
 
+        self.input_box.setText(text)
+        self.input_box.setSelection(0, len(self.input_box.text()))
+        self.input_box.setFocus()
+
         self._completer = completer
         if completer:
             self.input_box.setCompleter(self._completer)
@@ -112,21 +116,12 @@ class Minibuffer(QtCore.QObject):
             except AttributeError:
                 pass
 
-            QtCore.QTimer.singleShot(0.01, completer.complete)
-
-            # try:
-            #     self.start.connect(completer.complete)
-            # except AttributeError:
-            #     pass
+            QtCore.QTimer.singleShot(0.01, self.tab_key_event)
 
             if hasattr(completer, 'default_completion'):
                 default = completer.default_completion
                 if default is not None:
                     text = default
-
-        self.input_box.setText(text)
-        self.input_box.setSelection(0, len(self.input_box.text()))
-        self.input_box.setFocus()
 
         self.start.emit()
 
@@ -143,9 +138,6 @@ class Minibuffer(QtCore.QObject):
         self.timer.stop()
 
         self.complete_cont(message, completer)
-
-        # if self._completer:
-        #     self._completer.complete()
 
     def _singled_out(self, text):
         if not self._completer:
@@ -206,7 +198,8 @@ class Minibuffer(QtCore.QObject):
         if (self._completer.completionCount() == 1):
             self.filled.emit(prefix)
         else:
-            self.start.emit()
+            self._completer.setCompletionPrefix(prefix)
+            self._completer.complete()
 
 
 class InputBox(QtWidgets.QLineEdit):
