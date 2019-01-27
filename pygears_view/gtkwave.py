@@ -17,6 +17,10 @@ import os
 import re
 
 
+class PipeNotTraced(Exception):
+    pass
+
+
 def active_intf():
     active_buffer()
 
@@ -129,7 +133,12 @@ class GtkWave:
             if not isinstance(m, SimVerilated):
                 continue
 
-            instance = GtkWaveWindow(m.shmid)
+            if hasattr(m, 'shmid'):
+                trace_fn = m.shmid
+            else:
+                trace_fn = m.trace_fn
+
+            instance = GtkWaveWindow(trace_fn)
             vcd_map = VerilatorVCDMap(m, instance)
             intf = GtkWaveGraphIntf(
                 vcd_map, instance, graph=graph[m.gear.name[1:]])
@@ -151,7 +160,11 @@ class GtkWave:
                 return inst
 
     def show_pipe(self, pipe):
-        return self.pipe_gtkwave_intf(pipe).show_pipe(pipe)
+        pipe_intf = self.pipe_gtkwave_intf(pipe)
+        if pipe_intf is None:
+            raise PipeNotTraced
+
+        return pipe_intf.show_pipe(pipe)
 
     def update(self):
         for w in self.graph_intfs:

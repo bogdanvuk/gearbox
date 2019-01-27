@@ -6,6 +6,7 @@ from pygears.core.hier_node import HierVisitorBase
 from pygears.core.hier_node import NamedHierNode
 from pygears.conf import reg_inject, Inject
 from pygears.rtl.node import RTLNode
+from pygears.rtl.intf import RTLIntf
 from .node import NodeItem, hier_expand, hier_painter, node_painter
 from pygears.sim.modules.cosim_base import CosimBase
 from .pipe import Pipe
@@ -123,7 +124,7 @@ class NodeModel(NamedHierNode):
         self.setup_view()
 
         for child in self.gear.child:
-            if not isinstance(child, RTLNode):
+            if isinstance(child, RTLIntf):
                 for i in range(len(child.consumers)):
                     n = PipeModel(child, consumer_id=i, parent=self)
 

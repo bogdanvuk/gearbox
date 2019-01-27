@@ -11,6 +11,7 @@ from .main_window import Shortcut, message, register_prefix
 from .pipe import Pipe
 from .saver import save
 from .description import describe_text, describe_file, describe_trace
+from .gtkwave import PipeNotTraced
 from .utils import trigger
 import os
 
@@ -588,10 +589,18 @@ def send_to_wave(
         graph=Inject('viewer/graph'), gtkwave=Inject('viewer/gtkwave')):
 
     added = []
-    for pipe in graph.selected_pipes():
-        added.append(gtkwave.show_pipe(pipe.model))
+    selected_pipes = graph.selected_pipes()
 
-    message('Waves added: ' + ' '.join(added))
+    for pipe in selected_pipes:
+        try:
+            added.append(gtkwave.show_pipe(pipe.model))
+        except PipeNotTraced:
+            pass
+
+    if (len(selected_pipes) == 1) and (len(added) == 0):
+        message(f'WARNING: {pipe.model.name} not traced')
+    else:
+        message('Waves added: ' + ' '.join(added))
 
 
 class ShortcutRepeat(QtCore.QObject):
