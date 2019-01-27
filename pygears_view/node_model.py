@@ -91,11 +91,17 @@ class PipeModel(NamedHierNode):
 
     @property
     def name(self):
-        return self.intf.name
+        if self.intf.is_broadcast:
+            return f'{self.intf.name}_bc_{self.consumer_id}'
+        else:
+            return self.intf.name
 
     @property
     def basename(self):
-        return self.intf.basename
+        if self.intf.is_broadcast:
+            return f'{self.intf.basename}_bc_{self.consumer_id}'
+        else:
+            return self.intf.basename
 
 
 class NodeModel(NamedHierNode):
