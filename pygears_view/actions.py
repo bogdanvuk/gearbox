@@ -11,7 +11,7 @@ from .main_window import Shortcut, message, register_prefix
 from .pipe import Pipe
 from .saver import save
 from .description import describe_text, describe_file, describe_trace
-from .gtkwave import PipeNotTraced
+from .gtkwave import ItemNotTraced
 from .utils import trigger
 import os
 
@@ -280,10 +280,10 @@ def select_buffer(
 @single_select_action
 def print_description(node, graph):
     if isinstance(node, Pipe):
-        intf = node.model.intf
+        intf = node.model.rtl
         print(f'Interface {intf.name}: {repr(intf.dtype)}')
     else:
-        rtl_node = node.model.gear
+        rtl_node = node.model.rtl
         print(f'Node: {rtl_node.name}')
         print('paremeters: ')
         import pprint
@@ -300,7 +300,7 @@ def describe_item(node, graph):
 @single_select_action
 def describe_inst(node, graph):
     if not isinstance(node, Pipe):
-        describe_trace(node.model.gear.gear.trace)
+        describe_trace(node.model.rtl.gear.trace)
 
 
 @shortcut('description', Qt.Key_J)
@@ -589,16 +589,15 @@ def send_to_wave(
         graph=Inject('viewer/graph'), gtkwave=Inject('viewer/gtkwave')):
 
     added = []
-    selected_pipes = graph.selected_pipes()
-
-    for pipe in selected_pipes:
+    selected_item = graph.selected_items()
+    for item in selected_item:
         try:
-            added.append(gtkwave.show_pipe(pipe.model))
-        except PipeNotTraced:
+            added.append(gtkwave.show_item(item.model))
+        except ItemNotTraced:
             pass
 
-    if (len(selected_pipes) == 1) and (len(added) == 0):
-        message(f'WARNING: {pipe.model.name} not traced')
+    if (len(selected_item) == 1) and (len(added) == 0):
+        message(f'WARNING: {item.model.name} not traced')
     else:
         message('Waves added: ' + ' '.join(added))
 
@@ -694,7 +693,7 @@ class GraphGtkwaveSelectSync(QtCore.QObject):
 
         selected_wave_pipes = {}
         for s in selected:
-            gtkwave_intf = gtkwave.pipe_gtkwave_intf(s.model)
+            gtkwave_intf = gtkwave.item_gtkwave_intf(s.model)
             if gtkwave_intf:
                 if gtkwave_intf not in selected_wave_pipes:
                     selected_wave_pipes[gtkwave_intf] = []

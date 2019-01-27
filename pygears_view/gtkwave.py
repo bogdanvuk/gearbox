@@ -1,23 +1,20 @@
 from PySide2 import QtCore
-from functools import partial
 import collections
 
 from pygears.sim.modules import SimVerilated
 from pygears.sim import timestep
-from .node_model import find_cosim_modules
+from .node_model import find_cosim_modules, PipeModel, NodeModel
 from pygears.core.hier_node import HierVisitorBase
-from pygears.conf import Inject, reg_inject, MayInject, bind, registry
-from pygears.rtl.gear import rtl_from_gear_port
+from pygears.conf import Inject, MayInject, bind, reg_inject
 from typing import NamedTuple
 from .gtkwave_intf import GtkWaveWindow
-from .graph import GraphVisitor
 from .layout import active_buffer, Buffer
 import fnmatch
 import os
 import re
 
 
-class PipeNotTraced(Exception):
+class ItemNotTraced(Exception):
     pass
 
 
@@ -35,7 +32,7 @@ class VerilatorVCDMap:
         self.sim_module = sim_module
         self.rtl_node = rtl_map[self.sim_module.gear]
         self.path_prefix = '.'.join(['TOP', sim_module.wrap_name])
-        self.pipe_signals = {}
+        self.item_signals = {}
         self.signal_name_map = {}
 
     @property
@@ -46,9 +43,9 @@ class VerilatorVCDMap:
     def vcd_fn(self):
         return self.sim_module.trace_fn
 
-    def pipe_basename(self, pipe):
-        pipe_name_stem = pipe.name[len(self.rtl_node.parent.name) + 1:]
-        return pipe_name_stem.replace('/', '.')
+    def item_basename(self, item):
+        item_name_stem = item.name[len(self.rtl_node.parent.name) + 1:]
+        return item_name_stem.replace('/', '.')
 
     def make_relative_signal_name_map(self, path_prefix, signal_list):
         signal_name_map = {}
@@ -64,19 +61,23 @@ class VerilatorVCDMap:
 
         return signal_name_map
 
-    def get_signals_for_pipe(self, pipe):
-        if pipe in self.pipe_signals:
-            return self.pipe_signals[pipe]
+    def get_signals_for_item(self, item):
+        if item in self.item_signals:
+            return self.item_signals[item]
 
         if not self.signal_name_map:
             self.signal_name_map = self.make_relative_signal_name_map(
                 self.path_prefix, self.gtkwave_intf.command('list_signals'))
 
-        if not self.rtl_node.is_descendent(pipe.intf):
+        if not self.rtl_node.is_descendent(item.rtl):
             return
 
-        signals = fnmatch.filter(self.signal_name_map.keys(),
-                                 self.pipe_basename(pipe) + '_*')
+        if isinstance(item, PipeModel):
+            match = self.item_basename(item) + '_*'
+        elif isinstance(item, NodeModel):
+            match = self.item_basename(item) + '.*'
+
+        signals = fnmatch.filter(self.signal_name_map.keys(), match)
         return [self.signal_name_map[s] for s in signals]
 
 
@@ -91,16 +92,17 @@ class Signals(NamedTuple):
     valid: str
 
 
-class GraphPipeCollector(HierVisitorBase):
+class GraphItemCollector(HierVisitorBase):
     def __init__(self, vcd_map):
         self.vcd_pipes = {}
+        self.vcd_nodes = {}
         self.vcd_map = vcd_map
 
     def PipeModel(self, pipe):
         if pipe not in self.vcd_pipes:
             try:
-                all_sigs = self.vcd_map.get_signals_for_pipe(pipe)
-                # print(f'Pipe: {pipe} ({rtl_intf.name}) -> {all_sigs}')
+                all_sigs = self.vcd_map.get_signals_for_item(pipe)
+                # print(f'PipeModel: {pipe} ({rtl_intf.name}) -> {all_sigs}')
 
                 stem = ''
                 for s in all_sigs:
@@ -112,6 +114,11 @@ class GraphPipeCollector(HierVisitorBase):
                     self.vcd_pipes[pipe] = stem
             except:
                 pass
+
+    def NodeModel(self, node):
+        if not node.rtl.is_hierarchical:
+            if node not in self.vcd_nodes:
+                self.vcd_nodes[node] = self.vcd_map.get_signals_for_item(node)
 
 
 class GtkWave:
@@ -149,22 +156,22 @@ class GtkWave:
             self.instances.append(instance)
             self.buffers.append(buffer)
 
-    def pipe_gtkwave_intf(self, pipe):
+    def item_gtkwave_intf(self, item):
         for intf in self.graph_intfs:
-            if intf.has_pipe_wave(pipe):
+            if intf.has_item_wave(item):
                 return intf
 
     def pipe_gtkwave_instance(self, pipe):
         for intf, inst in zip(self.graph_intfs, self.instances):
-            if intf.has_pipe_wave(pipe):
+            if intf.has_item_wave(pipe):
                 return inst
 
-    def show_pipe(self, pipe):
-        pipe_intf = self.pipe_gtkwave_intf(pipe)
-        if pipe_intf is None:
-            raise PipeNotTraced
+    def show_item(self, item):
+        item_intf = self.item_gtkwave_intf(item)
+        if item_intf is None:
+            raise ItemNotTraced
 
-        return pipe_intf.show_pipe(pipe)
+        return item_intf.show_item(item)
 
     def update(self):
         for w in self.graph_intfs:
@@ -215,13 +222,35 @@ class GtkWaveGraphIntf(QtCore.QObject):
         self.vcd_map = vcd_map
         self.gtkwave_intf = gtkwave_intf
         self.loaded = False
-        self.pipe_collect = GraphPipeCollector(vcd_map)
+        self.item_collect = GraphItemCollector(vcd_map)
         self.pipes_on_wave = {}
         self.should_update = False
         self.updating = False
 
-    def has_pipe_wave(self, pipe):
-        return pipe in self.pipe_collect.vcd_pipes
+    def has_item_wave(self, item):
+        if isinstance(item, PipeModel):
+            return item in self.item_collect.vcd_pipes
+        elif isinstance(item, NodeModel):
+            return item in self.item_collect.vcd_nodes
+
+    def show_item(self, item):
+        if isinstance(item, PipeModel):
+            return self.show_pipe(item)
+        elif isinstance(item, NodeModel):
+            return self.show_node(item)
+
+    def show_node(self, node):
+        sigs = self.vcd_map.get_signals_for_item(node)
+        commands = []
+        commands.append(f'gtkwave::addSignalsFromList {{{" ".join(sigs)}}}')
+        commands.append(
+            f'gtkwave::highlightSignalsFromList {{{" ".join(sigs)}}}')
+
+        commands.append(f'gtkwave::/Edit/Create_Group {node.name}')
+
+        self.gtkwave_intf.command(commands)
+
+        return node.name
 
     def show_pipe(self, pipe):
 
@@ -229,7 +258,7 @@ class GtkWaveGraphIntf(QtCore.QObject):
         sig_names = []
 
         prefix = (
-            self.vcd_map.path_prefix + '.' + self.vcd_map.pipe_basename(pipe))
+            self.vcd_map.path_prefix + '.' + self.vcd_map.item_basename(pipe))
 
         intf_name = pipe.name.replace('.', '/')
         status_sig = intf_name + '_state'
@@ -254,7 +283,7 @@ class GtkWaveGraphIntf(QtCore.QObject):
             f'gtkwave::setCurrentTranslateTransProc "{dti_translate_path}"')
         commands.append(f'gtkwave::installTransFilter 1')
 
-        for s in self.vcd_map.get_signals_for_pipe(pipe):
+        for s in self.vcd_map.get_signals_for_item(pipe):
             stem = s[len(prefix):]
             if stem.startswith('_data'):
                 sig_names.append(s)
@@ -337,7 +366,7 @@ class GtkWaveGraphIntf(QtCore.QObject):
             return
 
         signal_names = [(pipe, name)
-                        for pipe, name in self.pipe_collect.vcd_pipes.items()
+                        for pipe, name in self.item_collect.vcd_pipes.items()
                         if pipe.view.isVisible()]
 
         for i in range(0, len(signal_names), 20):
@@ -373,7 +402,7 @@ class GtkWaveGraphIntf(QtCore.QObject):
 
             self.gtkwave_intf.command(f'gtkwave::stripGUI')
             self.gtkwave_intf.command(f'gtkwave::setZoomFactor -7')
-            self.pipe_collect.visit(self.graph)
+            self.item_collect.visit(self.graph)
             self.loaded = True
             self.vcd_loaded.emit()
 

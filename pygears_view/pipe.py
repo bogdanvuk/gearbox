@@ -51,10 +51,8 @@ class Pipe(QtWidgets.QGraphicsPathItem):
     def show_tooltip(self):
         tooltip = '<b>{}</b><br/>'.format(self.model.name)
         from pygears.typing_common.pprint import pprint
-        disp = pprint.pformat(self.model.intf.dtype, indent=4, width=30)
+        disp = pprint.pformat(self.model.rtl.dtype, indent=4, width=30)
         tooltip += disp.replace('\n', '<br/>')
-        # tooltip += '<br/>{}<br/>'.format(
-        #     pprint.pformat(self.model.intf.dtype, indent=4, width=30))
         self.setToolTip(tooltip)
 
     def __str__(self):
