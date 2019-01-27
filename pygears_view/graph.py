@@ -76,19 +76,15 @@ class Graph(QtWidgets.QGraphicsView):
                  sim_bridge=MayInject('viewer/sim_bridge'),
                  sim_proxy=MayInject('viewer/sim_proxy')):
         super().__init__(parent)
-        scene_area = 8000.0
-        scene_pos = (scene_area / 2) * -1
         self.setScene(NodeScene(self))
         self.scene().selectionChanged.connect(self.selection_changed_slot)
         self.setFocusPolicy(QtCore.Qt.ClickFocus)
-        # self.setFocusPolicy(QtCore.Qt.NoFocus)
         self.setAlignment(QtCore.Qt.AlignCenter)
-        self.setSceneRect(scene_pos, scene_pos, scene_area, scene_area)
-        self.setSizePolicy(QtWidgets.QSizePolicy.Ignored,
-                           QtWidgets.QSizePolicy.Ignored)
         self.setRenderHint(QtGui.QPainter.Antialiasing, True)
         self.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         self.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
+        self.setResizeAnchor(QtWidgets.QGraphicsView.AnchorUnderMouse)
+        self.setTransformationAnchor(QtWidgets.QGraphicsView.AnchorUnderMouse)
         self.setViewportUpdateMode(QtWidgets.QGraphicsView.FullViewportUpdate)
         self._pipe_layout = PIPE_LAYOUT_STRAIGHT
         self._live_pipe = None
@@ -441,19 +437,13 @@ class Graph(QtWidgets.QGraphicsView):
         self.zoom_to_nodes(self.top._nodes)
 
     def zoom_to_nodes(self, nodes):
-        # rect = self._combined_rect(nodes)
-        # self.fitInView(rect, QtCore.Qt.KeepAspectRatio)
-
         from functools import reduce
 
         def box(node):
-            box = node.boundingRect()
-            box.moveTo(node.mapToScene(node.pos()))
-            return box
+            return node.sceneBoundingRect()
 
         rect = reduce(lambda x, y: x.united(y), map(box, nodes))
         self.fitInView(rect, QtCore.Qt.KeepAspectRatio)
-        # self.centerOn(rect.center())
 
         if self.get_zoom() > 0.1:
             self.reset_zoom()
