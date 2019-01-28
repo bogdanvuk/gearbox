@@ -173,6 +173,10 @@ class NodeItem(AbstractNodeItem):
 
         for node in self._nodes:
             gvn = self.get_layout_node(node)
+            for i in range(len(self.inputs)):
+                self.layout_graph.add_edge(
+                    self.layout_graph.get_node(f'i{i}'), gvn, style='invis')
+
             for i in range(len(self.outputs)):
                 self.layout_graph.add_edge(
                     gvn, self.layout_graph.get_node(f'o{i}'), style='invis')
@@ -699,6 +703,8 @@ class NodeItem(AbstractNodeItem):
         #     # if self.model.name == '':
         #     self.layout_graph.draw('proba.png')
         #     self.layout_graph.draw('proba.dot')
+
+        # self.layout_graph.draw(f'{self.model.name.replace("/", "_")}.png')
 
         def gv_point_load(point):
             return tuple(float(num) for num in point.split(',')[-2:])
