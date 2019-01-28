@@ -5,7 +5,7 @@ from pygears.sim.modules import SimVerilated
 from pygears.sim import timestep
 from .node_model import find_cosim_modules, PipeModel, NodeModel
 from pygears.core.hier_node import HierVisitorBase
-from pygears.conf import Inject, MayInject, bind, reg_inject
+from pygears.conf import Inject, MayInject, bind, reg_inject, registry
 from typing import NamedTuple
 from .gtkwave_intf import GtkWaveWindow
 from .layout import active_buffer, Buffer
@@ -209,6 +209,16 @@ class GtkWaveBuffer(Buffer):
         return 'gtkwave'
 
 
+class NodeActivityVisitor(HierVisitorBase):
+    def NodeModel(self, node):
+        if (any(p.status == 'active' for p in node.input_ext_pipes)
+                and (not any(p.status == 'active' or p.status == 'handshaked'
+                             for p in node.output_ext_pipes))):
+            node.set_status('stuck')
+        else:
+            node.set_status('empty')
+
+
 class GtkWaveGraphIntf(QtCore.QObject):
     vcd_loaded = QtCore.Signal()
 
@@ -384,6 +394,8 @@ class GtkWaveGraphIntf(QtCore.QObject):
 
             for wave_status, (pipe, _) in zip(rtl_status, cur_names):
                 self.update_rtl_intf(pipe, wave_status.strip())
+
+        NodeActivityVisitor().visit(registry('viewer/graph_model'))
 
         if self.should_update:
             self.should_update = False

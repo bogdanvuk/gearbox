@@ -1,4 +1,4 @@
-from PySide2 import QtWidgets, QtGui
+from PySide2 import QtWidgets, QtGui, QtCore
 from .layout import Buffer
 from pygears.conf import Inject, reg_inject, bind, MayInject, registry
 import pygments
@@ -129,6 +129,8 @@ def description(main=Inject('viewer/main')):
 
 
 class Description(QtWidgets.QTextEdit):
+    resized = QtCore.Signal()
+
     def __init__(self):
         super().__init__()
         self.setReadOnly(True)
@@ -139,6 +141,10 @@ class Description(QtWidgets.QTextEdit):
         inset grey;
         """)
         self.document().setDefaultStyleSheet(dark_theme)
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self.resized.emit()
 
     def clean(self):
         self.fn = None

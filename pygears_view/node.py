@@ -11,6 +11,13 @@ from pygears.conf import reg_inject, Inject
 import pygraphviz as pgv
 from . import gv_utils
 
+NODE_SIM_STATUS_COLOR = {
+    'empty_hier': (48, 58, 69, 255),
+    'empty': (0, 0, 0, 50),
+    'stuck': (170, 50, 90, 200),
+    'stuck_hier': (170, 50, 90, 200),
+}
+
 
 def hier_expand(node, padding=40):
     bound = node.node_bounding_rect
@@ -45,7 +52,7 @@ def hier_painter(self, painter, option, widget):
     painter.drawRect(rect)
 
     top_rect = QtCore.QRectF(0.0, 0.0, rect.width(), 20.0)
-    painter.setBrush(QtGui.QColor(*self.color))
+    painter.setBrush(QtGui.QColor(*self.status_color))
     painter.setPen(QtCore.Qt.NoPen)
     painter.drawRect(top_rect)
 
@@ -56,24 +63,14 @@ def hier_painter(self, painter, option, widget):
         painter.setPen(QtCore.Qt.NoPen)
         painter.drawRect(rect)
 
-    # txt_rect = QtCore.QRectF(top_rect.x(),
-    #                          top_rect.y() + 1.5, rect.width(),
-    #                          top_rect.height())
-    # painter.setPen(QtGui.QColor(*self.text_color))
-    # painter.drawText(txt_rect, QtCore.Qt.AlignCenter, self.name)
-
     path = QtGui.QPainterPath()
     path.addRect(rect)
-    border_color = self.color
+    border_color = self.border_color
     if self.selected and NODE_SEL_BORDER_COLOR:
         border_color = NODE_SEL_BORDER_COLOR
     painter.setBrush(QtCore.Qt.NoBrush)
     painter.setPen(QtGui.QPen(QtGui.QColor(*border_color), 1))
     painter.drawPath(path)
-
-    # for port in self.inputs + self.outputs:
-    #     for pipe in port.connected_pipes:
-    #         pipe.draw_path()
 
     painter.restore()
 
@@ -106,7 +103,8 @@ def node_painter(self, painter, option, widget):
                                self._width - (radius_x / 1.25), 28)
     path = QtGui.QPainterPath()
     path.addRoundedRect(label_rect, radius_x / 1.5, radius_y / 1.5)
-    painter.setBrush(QtGui.QColor(0, 0, 0, 50))
+    # painter.setBrush(QtGui.QColor(0, 0, 0, 50))
+    painter.setBrush(QtGui.QColor(*self.status_color))
     painter.fillPath(path, painter.brush())
 
     border_width = 0.8
@@ -123,10 +121,6 @@ def node_painter(self, painter, option, widget):
     painter.setBrush(QtCore.Qt.NoBrush)
     painter.setPen(QtGui.QPen(border_color, border_width))
     painter.drawPath(path)
-
-    # for port in self.inputs + self.outputs:
-    #     for pipe in port.connected_pipes:
-    #         pipe.draw_path(pipe._input_port, pipe._output_port)
 
     painter.restore()
 
@@ -298,6 +292,16 @@ class NodeItem(AbstractNodeItem):
             self._output_items[port_item] = text
 
         return port_item
+
+    def set_status(self, status):
+        self.status = status
+        if self.model.hierarchical:
+            status = f'{status}_hier'
+
+        new_color = NODE_SIM_STATUS_COLOR[status]
+        if new_color != self.status_color:
+            self.status_color = new_color
+            self.update()
 
     @AbstractNodeItem.selected.setter
     def selected(self, selected=False):

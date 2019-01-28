@@ -59,25 +59,41 @@ class PipeModel(NamedHierNode):
 
         if output_port_model.node is parent.rtl:
             output_port = parent.view.inputs[output_port_model.index]
+            # parent.input_int_pipes[output_port_model.index] = self
+            parent.input_int_pipes.append(self)
         else:
             output_port = parent[output_port_model.node.basename].view.outputs[
                 output_port_model.index]
 
+            # parent.rtl_map[output_port_model.node].output_ext_pipes[
+            #     output_port_model.index] = self
+            parent.rtl_map[output_port_model.node].output_ext_pipes.append(
+                self)
+
         try:
             if input_port_model.node is parent.rtl:
                 input_port = parent.view.outputs[input_port_model.index]
+                # parent.output_int_pipes[input_port_model.index] = self
+                parent.output_int_pipes.append(self)
             else:
                 input_port = parent[input_port_model.node.
                                     basename].view.inputs[input_port_model.
                                                           index]
+                # parent.rtl_map[input_port_model.node].input_ext_pipes[
+                #     input_port_model.index] = self
+                parent.rtl_map[input_port_model.node].input_ext_pipes.append(
+                    self)
+
         except KeyError:
             import pdb
             pdb.set_trace()
 
         self.view = Pipe(output_port, input_port, parent.view, self)
         self.parent.view.add_pipe(self.view)
+        self.set_status('empty')
 
     def set_status(self, status):
+        self.status = status
         self.view.set_status(status)
 
     @property
@@ -110,6 +126,17 @@ class NodeModel(NamedHierNode):
 
         self.rtl = gear
 
+        # self.input_ext_pipes = [None] * len(self.rtl.in_ports)
+        # self.output_ext_pipes = [None] * len(self.rtl.out_ports)
+        # self.input_int_pipes = [None] * len(self.rtl.in_ports)
+        # self.output_int_pipes = [None] * len(self.rtl.out_ports)
+        self.input_ext_pipes = []
+        self.output_ext_pipes = []
+        self.input_int_pipes = []
+        self.output_int_pipes = []
+
+        self.rtl_map = {}
+
         self.view = NodeItem(
             gear.basename,
             parent=(None if parent is None else parent.view),
@@ -122,20 +149,27 @@ class NodeModel(NamedHierNode):
 
         for child in self.rtl.child:
             if isinstance(child, RTLNode):
-                n = NodeModel(child, self)
+                self.rtl_map[child] = NodeModel(child, self)
 
                 if parent is not None:
-                    n.view.hide()
+                    self.rtl_map[child].view.hide()
 
         self.setup_view()
 
         for child in self.rtl.child:
             if isinstance(child, RTLIntf):
                 for i in range(len(child.consumers)):
-                    n = PipeModel(child, consumer_id=i, parent=self)
+                    self.rtl_map[child] = PipeModel(
+                        child, consumer_id=i, parent=self)
 
                     if parent is not None:
-                        n.view.hide()
+                        self.rtl_map[child].view.hide()
+
+        self.set_status('empty')
+
+    def set_status(self, status):
+        self.status = status
+        self.view.set_status(status)
 
     @property
     @reg_inject

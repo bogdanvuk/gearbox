@@ -23,6 +23,7 @@ class AbstractNodeItem(QGraphicsItem):
             'name': name.strip(),
             'color': (48, 58, 69, 255),
             'border_color': (85, 100, 100, 255),
+            'status_color': (48, 58, 69, 255),
             'text_color': (255, 255, 255, 180),
             'type': 'AbstractBaseNode',
             'selected': False,
@@ -121,6 +122,14 @@ class AbstractNodeItem(QGraphicsItem):
     @text_color.setter
     def text_color(self, color=(100, 100, 100, 255)):
         self._properties['text_color'] = color
+
+    @property
+    def status_color(self):
+        return self._properties['status_color']
+
+    @status_color.setter
+    def status_color(self, color=(0, 0, 0, 255)):
+        self._properties['status_color'] = color
 
     @property
     def border_color(self):
