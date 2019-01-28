@@ -206,6 +206,11 @@ class NodeItem(AbstractNodeItem):
 
     def show(self):
         super().show()
+
+        if not self.collapsed:
+            for obj in self.children:
+                obj.show()
+
         ports = self.inputs + self.outputs
         for port in ports:
             for pipe in port.connected_pipes:
