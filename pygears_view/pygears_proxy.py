@@ -21,7 +21,7 @@ class PyGearsBridgeServer(SimExtend):
     def before_run(self, sim):
         self.handle_event('before_run')
 
-    def before_timestep(self, sim, timestep):
+    def after_timestep(self, sim, timestep):
         # if timestep > (1 << 15):
         self.handle_event('after_timestep')
         return True

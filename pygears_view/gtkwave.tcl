@@ -170,9 +170,9 @@ proc get_values {signals} {
     set end_time_value [ gtkwave::getWindowEndTime ]
     foreach s $signals {
         if { [catch {
-            set valid_val [gtkwave::signalChangeList ${s}_valid -start_time $end_time_value -max 1]
-            set ready_val [gtkwave::signalChangeList ${s}_ready -start_time $end_time_value -max 1]
-            puts [format "%s %s" [lindex $valid_val 1] [lindex $ready_val 1]]
+            set valid_val [gtkwave::signalValueAt ${s}_valid]
+            set ready_val [gtkwave::signalValueAt ${s}_ready]
+            puts [format "%s %s" $valid_val $ready_val]
         } err ]} {
             puts "0 0"
         }
