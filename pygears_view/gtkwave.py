@@ -166,6 +166,21 @@ class GtkWave:
             if intf.has_item_wave(pipe):
                 return inst
 
+    def update_pipe_statuses(self, pipes):
+        intfs = {}
+        for p in pipes:
+            pipe_intf = self.item_gtkwave_intf(p)
+            if pipe_intf is None:
+                return None
+
+            if pipe_intf not in intfs:
+                intfs[pipe_intf] = []
+
+            intfs[pipe_intf].append(p)
+
+        for intf, pipes in intfs.items():
+            intf.update_pipes(pipes)
+
     def show_item(self, item):
         item_intf = self.item_gtkwave_intf(item)
         if item_intf is None:
@@ -375,9 +390,20 @@ class GtkWaveGraphIntf(QtCore.QObject):
             self.gtkwave_intf.command_nb(f'gtkwave::nop', self.cmd_id)
             return
 
-        signal_names = [(pipe, name)
-                        for pipe, name in self.item_collect.vcd_pipes.items()
-                        if pipe.view.isVisible()]
+        self.update_pipes(
+            p for p in self.item_collect.vcd_pipes if p.view.isVisible())
+
+        if self.should_update:
+            self.should_update = False
+            self.gtkwave_intf.response.connect(self.gtkwave_resp)
+            self.gtkwave_intf.command_nb(f'gtkwave::nop', self.cmd_id)
+        else:
+            self.updating = False
+
+    def update_pipes(self, pipes):
+        ts = timestep()
+        signal_names = [(pipe, self.item_collect.vcd_pipes[pipe])
+                        for pipe in pipes if pipe.status[0] != ts]
 
         for i in range(0, len(signal_names), 20):
 
@@ -396,13 +422,6 @@ class GtkWaveGraphIntf(QtCore.QObject):
                 self.update_rtl_intf(pipe, wave_status.strip())
 
         NodeActivityVisitor().visit(registry('viewer/graph_model'))
-
-        if self.should_update:
-            self.should_update = False
-            self.gtkwave_intf.response.connect(self.gtkwave_resp)
-            self.gtkwave_intf.command_nb(f'gtkwave::nop', self.cmd_id)
-        else:
-            self.updating = False
 
     def update(self):
         if not self.loaded:

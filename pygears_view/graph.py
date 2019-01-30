@@ -69,6 +69,7 @@ class Graph(QtWidgets.QGraphicsView):
     node_selected = QtCore.Signal(str)
     sim_refresh = QtCore.Signal()
     resized = QtCore.Signal()
+    node_expand_toggled = QtCore.Signal(bool, object)
 
     @reg_inject
     def __init__(self,

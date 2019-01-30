@@ -92,7 +92,9 @@ class PipeModel(NamedHierNode):
         self.parent.view.add_pipe(self.view)
         self.set_status('empty')
 
-    def set_status(self, status):
+    @reg_inject
+    def set_status(self, status, timestep=Inject('sim/timestep')):
+        self.status = (timestep, status)
         self.status = status
         self.view.set_status(status)
 
@@ -167,8 +169,9 @@ class NodeModel(NamedHierNode):
 
         self.set_status('empty')
 
-    def set_status(self, status):
-        self.status = status
+    @reg_inject
+    def set_status(self, status, timestep=Inject('sim/timestep')):
+        self.status = (timestep, status)
         self.view.set_status(status)
 
     @property
@@ -255,6 +258,10 @@ padding-right: 10px;
     @property
     def hierarchical(self):
         return bool(self.rtl.is_hierarchical)
+
+    @property
+    def pipes(self):
+        return list(c for c in self.child if isinstance(c, PipeModel))
 
     def setup_view(self):
 

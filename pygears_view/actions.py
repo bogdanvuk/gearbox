@@ -624,6 +624,17 @@ def create_shortcut_repeater(main=Inject('viewer/main')):
     bind('viewer/shortcut_repeater', ShortcutRepeat(main))
 
 
+@reg_inject
+def node_expand_toggle(status, node, gtkwave=Inject('viewer/gtkwave')):
+    if status:
+        gtkwave.update_pipe_statuses(node.pipes)
+
+
+@inject_async
+def create_node_expand_toggle(graph=Inject('viewer/graph')):
+    graph.node_expand_toggled.connect(node_expand_toggle)
+
+
 @shortcut('graph', Qt.Key_Slash)
 @reg_inject
 def node_search(

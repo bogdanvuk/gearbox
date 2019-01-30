@@ -52,7 +52,11 @@ def hier_painter(self, painter, option, widget):
     painter.drawRect(rect)
 
     top_rect = QtCore.QRectF(0.0, 0.0, rect.width(), 20.0)
-    painter.setBrush(QtGui.QColor(*self.status_color))
+    if self.collapsed:
+        painter.setBrush(QtGui.QColor(*self.status_color))
+    else:
+        painter.setBrush(QtGui.QColor(*self.border_color))
+
     painter.setPen(QtCore.Qt.NoPen)
     painter.drawRect(top_rect)
 
@@ -227,6 +231,7 @@ class NodeItem(AbstractNodeItem):
         self.size_expander(self)
         self.graph.top.layout()
         self.graph.ensureVisible(self)
+        self.graph.node_expand_toggled.emit(False, self.model)
 
     def expand(self):
         if not self.collapsed or not self.hierarchical:
@@ -240,6 +245,7 @@ class NodeItem(AbstractNodeItem):
         self.graph.top.layout()
         self.graph.ensureVisible(self)
         self.selected = True
+        self.graph.node_expand_toggled.emit(True, self.model)
 
     def get_visible_objs(self, objtype):
         for n in self._nodes:
