@@ -19,6 +19,248 @@ NODE_SIM_STATUS_COLOR = {
 }
 
 
+def node_layout(self):
+    self._width, self._height = calc_node_size(self)
+    self.post_init()
+
+
+def minimized_painter(self, painter, option, widget):
+    painter.save()
+    painter.setBrush(QtGui.QColor(*self.color))
+    painter.setPen(QtCore.Qt.NoPen)
+    painter.drawEllipse(5, 5, self._width, self._height)
+
+    path = QtGui.QPainterPath()
+    path.addEllipse(5, 5, self._width, self._height)
+    border_color = self.border_color
+    if self.selected and NODE_SEL_BORDER_COLOR:
+        border_color = NODE_SEL_BORDER_COLOR
+    painter.setBrush(QtCore.Qt.NoBrush)
+    painter.setPen(QtGui.QPen(QtGui.QColor(*border_color), 3))
+    painter.drawPath(path)
+
+    painter.restore()
+
+
+def minimized_layout(self):
+    self._width, self._height = 10, 10
+    self._text_item.hide()
+
+    for port, text in self._input_items.items():
+        port.setPos(self._width, self._height)
+        port.hide()
+        text.hide()
+
+    for port, text in self._output_items.items():
+        port.setPos(self._width, self._height)
+        port.hide()
+        text.hide()
+
+
+def hier_layout(self):
+    if self.collapsed:
+        node_layout(self)
+        return
+
+    for node in self._nodes:
+        if hasattr(node, 'layout'):
+            node.layout()
+
+    for node in self._nodes:
+        gvn = self.get_layout_node(node)
+        try:
+            del gvn.attr['width']
+            del gvn.attr['height']
+        except KeyError:
+            pass
+
+        if node._layout != minimized_layout:
+            # gvn.attr['label'] = gv_utils.get_node_record(node).replace(
+            #     '\n', '')
+            node_layout_rec = gv_utils.get_node_record(node)
+            # print('-' * 60)
+            # print(f'Node layout for {node.model.name}')
+            # print('-' * 60)
+            # print(node_layout_rec)
+            gvn.attr['label'] = node_layout_rec.replace('\n', '')
+        else:
+            gvn.attr['label'] = ""
+            gvn.attr['width'] = 1 / 72
+            gvn.attr['height'] = 1 / 72
+
+    # for i in range(len(self.inputs)):
+    #     gvn = self.layout_graph.get_node(f'i{i}')
+
+    # for i in range(len(self.outputs)):
+    #     gvn = self.layout_graph.get_node(f'o{i}')
+
+    # for pipe in self.pipes:
+    #     gve = self.get_layout_edge(pipe)
+
+    self.layout_graph.layout(prog='dot')
+
+    # if self.model.name == '/riscv':
+    #     # if self.model.name == '':
+    #     self.layout_graph.draw('proba.png')
+    #     self.layout_graph.draw('proba.dot')
+
+    # self.layout_graph.draw(f'{self.model.name.replace("/", "_")}.png')
+
+    def gv_point_load(point):
+        return tuple(float(num) for num in point.split(',')[-2:])
+
+    padding = 40
+    max_y = 0
+    max_x = 0
+
+    # if self.model.name == '/ref_model':
+    #     import pdb
+    #     pdb.set_trace()
+
+    for node in self._nodes:
+        gvn = self.get_layout_node(node)
+        pos = gv_point_load(gvn.attr['pos'])
+        node.set_pos(pos[0] - node.width / 2, pos[1] + node.height / 2)
+
+        # for i in range((self.outputs)):
+        #     self.layout_graph.add_edge(
+        #         gvn, self.layout_graph.get_node(f'o{i}'), style='invis')
+
+        max_y = max(max_y, (pos[1] + node.height / 2))
+        max_x = max(max_x, (pos[0] + node.width / 2))
+
+    if self.inputs:
+        port_height = self.inputs[0].boundingRect().height()
+
+        for i, p in enumerate(self.inputs):
+            gvn = self.layout_graph.get_node(f'i{i}')
+            pos = gv_point_load(gvn.attr['pos'])
+
+            p.setPos(-port_height / 2, pos[1] + port_height / 2)
+
+    if self.outputs:
+        port_height = self.outputs[0].boundingRect().height()
+
+        for i, p in enumerate(self.outputs):
+            gvn = self.layout_graph.get_node(f'o{i}')
+            pos = gv_point_load(gvn.attr['pos'])
+
+            p.setPos(pos[0] - port_height / 2, pos[1] + port_height / 2)
+
+    for pipe in self.pipes:
+        gve = self.get_layout_edge(pipe)
+        path = [gv_point_load(point) for point in gve.attr['pos'].split()]
+        pipe.layout_path = [QtCore.QPointF(p[0], p[1]) for p in path]
+
+        max_y = max(max_y, *(p.y() for p in pipe.layout_path))
+
+    self.layers = []
+
+    class Layer(list):
+        def __init__(self, node):
+            super().__init__([node])
+            self.rect = node.boundingRect()
+            self.rect.translate(node.pos())
+
+        def __str__(self):
+            return str(self.rect)
+
+        def __repr__(self):
+            return repr(self.rect)
+
+        def add(self, node):
+            rect = node.boundingRect()
+            rect.translate(node.pos())
+
+            if ((self.rect.left() < rect.right())
+                    and (self.rect.right() > rect.left())):
+                self.append(node)
+                self.sort(key=lambda n: n.y())
+                return True
+            else:
+                return False
+
+    def find_layer(node):
+        for layer in self.layers:
+            if layer.add(node):
+                return
+        else:
+            self.layers.append(Layer(node))
+
+    for node in self._nodes:
+        node.setY(max_y - node.y() + padding)
+        find_layer(node)
+
+    self.layers = sorted(self.layers, key=lambda l: l.rect.left())
+
+    # print(self.layers)
+
+    for p in self.inputs:
+        p.setY(max_y - p.y() + padding)
+
+    for p in self.outputs:
+        p.setY(max_y - p.y() + padding)
+        if p.x() <= max_x:
+            p.setX(max_x + padding)
+
+    for pipe in self.pipes:
+        for p in pipe.layout_path:
+            p.setY(max_y - p.y() + padding)
+
+    # for edge in self.layout_edges:
+    #     if not hasattr(edge, 'view'):
+    #         continue
+
+    #     pipe = edge.data
+
+    #     pipe.layout_path = [
+    #         QtCore.QPointF(p[1] - x_min + padding, p[0] - y_min + padding)
+    #         for p in reversed(edge.view._pts[1:-1])
+    #     ]
+
+    if self.parent is not None:
+        self.size_expander(self)
+    else:
+        for p in self.pipes:
+            p.draw_path()
+
+
+def calc_node_size(self):
+    """
+    calculate minimum node size.
+    """
+    title_width = self._text_item.boundingRect().width()
+
+    port_names_width = 0.0
+    port_height = 0.0
+    if self._input_items:
+        input_widths = []
+        for port, text in self._input_items.items():
+            input_width = port.boundingRect().width() * 2
+            if text.isVisible():
+                input_width += text.boundingRect().width()
+            input_widths.append(input_width)
+        port_names_width += max(input_widths)
+        port = list(self._input_items.keys())[0]
+        port_height = port.boundingRect().height() * 2
+    if self._output_items:
+        output_widths = []
+        for port, text in self._output_items.items():
+            output_width = port.boundingRect().width() * 2
+            if text.isVisible():
+                output_width += text.boundingRect().width()
+            output_widths.append(output_width)
+        port_names_width += max(output_widths)
+        port = list(self._output_items.keys())[0]
+        port_height = port.boundingRect().height() * 2
+
+    height = port_height * (max([len(self.inputs), len(self.outputs)]) + 2)
+    height += 10
+    width = max(port_names_width, title_width)
+
+    return width, height
+
+
 def hier_expand(node, padding=40):
     bound = node.node_bounding_rect
 
@@ -133,16 +375,21 @@ class NodeItem(AbstractNodeItem):
     @reg_inject
     def __init__(self,
                  name,
+                 layout,
                  parent=None,
                  model=None,
                  graph=Inject('viewer/graph')):
         super().__init__(name)
 
+        self._layout = layout
         self.parent = parent
         self.graph = graph
         self.model = model
         self.layout_graph = pgv.AGraph(
             directed=True, rankdir='LR', splines='true', strict=False)
+
+        self.layout_graph.add_node('source', label='')
+        self.layout_graph.add_node('sink', label='')
 
         self.layout_pipe_map = {}
 
@@ -164,20 +411,18 @@ class NodeItem(AbstractNodeItem):
 
     def setup_done(self):
         self._hide_single_port_labels()
-        self.collapsed_size = self.calc_size()
-        self._width, self._height = self.collapsed_size
 
-        self.post_init()
+        self.layout()
 
-        for node in self._nodes:
-            gvn = self.get_layout_node(node)
-            for i in range(len(self.inputs)):
-                self.layout_graph.add_edge(
-                    self.layout_graph.get_node(f'i{i}'), gvn, style='invis')
+        # for node in self._nodes:
+        #     gvn = self.get_layout_node(node)
+        #     for i in range(len(self.inputs)):
+        #         self.layout_graph.add_edge(
+        #             self.layout_graph.get_node(f'i{i}'), gvn, style='invis')
 
-            for i in range(len(self.outputs)):
-                self.layout_graph.add_edge(
-                    gvn, self.layout_graph.get_node(f'o{i}'), style='invis')
+        #     for i in range(len(self.outputs)):
+        #         self.layout_graph.add_edge(
+        #             gvn, self.layout_graph.get_node(f'o{i}'), style='invis')
 
     def mouseDoubleClickEvent(self, event):
         self.auto_resize()
@@ -280,22 +525,30 @@ class NodeItem(AbstractNodeItem):
         # text.setVisible(display_name)
 
         if isinstance(port, InPort):
+            port_node_name = f'i{len(self._input_items)}'
             self.layout_graph.add_node(
-                f'i{len(self._input_items)}',
+                port_node_name,
                 label='',
-                rank='source',
                 width=2 / 72,
                 height=2 / 72)
             self._input_items[port_item] = text
+            self.layout_graph.add_edge(
+                self.layout_graph.get_node('sink'),
+                self.layout_graph.get_node(port_node_name),
+                style='invis')
         else:
+            port_node_name = f'o{len(self._output_items)}'
             self.layout_graph.add_node(
-                f'o{len(self._output_items)}',
+                port_node_name,
                 label='',
-                rank='sink',
                 width=2 / 72,
                 height=2 / 72)
 
             self._output_items[port_item] = text
+            self.layout_graph.add_edge(
+                self.layout_graph.get_node(port_node_name),
+                self.layout_graph.get_node('source'),
+                style='invis')
 
         return port_item
 
@@ -411,41 +664,6 @@ class NodeItem(AbstractNodeItem):
         for port in ports:
             for pipe in port.connected_pipes:
                 pipe.reset()
-
-    def calc_size(self):
-        """
-        calculate minimum node size.
-        """
-        title_width = self._text_item.boundingRect().width()
-
-        port_names_width = 0.0
-        port_height = 0.0
-        if self._input_items:
-            input_widths = []
-            for port, text in self._input_items.items():
-                input_width = port.boundingRect().width() * 2
-                if text.isVisible():
-                    input_width += text.boundingRect().width()
-                input_widths.append(input_width)
-            port_names_width += max(input_widths)
-            port = list(self._input_items.keys())[0]
-            port_height = port.boundingRect().height() * 2
-        if self._output_items:
-            output_widths = []
-            for port, text in self._output_items.items():
-                output_width = port.boundingRect().width() * 2
-                if text.isVisible():
-                    output_width += text.boundingRect().width()
-                output_widths.append(output_width)
-            port_names_width += max(output_widths)
-            port = list(self._output_items.keys())[0]
-            port_height = port.boundingRect().height() * 2
-
-        height = port_height * (max([len(self.inputs), len(self.outputs)]) + 2)
-        height += 10
-        width = max(port_names_width, title_width)
-
-        return width, height
 
     def arrange_label(self):
         """
@@ -584,6 +802,12 @@ class NodeItem(AbstractNodeItem):
 
         self.layout_graph.add_node(id(node), shape='none', margin=0)
 
+        # if not node.inputs:
+        #     self.layout_graph.add_edge(
+        #         self.layout_graph.get_node('sink'),
+        #         self.layout_graph.get_node(id(node)),
+        #         style='invis')
+
         self._nodes.append(node)
 
     # def connect(self, port1, port2):
@@ -607,25 +831,36 @@ class NodeItem(AbstractNodeItem):
         node1 = pipe.output_port.parentItem()
         node2 = pipe.input_port.parentItem()
 
+        tailport = None
+        if node1._layout != minimized_layout:
+            tailport = f'o{pipe.output_port.model.index}'
+
+        headport = None
+        if node2._layout != minimized_layout:
+            headport = f'i{pipe.input_port.model.index}'
+
         if (node2 is not self) and (node1 is not self):
             self.layout_graph.add_edge(
                 id(node1),
                 id(node2),
-                tailport=f'o{pipe.output_port.model.index}',
-                headport=f'i{pipe.input_port.model.index}',
+                # rank='none',
+                tailport=tailport,
+                headport=headport,
                 key=id(pipe))
 
         elif (node2 is self):
             self.layout_graph.add_edge(
                 id(node1),
                 f'o{pipe.input_port.model.index}',
-                tailport=f'o{pipe.output_port.model.index}',
+                # rank='none',
+                tailport=tailport,
                 key=id(pipe))
         else:
             self.layout_graph.add_edge(
                 f'i{pipe.output_port.model.index}',
                 id(node2),
-                headport=f'i{pipe.input_port.model.index}',
+                # rank='none',
+                headport=headport,
                 key=id(pipe))
 
     @property
@@ -669,167 +904,4 @@ class NodeItem(AbstractNodeItem):
         return self.layout_graph.get_node(str(id(node)))
 
     def layout(self):
-        if not self.hierarchical:
-            return
-
-        if self.collapsed:
-            self._width, self._height = self.collapsed_size
-            self.post_init()
-            return
-
-        for node in self._nodes:
-            if hasattr(node, 'layout'):
-                node.layout()
-
-        for node in self._nodes:
-            gvn = self.get_layout_node(node)
-            try:
-                del gvn.attr['width']
-                del gvn.attr['height']
-            except KeyError:
-                pass
-
-            # gvn.attr['label'] = gv_utils.get_node_record(node).replace(
-            #     '\n', '')
-            node_layout = gv_utils.get_node_record(node)
-            # print('-' * 60)
-            # print(f'Node layout for {node.model.name}')
-            # print('-' * 60)
-            # print(node_layout)
-            gvn.attr['label'] = node_layout.replace('\n', '')
-
-        # for i in range(len(self.inputs)):
-        #     gvn = self.layout_graph.get_node(f'i{i}')
-
-        # for i in range(len(self.outputs)):
-        #     gvn = self.layout_graph.get_node(f'o{i}')
-
-        # for pipe in self.pipes:
-        #     gve = self.get_layout_edge(pipe)
-
-        self.layout_graph.layout(prog='dot')
-
-        # if self.model.name == '/riscv':
-        #     # if self.model.name == '':
-        #     self.layout_graph.draw('proba.png')
-        #     self.layout_graph.draw('proba.dot')
-
-        # self.layout_graph.draw(f'{self.model.name.replace("/", "_")}.png')
-
-        def gv_point_load(point):
-            return tuple(float(num) for num in point.split(',')[-2:])
-
-        padding = 40
-        max_y = 0
-        max_x = 0
-
-        # if self.model.name == '/ref_model':
-        #     import pdb
-        #     pdb.set_trace()
-
-        for node in self._nodes:
-            gvn = self.get_layout_node(node)
-            pos = gv_point_load(gvn.attr['pos'])
-            node.set_pos(pos[0] - node.width / 2, pos[1] + node.height / 2)
-
-            # for i in range((self.outputs)):
-            #     self.layout_graph.add_edge(
-            #         gvn, self.layout_graph.get_node(f'o{i}'), style='invis')
-
-            max_y = max(max_y, (pos[1] + node.height / 2))
-            max_x = max(max_x, (pos[0] + node.width / 2))
-
-        if self.inputs:
-            port_height = self.inputs[0].boundingRect().height()
-
-            for i, p in enumerate(self.inputs):
-                gvn = self.layout_graph.get_node(f'i{i}')
-                pos = gv_point_load(gvn.attr['pos'])
-
-                p.setPos(-port_height / 2, pos[1] + port_height / 2)
-
-        if self.outputs:
-            port_height = self.outputs[0].boundingRect().height()
-
-            for i, p in enumerate(self.outputs):
-                gvn = self.layout_graph.get_node(f'o{i}')
-                pos = gv_point_load(gvn.attr['pos'])
-
-                p.setPos(pos[0] - port_height / 2, pos[1] + port_height / 2)
-
-        for pipe in self.pipes:
-            gve = self.get_layout_edge(pipe)
-            path = [gv_point_load(point) for point in gve.attr['pos'].split()]
-            pipe.layout_path = [QtCore.QPointF(p[0], p[1]) for p in path]
-
-            max_y = max(max_y, *(p.y() for p in pipe.layout_path))
-
-        self.layers = []
-
-        class Layer(list):
-            def __init__(self, node):
-                super().__init__([node])
-                self.rect = node.boundingRect()
-                self.rect.translate(node.pos())
-
-            def __str__(self):
-                return str(self.rect)
-
-            def __repr__(self):
-                return repr(self.rect)
-
-            def add(self, node):
-                rect = node.boundingRect()
-                rect.translate(node.pos())
-
-                if ((self.rect.left() < rect.right())
-                        and (self.rect.right() > rect.left())):
-                    self.append(node)
-                    self.sort(key=lambda n: n.y())
-                    return True
-                else:
-                    return False
-
-        def find_layer(node):
-            for layer in self.layers:
-                if layer.add(node):
-                    return
-            else:
-                self.layers.append(Layer(node))
-
-        for node in self._nodes:
-            node.setY(max_y - node.y() + padding)
-            find_layer(node)
-
-        self.layers = sorted(self.layers, key=lambda l: l.rect.left())
-
-        # print(self.layers)
-
-        for p in self.inputs:
-            p.setY(max_y - p.y() + padding)
-
-        for p in self.outputs:
-            p.setY(max_y - p.y() + padding)
-            if p.x() <= max_x:
-                p.setX(max_x + padding)
-
-        for pipe in self.pipes:
-            for p in pipe.layout_path:
-                p.setY(max_y - p.y() + padding)
-
-        # for edge in self.layout_edges:
-        #     if not hasattr(edge, 'view'):
-        #         continue
-
-        #     pipe = edge.data
-
-        #     pipe.layout_path = [
-        #         QtCore.QPointF(p[1] - x_min + padding, p[0] - y_min + padding)
-        #         for p in reversed(edge.view._pts[1:-1])
-        #     ]
-
-        if self.parent is not None:
-            self.size_expander(self)
-        else:
-            for p in self.pipes:
-                p.draw_path()
+        self._layout(self)

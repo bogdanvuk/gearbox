@@ -329,7 +329,6 @@ class Graph(QtWidgets.QGraphicsView):
         return self.selected_nodes() + self.selected_pipes()
 
     def add_node(self, node, pos=None):
-        print(f'Adding: {node.name}')
         pos = pos or (self._previous_pos.x(), self._previous_pos.y())
         node.pre_init(self, pos)
         self.scene().addItem(node)

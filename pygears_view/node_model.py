@@ -7,7 +7,8 @@ from pygears.core.hier_node import NamedHierNode
 from pygears.conf import reg_inject, Inject
 from pygears.rtl.node import RTLNode
 from pygears.rtl.intf import RTLIntf
-from .node import NodeItem, hier_expand, hier_painter, node_painter
+from .node import NodeItem, hier_expand, hier_painter, node_painter, minimized_painter
+from .node import node_layout, hier_layout, minimized_layout
 from pygears.sim.modules.cosim_base import CosimBase
 from .pipe import Pipe
 from .html_utils import highlight, tabulate, highlight_style
@@ -16,6 +17,7 @@ from pygears.core.partial import Partial
 from pygears.core.port import InPort
 from pygears.typing_common.pprint import pprint
 from pygears.typing import is_type
+from pygears.common import sieve, cast
 
 from .constants import Z_VAL_PIPE
 
@@ -139,8 +141,24 @@ class NodeModel(NamedHierNode):
 
         self.rtl_map = {}
 
+        layout = hier_layout if self.hierarchical else node_layout
+        painter = None
+        try:
+            # print(self.definition.__name__)
+            # if self.definition.__name__ == 'sieve':
+            #     import pdb; pdb.set_trace()
+
+            if self.definition in (sieve.func, cast.func):
+                # import pdb
+                # pdb.set_trace()
+                layout = minimized_layout
+                painter = minimized_painter
+        except TypeError:
+            pass
+
         self.view = NodeItem(
             gear.basename,
+            layout=layout,
             parent=(None if parent is None else parent.view),
             model=self)
 
@@ -156,7 +174,7 @@ class NodeModel(NamedHierNode):
                 if parent is not None:
                     self.rtl_map[child].view.hide()
 
-        self.setup_view()
+        self.setup_view(painter=painter)
 
         for child in self.rtl.child:
             if isinstance(child, RTLIntf):
@@ -195,7 +213,10 @@ class NodeModel(NamedHierNode):
 
     @property
     def definition(self):
-        return self.rtl.params['definition'].func
+        try:
+            return self.rtl.params['definition'].func
+        except KeyError:
+            raise TypeError
 
     @property
     def description(self):
@@ -263,17 +284,27 @@ padding-right: 10px;
     def pipes(self):
         return list(c for c in self.child if isinstance(c, PipeModel))
 
-    def setup_view(self):
+    def setup_view(self, painter=None, size_expander=None):
 
         view = self.view
+        view.size_expander = size_expander
+        view.painter = painter
 
         if self.parent is not None:
             if self.hierarchical:
                 view.setZValue(Z_VAL_PIPE - 1)
-                view.size_expander = hier_expand
-                view.painter = hier_painter
+
+                if view.size_expander is None:
+                    view.size_expander = hier_expand
+
+                if view.painter is None:
+                    view.painter = hier_painter
+
             else:
-                view.size_expander = lambda x: None
-                view.painter = node_painter
+                if view.size_expander is None:
+                    view.size_expander = lambda x: None
+
+                if view.painter is None:
+                    view.painter = node_painter
 
         view.setup_done()
