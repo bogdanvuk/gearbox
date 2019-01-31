@@ -166,15 +166,21 @@ proc trace_down {} {
     gtkwave::setTraceHighlightFromIndex 0 on
 }
 
-proc get_values {signals} {
-    set end_time_value [ gtkwave::getWindowEndTime ]
+proc get_values {timestep signals} {
     foreach s $signals {
         if { [catch {
-            set valid_val [gtkwave::signalValueAt ${s}_valid]
-            set ready_val [gtkwave::signalValueAt ${s}_ready]
+            set valid_val [gtkwave::signalValueAt ${s}_valid $timestep]
+            set ready_val [gtkwave::signalValueAt ${s}_ready $timestep]
             puts [format "%s %s" $valid_val $ready_val]
         } err ]} {
             puts "0 0"
         }
+    }
+}
+
+proc set_marker_if_needed {timestep} {
+    if {[gtkwave::getMarker] != $timestep} {
+        gtkwave::setMarker $timestep
+        gtkwave::setWindowStartTime [expr $timestep - 10]
     }
 }

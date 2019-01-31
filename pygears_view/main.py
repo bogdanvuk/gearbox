@@ -16,6 +16,7 @@ from pygears.conf import Inject, reg_inject, safe_bind, PluginBase, registry, bi
 from .pygears_proxy import PyGearsBridgeServer, sim_bridge
 from .saver import get_save_file_path
 from .node_model import find_cosim_modules
+from .timekeep import TimeKeep
 from pygears.sim.modules import SimVerilated
 
 
@@ -61,6 +62,8 @@ def main(pipe=None, layers=Inject('viewer/layers')):
 
     app = QtWidgets.QApplication(sys.argv)
     app.setFont(QtGui.QFont("DejaVu Sans Mono", 11))
+
+    timekeep = TimeKeep()
 
     main_window = MainWindow()
 

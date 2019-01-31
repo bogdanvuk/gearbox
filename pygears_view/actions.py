@@ -667,25 +667,9 @@ def node_search(
 @shortcut(None, Qt.Key_Colon)
 @reg_inject
 def time_search(
-        time=Interactive('Time: '), sim_bridge=Inject('viewer/sim_bridge')):
+        time=Interactive('Time: '), timekeep=Inject('viewer/timekeep')):
 
-    if time is None:
-        return
-
-    time = int(time)
-
-    @reg_inject
-    def break_on_timestep(cur_time=Inject('sim/timestep')):
-        if cur_time == time:
-            return True, False
-        else:
-            return False, True
-
-    sim_bridge.breakpoints.add(break_on_timestep)
-    if not sim_bridge.running:
-        sim_bridge.cont()
-
-    print(f"Finished: {time}")
+    timekeep.timestep = int(time)
 
 
 @inject_async

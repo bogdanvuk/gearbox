@@ -67,14 +67,12 @@ class Graph(QtWidgets.QGraphicsView):
     connection_changed = QtCore.Signal(list, list)
     selection_changed = QtCore.Signal(list)
     node_selected = QtCore.Signal(str)
-    sim_refresh = QtCore.Signal()
     resized = QtCore.Signal()
     node_expand_toggled = QtCore.Signal(bool, object)
 
     @reg_inject
     def __init__(self,
                  parent=None,
-                 sim_bridge=MayInject('viewer/sim_bridge'),
                  sim_proxy=MayInject('viewer/sim_proxy')):
         super().__init__(parent)
         self.setScene(NodeScene(self))
@@ -106,21 +104,11 @@ class Graph(QtWidgets.QGraphicsView):
         self.RMB_state = False
         self.MMB_state = False
 
-        if sim_bridge:
-            sim_bridge.sim_refresh.connect(self._sim_refresh_slot)
-            sim_bridge.after_run.connect(self._sim_refresh_slot)
-
     def __str__(self):
         return '{}.{}()'.format(self.__module__, self.__class__.__name__)
 
     def __repr__(self):
         return '{}.{}()'.format(self.__module__, self.__class__.__name__)
-
-    def _sim_refresh_slot(self):
-        pass
-        # self.sim_status.update()
-        # self.sim_refresh.emit()
-        # self.print_modeline()
 
     def _set_viewer_zoom(self, value):
         if value == 0.0:

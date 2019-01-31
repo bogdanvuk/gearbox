@@ -2,6 +2,7 @@ from PySide2 import QtWidgets
 from .stylesheet import STYLE_MODELINE
 from pygears.conf import registry, Inject, reg_inject, MayInject, inject_async
 from .html_utils import tabulate, fontify
+from .timekeep import timestep_event_register
 
 
 class Modeline(QtWidgets.QLabel):
@@ -10,27 +11,24 @@ class Modeline(QtWidgets.QLabel):
         super().__init__()
         self.window = window
         self.setStyleSheet(STYLE_MODELINE)
-        inject_async(self.sim_bridge_connect)
-
-    def sim_bridge_connect(self, sim_bridge=Inject('viewer/sim_bridge')):
-        sim_bridge.sim_refresh.connect(self.update)
+        timestep_event_register(self.update)
 
     @reg_inject
-    def remove(self, sim_bridge=Inject('viewer/sim_bridge')):
-        sim_bridge.sim_refresh.disconnect(self.update)
+    def remove(self, timekeep=Inject('viewer/timekeep')):
+        timekeep.timestep_changed.disconnect(self.update)
         self.setParent(None)
         self.deleteLater()
 
     def __del__(self):
         print("Deleting the modeline")
 
-    def update(self):
+    @reg_inject
+    def update(self, timestep=Inject('viewer/timestep')):
         if self.window.buff is not None:
             name = self.window.buff.name
         else:
             name = 'empty'
 
-        timestep = registry("sim/timestep")
         if timestep is None:
             timestep = '-'
 

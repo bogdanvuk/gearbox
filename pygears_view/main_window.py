@@ -134,6 +134,10 @@ class MainWindow(QtWidgets.QMainWindow):
             QtGui.QKeySequence(QtCore.Qt.CTRL + QtCore.Qt.Key_G),
             self).activated.connect(self._key_cancel_event)
 
+        QtWidgets.QShortcut(
+            QtGui.QKeySequence(QtCore.Qt.Key_Escape),
+            self).activated.connect(self._key_cancel_event)
+
     def resizeEvent(self, event):
         super().resizeEvent(event)
         self.resized.emit()

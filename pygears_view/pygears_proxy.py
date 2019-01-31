@@ -31,7 +31,7 @@ class PyGearsBridgeServer(SimExtend):
 
 
 def sim_bridge():
-    sim_bridge = PyGearsClient(refresh_interval=2000)
+    sim_bridge = PyGearsClient()
     safe_bind('viewer/sim_bridge', sim_bridge)
 
 
@@ -44,13 +44,10 @@ class PyGearsClient(QtCore.QObject):
     @reg_inject
     def __init__(self,
                  plugin=Inject('sim/pygears_view'),
-                 refresh_interval=1000,
                  parent=None):
         super().__init__(parent)
 
-        bind('viewer/refresh_interval', refresh_interval)
         self.plugin = plugin
-        self.refresh_interval = refresh_interval
         self.loop = QtCore.QEventLoop(self)
         self.breakpoints = set()
         self.running = False
@@ -84,8 +81,6 @@ class PyGearsClient(QtCore.QObject):
 
     def run(self):
 
-        refresh_counter = 0
-
         while True:
             self.thrd.eventDispatcher().processEvents(
                 QtCore.QEventLoop.AllEvents)
@@ -99,17 +94,11 @@ class PyGearsClient(QtCore.QObject):
             if msg == "after_timestep":
                 self.after_timestep.emit()
 
-                refresh_counter += 1
                 if self._should_break():
-                    refresh_counter = 0
                     self.running = False
                     self.sim_refresh.emit()
                     self.loop.exec_()
                     self.running = True
-
-                elif refresh_counter >= self.refresh_interval:
-                    self.sim_refresh.emit()
-                    refresh_counter = 0
 
                 self.plugin.queue.task_done()
 

@@ -1,8 +1,8 @@
 from PySide2 import QtCore
 import collections
 
+from .timekeep import timestep, timestep_event_register, max_timestep
 from pygears.sim.modules import SimVerilated
-from pygears.sim import timestep
 from .node_model import find_cosim_modules, PipeModel, NodeModel
 from pygears.core.hier_node import HierVisitorBase
 from pygears.conf import Inject, MayInject, bind, reg_inject, registry
@@ -123,14 +123,11 @@ class GraphItemCollector(HierVisitorBase):
 
 class GtkWave:
     @reg_inject
-    def __init__(self,
-                 graph=Inject('viewer/graph_model'),
-                 sim_bridge=MayInject('viewer/sim_bridge')):
+    def __init__(self, graph=Inject('viewer/graph_model')):
         super().__init__()
         self.graph = graph
 
-        if sim_bridge:
-            sim_bridge.sim_refresh.connect(self.update)
+        timestep_event_register(self.update)
 
         self.graph_intfs = []
         self.instances = []
@@ -188,9 +185,13 @@ class GtkWave:
 
         return item_intf.show_item(item)
 
-    def update(self):
+    @reg_inject
+    def update(self, timestep=Inject('viewer/timestep')):
+        if timestep is None:
+            timestep = 0
+
         for w in self.graph_intfs:
-            w.update()
+            w.update(timestep)
 
 
 class GtkWaveBuffer(Buffer):
@@ -381,7 +382,7 @@ class GtkWaveGraphIntf(QtCore.QObject):
         if ts is None:
             ts = 0
 
-        gtkwave_timestep = int(ret) // 10
+        gtkwave_timestep = (int(ret) // 10) - 1
         self.gtkwave_intf.response.disconnect(self.gtkwave_resp)
 
         if ts - gtkwave_timestep > 1000:
@@ -393,6 +394,9 @@ class GtkWaveGraphIntf(QtCore.QObject):
         self.update_pipes(
             p for p in self.item_collect.vcd_pipes if p.view.isVisible())
 
+        self.gtkwave_intf.command(
+            f'set_marker_if_needed {gtkwave_timestep*10}')
+
         if self.should_update:
             self.should_update = False
             self.gtkwave_intf.response.connect(self.gtkwave_resp)
@@ -402,6 +406,9 @@ class GtkWaveGraphIntf(QtCore.QObject):
 
     def update_pipes(self, pipes):
         ts = timestep()
+        if ts is None:
+            ts = 0
+
         signal_names = [(pipe, self.item_collect.vcd_pipes[pipe])
                         for pipe in pipes if pipe.status[0] != ts]
 
@@ -411,7 +418,8 @@ class GtkWaveGraphIntf(QtCore.QObject):
             cur_names = signal_names[cur_slice]
 
             ret = self.gtkwave_intf.command(
-                f'get_values [list {" ".join(s[1] for s in cur_names)}]')
+                f'get_values {(ts+1)*10} [list {" ".join(s[1] for s in cur_names)}]'
+            )
             rtl_status = ret.split('\n')
 
             # assert len(rtl_status) == (cur_slice.stop - cur_slice.start)
@@ -423,7 +431,7 @@ class GtkWaveGraphIntf(QtCore.QObject):
 
         NodeActivityVisitor().visit(registry('viewer/graph_model'))
 
-    def update(self):
+    def update(self, timestep):
         if not self.loaded:
             # ret = self.gtkwave_intf.command(
             #     f'gtkwave::loadFile {self.vcd_map.vcd_fn}')
@@ -437,7 +445,17 @@ class GtkWaveGraphIntf(QtCore.QObject):
             self.loaded = True
             self.vcd_loaded.emit()
 
-        if not self.updating:
+        mts = max_timestep()
+        if mts is None:
+            mts = 0
+
+        if timestep < mts:
+            self.update_pipes(
+                p for p in self.item_collect.vcd_pipes if p.view.isVisible())
+            self.gtkwave_intf.command(
+                f'set_marker_if_needed {(timestep+1)*10}')
+
+        elif not self.updating:
             self.should_update = False
             self.updating = True
             self.gtkwave_intf.response.connect(self.gtkwave_resp)
