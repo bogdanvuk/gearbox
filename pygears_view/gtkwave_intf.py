@@ -1,20 +1,59 @@
-import subprocess
-import pexpect
-import re
 import os
+import re
+import subprocess
+
+import pexpect
+from PySide2 import QtCore, QtGui, QtWidgets
 
 from pygears.conf import Inject, MayInject, bind, reg_inject
-from PySide2 import QtWidgets, QtGui, QtCore
+
+
+class GtkEventProc(QtCore.QObject):
+    key_press = QtCore.Signal(int, int, str)
+
+    def gtk_event(self, name, data):
+        getattr(self, name, lambda x: x)(data)
+
+    @reg_inject
+    def SetMarker(self, data, timekeep=Inject('viewer/timekeep')):
+        print(f'SetMarker: {data}')
+        timekeep.timestep = (int(data)//10 - 1)
+
+    def KeyPress(self, data):
+        native_modifiers, native_key = map(int, data.split(','))
+        modifiers = 0
+        text = ''
+        key = native_key
+
+        if key < 127:
+            text = chr(key)
+
+            if chr(key).islower():
+                key = ord(chr(key).upper())
+
+        key = native_key_map.get(key, key)
+
+        if native_modifiers & 0x4:
+            modifiers += QtCore.Qt.CTRL
+
+        if ((native_modifiers & 0x1) and (key > 127 or chr(key).isalpha())):
+            modifiers += QtCore.Qt.SHIFT
+
+        if native_modifiers & 0x8:
+            modifiers += QtCore.Qt.ALT
+
+        self.key_press.emit(key, modifiers, text)
 
 
 class GtkWaveProc(QtCore.QObject):
 
-    key_press = QtCore.Signal(int, int, str)
     window_up = QtCore.Signal(str, int, int)
     response = QtCore.Signal(str, int)
+    gtk_event = QtCore.Signal(str, str)
 
-    def __init__(self, trace_fn, parent=None):
-        super().__init__(parent)
+    def __init__(self, trace_fn):
+        super().__init__()
+
         self.gtkwave_thread = QtCore.QThread()
         self.trace_fn = trace_fn
         self.moveToThread(self.gtkwave_thread)
@@ -46,19 +85,65 @@ class GtkWaveProc(QtCore.QObject):
                             self.p.before).group(0)
         print(f"GtkWave {version} window")
 
-        # out = subprocess.check_output(
-        #     'xwininfo -name "GTKWave - [no file loaded]"', shell=True)
-        window_id = subprocess.check_output(
-            'xdotool getactivewindow', shell=True)
+        print(self.p.send('gtkwave::getGtkWindowID\n'))
+        self.p.expect('%')
+        window_id = self.p.before
 
         print(f'Window id: {window_id} -> {int(window_id)}')
-
-        # window_id = re.search(r"Window id: 0x([0-9a-fA-F]+)",
-        #                       out.decode()).group(1)
-
-        # self.window_up.emit(version, self.p.pid, int(window_id, 16))
         self.window_up.emit(version, self.p.pid, int(window_id))
 
+        # while (1):
+        #     self.gtkwave_thread.eventDispatcher().processEvents(
+        #         QtCore.QEventLoop.AllEvents)
+
+        #     # if self.cmd_id is not None:
+        #     #     continue
+
+        #     try:
+        #         data = ''
+        #         while True:
+        #             data += self.p.read_nonblocking(size=4096, timeout=0.01)
+        #     except pexpect.TIMEOUT:
+        #         pass
+
+        #     for d in data.strip().split('\n'):
+        #         # print(f'Unsollicited: {data}')
+        #         res = re.search(r"KeyPress:(\d+),(\d+)", d)
+
+        #         if not res:
+        #             continue
+
+        #         native_modifiers, native_key = int(res.group(1)), int(
+        #             res.group(2))
+
+        #         modifiers = 0
+        #         text = ''
+        #         key = native_key
+
+        #         if key < 127:
+        #             text = chr(key)
+
+        #             if chr(key).islower():
+        #                 key = ord(chr(key).upper())
+
+        #         key = native_key_map.get(key, key)
+
+        #         if native_modifiers & 0x4:
+        #             modifiers += QtCore.Qt.CTRL
+
+        #         if ((native_modifiers & 0x1)
+        #                 and (key > 127 or chr(key).isalpha())):
+        #             modifiers += QtCore.Qt.SHIFT
+
+        #         if native_modifiers & 0x8:
+        #             modifiers += QtCore.Qt.ALT
+
+        #         self.key_press.emit(key, modifiers, text)
+
+        #         self.gtkwave_thread.eventDispatcher().processEvents(
+        #             QtCore.QEventLoop.AllEvents)
+
+        # while (self.event_proc is not None):
         while (1):
             self.gtkwave_thread.eventDispatcher().processEvents(
                 QtCore.QEventLoop.AllEvents)
@@ -75,46 +160,19 @@ class GtkWaveProc(QtCore.QObject):
 
             for d in data.strip().split('\n'):
                 # print(f'Unsollicited: {data}')
-                res = re.search(r"KeyPress:(\d+),(\d+)", d)
+                res = re.search(r"^\$\$(\w+):(.*)$", d)
 
-                if not res:
-                    continue
-
-                native_modifiers, native_key = int(res.group(1)), int(
-                    res.group(2))
-
-                modifiers = 0
-                text = ''
-                key = native_key
-
-                if key < 127:
-                    text = chr(key)
-
-                    if chr(key).islower():
-                        key = ord(chr(key).upper())
-
-                key = native_key_map.get(key, key)
-
-                if native_modifiers & 0x4:
-                    modifiers += QtCore.Qt.CTRL
-
-                if ((native_modifiers & 0x1)
-                        and (key > 127 or chr(key).isalpha())):
-                    modifiers += QtCore.Qt.SHIFT
-
-                if native_modifiers & 0x8:
-                    modifiers += QtCore.Qt.ALT
-
-                self.key_press.emit(key, modifiers, text)
-
-                self.gtkwave_thread.eventDispatcher().processEvents(
-                    QtCore.QEventLoop.AllEvents)
+                if res:
+                    self.gtk_event.emit(res.group(1), res.group(2))
+                    print(res.group(1), res.group(2))
+                    self.gtkwave_thread.eventDispatcher().processEvents(
+                        QtCore.QEventLoop.AllEvents)
 
     def command(self, cmd, cmd_id):
         self.cmd_id = cmd_id
+        # print(f'GtkWave> {cmd}')
         self.p.send(cmd + '\n')
         try:
-            # print(f'GtkWave: {cmd}')
             self.p.expect('%')
         except pexpect.TIMEOUT:
             print("timeout")
@@ -123,10 +181,11 @@ class GtkWaveProc(QtCore.QObject):
 
         resp = '\n'.join([
             d for d in self.p.before.strip().split('\n')
-            if not d.startswith("KeyPress")
+            if not d.startswith("$$")
         ])
 
         # print(f'GtkWave: {self.p.before.strip()}')
+        # print(f'Response: {cmd_id}, {resp}')
         self.response.emit(resp, cmd_id)
         self.cmd_id = None
 
@@ -181,8 +240,12 @@ class GtkWaveWindow(QtCore.QObject):
 
     def __init__(self, trace_fn, parent=None):
         super().__init__(parent)
+        self.event_proc = GtkEventProc()
         self.proc = GtkWaveProc(trace_fn)
-        self.proc.key_press.connect(self.key_press)
+        # self.proc = GtkWaveProc(trace_fn, None)
+
+        self.proc.gtk_event.connect(self.event_proc.gtk_event)
+        self.event_proc.key_press.connect(self.key_press)
         self.proc.window_up.connect(self.window_up)
         self.send_command.connect(self.proc.command)
         self.response = self.proc.response
@@ -250,5 +313,8 @@ class GtkWaveWindow(QtCore.QObject):
         self.widget.setWindowFlag(QtCore.Qt.X11BypassWindowManagerHint)
         self.widget.setWindowFlag(QtCore.Qt.BypassGraphicsProxyWidget)
         self.widget.setWindowFlag(QtCore.Qt.BypassWindowManagerHint)
+
+        self.command(f'gtkwave::stripGUI')
+        self.command(f'gtkwave::setZoomFactor -7')
 
         self.initialized.emit()

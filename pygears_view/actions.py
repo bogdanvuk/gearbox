@@ -669,7 +669,12 @@ def node_search(
 def time_search(
         time=Interactive('Time: '), timekeep=Inject('viewer/timekeep')):
 
-    timekeep.timestep = int(time)
+    try:
+        time = int(time)
+    except TypeError:
+        return
+
+    timekeep.timestep = time
 
 
 @inject_async

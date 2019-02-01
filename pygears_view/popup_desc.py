@@ -67,10 +67,16 @@ class PopupDesc(QtWidgets.QTextEdit):
             buff = active_buffer()
 
         if self.buff is not None:
-            self.buff.view.resized.disconnect(self.reposition)
+            try:
+                self.buff.view.resized.disconnect(self.reposition)
+            except AttributeError:
+                pass
 
         self.buff = buff
-        self.buff.view.resized.connect(self.reposition)
+        try:
+            self.buff.view.resized.connect(self.reposition)
+        except AttributeError:
+            pass
 
         if timeout:
             self.timeout_timer.setInterval(timeout)

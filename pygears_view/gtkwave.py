@@ -84,7 +84,7 @@ class VerilatorVCDMap:
 def gtkwave():
     status = GtkWave()
     bind('viewer/gtkwave', status)
-    status.update()
+    # status.update()
 
 
 class Signals(NamedTuple):
@@ -252,6 +252,7 @@ class GtkWaveGraphIntf(QtCore.QObject):
         self.pipes_on_wave = {}
         self.should_update = False
         self.updating = False
+        gtkwave_intf.initialized.connect(self.update)
 
     def has_item_wave(self, item):
         if isinstance(item, PipeModel):
@@ -431,7 +432,8 @@ class GtkWaveGraphIntf(QtCore.QObject):
 
         NodeActivityVisitor().visit(registry('viewer/graph_model'))
 
-    def update(self, timestep):
+    @reg_inject
+    def update(self, timestep=Inject('viewer/timestep')):
         if not self.loaded:
             # ret = self.gtkwave_intf.command(
             #     f'gtkwave::loadFile {self.vcd_map.vcd_fn}')
@@ -439,8 +441,6 @@ class GtkWaveGraphIntf(QtCore.QObject):
             # if "File load failure" in ret:
             #     return False
 
-            self.gtkwave_intf.command(f'gtkwave::stripGUI')
-            self.gtkwave_intf.command(f'gtkwave::setZoomFactor -7')
             self.item_collect.visit(self.graph)
             self.loaded = True
             self.vcd_loaded.emit()
@@ -448,6 +448,9 @@ class GtkWaveGraphIntf(QtCore.QObject):
         mts = max_timestep()
         if mts is None:
             mts = 0
+
+        if timestep is None:
+            timestep = 0
 
         if timestep < mts:
             self.update_pipes(
