@@ -1,15 +1,14 @@
-from PySide2 import QtGui, QtCore, QtWidgets
-from .node_abstract import AbstractNodeItem
-from .port import PortItem
-
-from .pipe import Pipe
-from .constants import NODE_SEL_COLOR, NODE_SEL_BORDER_COLOR, Z_VAL_NODE
-
-from pygears.rtl.port import InPort
-from pygears.conf import reg_inject, Inject
-
 import pygraphviz as pgv
+from PySide2 import QtCore, QtGui, QtWidgets
+
+from pygears.conf import Inject, reg_inject
+from pygears.rtl.port import InPort
+
 from . import gv_utils
+from .constants import NODE_SEL_BORDER_COLOR, NODE_SEL_COLOR, Z_VAL_NODE
+from .node_abstract import AbstractNodeItem
+from .pipe import Pipe
+from .port import PortItem
 
 NODE_SIM_STATUS_COLOR = {
     'empty_hier': (48, 58, 69, 255),
@@ -88,6 +87,11 @@ def hier_layout(self):
             gvn.attr['width'] = 1 / 72
             gvn.attr['height'] = 1 / 72
 
+    if not self.layout_graph.subgraphs():
+        self.layout_graph.add_subgraph([self.layout_graph.get_node(f'i{i}') for i in range(len(self.inputs))], 'sources', rank='same')
+        self.layout_graph.add_subgraph([self.layout_graph.get_node(f'o{i}') for i in range(len(self.outputs))], 'sink', rank='same')
+
+
     # for i in range(len(self.inputs)):
     #     gvn = self.layout_graph.get_node(f'i{i}')
 
@@ -105,29 +109,33 @@ def hier_layout(self):
     #     self.layout_graph.draw('proba.dot')
 
     # self.layout_graph.draw(f'{self.model.name.replace("/", "_")}.png')
+    # self.layout_graph.draw(f'{self.model.name.replace("/", "_")}.dot')
 
     def gv_point_load(point):
         return tuple(float(num) for num in point.split(',')[-2:])
 
-    padding = 40
-    max_y = 0
-    max_x = 0
+    # if self.name:
+    #     import pdb; pdb.set_trace()
 
-    # if self.model.name == '/ref_model':
-    #     import pdb
-    #     pdb.set_trace()
+    padding_y = 40
+    padding_x = -5
 
+    bounding_box = None
+    # print(f"Layout for: {node.name}")
     for node in self._nodes:
         gvn = self.get_layout_node(node)
         pos = gv_point_load(gvn.attr['pos'])
-        node.set_pos(pos[0] - node.width / 2, pos[1] + node.height / 2)
-
-        # for i in range((self.outputs)):
-        #     self.layout_graph.add_edge(
-        #         gvn, self.layout_graph.get_node(f'o{i}'), style='invis')
-
-        max_y = max(max_y, (pos[1] + node.height / 2))
-        max_x = max(max_x, (pos[0] + node.width / 2))
+        node_bounding_box = QtCore.QRectF(pos[0] - node.width / 2,
+                                          pos[1] - node.height / 2, node.width,
+                                          node.height)
+        # print(
+        #     f'  bb: {node.name}: {pos[0], pos[1], float(gvn.attr["width"])*72, float(gvn.attr["height"])*72} -> {node_bounding_box}'
+        # )
+        node.set_pos(node_bounding_box.x(), node_bounding_box.y())
+        if bounding_box is None:
+            bounding_box = node_bounding_box
+        else:
+            bounding_box = bounding_box.united(node_bounding_box)
 
     if self.inputs:
         port_height = self.inputs[0].boundingRect().height()
@@ -135,8 +143,14 @@ def hier_layout(self):
         for i, p in enumerate(self.inputs):
             gvn = self.layout_graph.get_node(f'i{i}')
             pos = gv_point_load(gvn.attr['pos'])
-
-            p.setPos(-port_height / 2, pos[1] + port_height / 2)
+            node_bounding_box = QtCore.QRectF(pos[0] - port_height / 2,
+                                              pos[1] - port_height / 2 + 0.5,
+                                              port_height, port_height)
+            # print(
+            #     f'  bb: {p.name}: {pos[0], pos[1], float(gvn.attr["width"])*72, float(gvn.attr["height"])*72} -> {node_bounding_box}'
+            # )
+            p.setPos(node_bounding_box.x(), node_bounding_box.y())
+            bounding_box = bounding_box.united(node_bounding_box)
 
     if self.outputs:
         port_height = self.outputs[0].boundingRect().height()
@@ -144,15 +158,21 @@ def hier_layout(self):
         for i, p in enumerate(self.outputs):
             gvn = self.layout_graph.get_node(f'o{i}')
             pos = gv_point_load(gvn.attr['pos'])
-
-            p.setPos(pos[0] - port_height / 2, pos[1] + port_height / 2)
+            node_bounding_box = QtCore.QRectF(pos[0] - port_height / 2,
+                                              pos[1] - port_height / 2 + 0.5,
+                                              port_height, port_height)
+            # print(
+            #     f'  bb: {p.name}: {pos[0], pos[1], float(gvn.attr["width"])*72, float(gvn.attr["height"])*72} -> {node_bounding_box}'
+            # )
+            p.setPos(node_bounding_box.x(), node_bounding_box.y())
+            bounding_box = bounding_box.united(node_bounding_box)
 
     for pipe in self.pipes:
         gve = self.get_layout_edge(pipe)
         path = [gv_point_load(point) for point in gve.attr['pos'].split()]
         pipe.layout_path = [QtCore.QPointF(p[0], p[1]) for p in path]
 
-        max_y = max(max_y, *(p.y() for p in pipe.layout_path))
+        # max_y = max(max_y, *(p.y() for p in pipe.layout_path))
 
     self.layers = []
 
@@ -187,36 +207,31 @@ def hier_layout(self):
         else:
             self.layers.append(Layer(node))
 
-    for node in self._nodes:
-        node.setY(max_y - node.y() + padding)
-        find_layer(node)
+    # print(f"  Bounding box: {bounding_box}")
 
     self.layers = sorted(self.layers, key=lambda l: l.rect.left())
+    for node in self._nodes:
+        find_layer(node)
 
-    # print(self.layers)
+    for item in (self._nodes + self.inputs + self.outputs):
+        # node.setY(max_y - node.y() + padding)
+        item.setPos(
+            item.x() - bounding_box.x() + padding_x,
+            bounding_box.height() -
+            (item.y() - bounding_box.y() + item._height) + padding_y)
+        # print(f'  {item.name}: {item.pos()}')
 
     for p in self.inputs:
-        p.setY(max_y - p.y() + padding)
+        p.setX(padding_x)
 
     for p in self.outputs:
-        p.setY(max_y - p.y() + padding)
-        if p.x() <= max_x:
-            p.setX(max_x + padding)
+        p.setX(bounding_box.width() + padding_x)
 
     for pipe in self.pipes:
         for p in pipe.layout_path:
-            p.setY(max_y - p.y() + padding)
-
-    # for edge in self.layout_edges:
-    #     if not hasattr(edge, 'view'):
-    #         continue
-
-    #     pipe = edge.data
-
-    #     pipe.layout_path = [
-    #         QtCore.QPointF(p[1] - x_min + padding, p[0] - y_min + padding)
-    #         for p in reversed(edge.view._pts[1:-1])
-    #     ]
+            p.setX(p.x() - bounding_box.x() + padding_x)
+            p.setY(bounding_box.height() - (p.y() - bounding_box.y()) +
+                   padding_y)
 
     if self.parent is not None:
         self.size_expander(self)
@@ -277,7 +292,7 @@ def hier_expand(node, padding=40):
         node._height = height + padding * 2
     else:
         node._width = width
-        node._height = height + padding * 2
+        node._height = height + padding * 3 / 2
 
     node.post_init()
 
@@ -387,9 +402,6 @@ class NodeItem(AbstractNodeItem):
         self.model = model
         self.layout_graph = pgv.AGraph(
             directed=True, rankdir='LR', splines='true', strict=False)
-
-        self.layout_graph.add_node('source', label='')
-        self.layout_graph.add_node('sink', label='')
 
         self.layout_pipe_map = {}
 
@@ -527,28 +539,14 @@ class NodeItem(AbstractNodeItem):
         if isinstance(port, InPort):
             port_node_name = f'i{len(self._input_items)}'
             self.layout_graph.add_node(
-                port_node_name,
-                label='',
-                width=2 / 72,
-                height=2 / 72)
+                port_node_name, label='', width=1 / 72, height=1 / 72)
             self._input_items[port_item] = text
-            self.layout_graph.add_edge(
-                self.layout_graph.get_node('sink'),
-                self.layout_graph.get_node(port_node_name),
-                style='invis')
         else:
             port_node_name = f'o{len(self._output_items)}'
             self.layout_graph.add_node(
-                port_node_name,
-                label='',
-                width=2 / 72,
-                height=2 / 72)
+                port_node_name, label='', width=1 / 72, height=1 / 72)
 
             self._output_items[port_item] = text
-            self.layout_graph.add_edge(
-                self.layout_graph.get_node(port_node_name),
-                self.layout_graph.get_node('source'),
-                style='invis')
 
         return port_item
 
@@ -724,6 +722,10 @@ class NodeItem(AbstractNodeItem):
             txt_y = port.y() - (txt_height / 2)
             text.setPos(txt_x - 1.0, txt_y)
 
+        # print(f"Port arrangement for {self.name}")
+        # for p in (self.inputs + self.outputs):
+        #     print(f'    {p.name}: {p.pos()}')
+
     def offset_label(self, x=0.0, y=0.0):
         """
         offset the label in the node layout.
@@ -801,20 +803,7 @@ class NodeItem(AbstractNodeItem):
         node.update()
 
         self.layout_graph.add_node(id(node), shape='none', margin=0)
-
-        # if not node.inputs:
-        #     self.layout_graph.add_edge(
-        #         self.layout_graph.get_node('sink'),
-        #         self.layout_graph.get_node(id(node)),
-        #         style='invis')
-
         self._nodes.append(node)
-
-    # def connect(self, port1, port2):
-    #     node1 = port1.node
-    #     node2 = port2.node
-
-    #     pipe = Pipe(port1, port2, parent=self)
 
     def add_pipe(self, pipe):
         if self.parent is not None:
@@ -823,10 +812,6 @@ class NodeItem(AbstractNodeItem):
             self.graph.scene().addItem(pipe)
 
         self.pipes.append(pipe)
-
-        # if self.name == '':
-        #     import pdb
-        #     pdb.set_trace()
 
         node1 = pipe.output_port.parentItem()
         node2 = pipe.input_port.parentItem()
@@ -843,7 +828,6 @@ class NodeItem(AbstractNodeItem):
             self.layout_graph.add_edge(
                 id(node1),
                 id(node2),
-                # rank='none',
                 tailport=tailport,
                 headport=headport,
                 key=id(pipe))
@@ -852,14 +836,12 @@ class NodeItem(AbstractNodeItem):
             self.layout_graph.add_edge(
                 id(node1),
                 f'o{pipe.input_port.model.index}',
-                # rank='none',
                 tailport=tailport,
                 key=id(pipe))
         else:
             self.layout_graph.add_edge(
                 f'i{pipe.output_port.model.index}',
                 id(node2),
-                # rank='none',
                 headport=headport,
                 key=id(pipe))
 

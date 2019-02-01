@@ -38,12 +38,12 @@ def get_node_record(node):
     while True:
 
         try:
-            pin = input_ports[iin].y()
+            pin = input_ports[iin].y() + input_ports[iin]._height/2
         except IndexError:
             pin = None
 
         try:
-            pout = output_ports[iout].y()
+            pout = output_ports[iout].y() + output_ports[iin]._height/2
         except IndexError:
             pout = None
 
