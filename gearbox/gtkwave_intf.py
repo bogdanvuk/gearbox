@@ -314,7 +314,7 @@ class GtkWaveWindow(QtCore.QObject):
         self.widget.setWindowFlag(QtCore.Qt.BypassGraphicsProxyWidget)
         self.widget.setWindowFlag(QtCore.Qt.BypassWindowManagerHint)
 
-        self.command(f'gtkwave::stripGUI')
+        self.command(f'gtkwave::toggleStripGUI')
         self.command(f'gtkwave::setZoomFactor -7')
 
         self.initialized.emit()

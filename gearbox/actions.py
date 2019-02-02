@@ -195,6 +195,11 @@ def node_up(graph=Inject('viewer/graph')):
     graph.select(node)
 
 
+@shortcut('gtkwave', (Qt.Key_T, Qt.Key_M))
+def toggle_menu():
+    active_buffer().instance.command('gtkwave::toggleStripGUI')
+
+
 @shortcut('gtkwave', Qt.Key_J)
 def trace_down():
     active_buffer().instance.command('trace_down')

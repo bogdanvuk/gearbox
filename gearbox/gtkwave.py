@@ -383,6 +383,9 @@ class GtkWaveGraphIntf(QtCore.QObject):
         if ts is None:
             ts = 0
 
+        # print('----------------------------------------')
+        # print(ret)
+        # ret = ret.split('\n')[-1]
         gtkwave_timestep = (int(ret) // 10) - 1
         self.gtkwave_intf.response.disconnect(self.gtkwave_resp)
 
@@ -419,7 +422,7 @@ class GtkWaveGraphIntf(QtCore.QObject):
             cur_names = signal_names[cur_slice]
 
             ret = self.gtkwave_intf.command(
-                f'get_values {(ts+1)*10} [list {" ".join(s[1] for s in cur_names)}]'
+                f'get_values {ts*10} [list {" ".join(s[1] for s in cur_names)}]'
             )
             rtl_status = ret.split('\n')
 
@@ -456,7 +459,7 @@ class GtkWaveGraphIntf(QtCore.QObject):
             self.update_pipes(
                 p for p in self.item_collect.vcd_pipes if p.view.isVisible())
             self.gtkwave_intf.command(
-                f'set_marker_if_needed {(timestep+1)*10}')
+                f'set_marker_if_needed {timestep*10}')
 
         elif not self.updating:
             self.should_update = False
