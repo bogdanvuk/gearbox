@@ -6,12 +6,12 @@ import threading
 
 from PySide2 import QtGui, QtWidgets
 
-from pygears_view.main_window import MainWindow
-from pygears_view.graph import graph
-from pygears_view.which_key import which_key
-from pygears_view.gtkwave import gtkwave
-from pygears_view.sniper import sniper
-from pygears_view.description import description
+from gearbox.main_window import MainWindow
+from gearbox.graph import graph
+from gearbox.which_key import which_key
+from gearbox.gtkwave import gtkwave
+from gearbox.sniper import sniper
+from gearbox.description import description
 from pygears.conf import Inject, reg_inject, safe_bind, PluginBase, registry, bind, MayInject
 from .pygears_proxy import PyGearsBridgeServer, sim_bridge
 from .saver import get_save_file_path
@@ -24,7 +24,7 @@ class PyGearsView(PyGearsBridgeServer):
     def __init__(self, top=None, live=False, reload=True):
         super().__init__(top)
 
-        bind('sim/pygears_view', self)
+        bind('sim/gearbox', self)
 
         self.live = live
         self.pipe = None
@@ -77,7 +77,7 @@ def main(pipe=None, layers=Inject('viewer/layers')):
 @reg_inject
 def reloader(
         outdir=MayInject('sim/artifact_dir'),
-        plugin=Inject('sim/pygears_view')):
+        plugin=Inject('sim/gearbox')):
     if plugin.reload:
         try:
             runpy.run_path(get_save_file_path())

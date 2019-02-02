@@ -7,8 +7,8 @@ from .layout import Window
 
 save_file_prolog = """
 from pygears.conf import Inject, reg_inject, MayInject, inject_async
-from pygears_view.utils import trigger
-from pygears_view.layout import Window, WindowLayout
+from gearbox.utils import trigger
+from gearbox.layout import Window, WindowLayout
 from PySide2 import QtWidgets
 from functools import partial
 """
@@ -162,4 +162,4 @@ def save():
 
 @reg_inject
 def get_save_file_path(outdir=MayInject('sim/artifact_dir')):
-    return os.path.abspath(os.path.join(outdir, 'pygears_view_save.py'))
+    return os.path.abspath(os.path.join(outdir, 'gearbox_save.py'))

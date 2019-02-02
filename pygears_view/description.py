@@ -125,7 +125,7 @@ def description(main=Inject('viewer/main')):
     bind('viewer/description', viewer)
 
     # describe_file(
-    #     '/tools/home/pygears_view/pygears_view/html_utils.py', lineno=15)
+    #     '/tools/home/gearbox/gearbox/html_utils.py', lineno=15)
 
 
 class Description(QtWidgets.QTextEdit):

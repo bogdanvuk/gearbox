@@ -43,7 +43,7 @@ class PyGearsClient(QtCore.QObject):
 
     @reg_inject
     def __init__(self,
-                 plugin=Inject('sim/pygears_view'),
+                 plugin=Inject('sim/gearbox'),
                  parent=None):
         super().__init__(parent)
 

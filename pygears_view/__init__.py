@@ -1,5 +1,5 @@
-from pygears_view.main import main, PyGearsView
-import pygears_view.graph
-import pygears_view.actions
+from gearbox.main import main, PyGearsView
+import gearbox.graph
+import gearbox.actions
 
 __all__ = ['main']

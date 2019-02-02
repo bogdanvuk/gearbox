@@ -1,4 +1,4 @@
-from pygears_view import main
+from gearbox import main
 from pygears.cookbook.rng import rng
 from pygears.common import shred
 
@@ -51,16 +51,67 @@ from pygears.cookbook.verif import verif
 from pygears.sim import sim
 from pygears.sim.modules.drv import drv
 
-from pygears_view import PyGearsView
+from gearbox import PyGearsView
 from pygears.sim.extens.vcd import VCD
 from pygears import bind
 
-seq = [(2, 1 << 16, 2)]
+from pygears.typing_common.pprint import pprint
+
+# pprint.pprint(Tuple[Uint[8], Uint[8]], width=30)
+
+# pprint.pprint(
+#     Tuple[{
+#         'test1': Tuple[{
+#             'test1': Tuple[Uint[1], Uint[2]],
+#             'test2': Uint[8]
+#         }],
+#         'test2': Uint[8]
+#     }],
+#     indent=4,
+#     width=22,
+#     compact=True)
+
+# pprint.pprint({
+#     'test1': {
+#         'test1': Uint[8],
+#         'test2': Uint[8]
+#     },
+#     'test2': Uint[8]
+# },
+#               indent=4,
+#               width=20,
+#               compact=True)
+
+# pprint.pprint({
+#     'test1': {
+#         'test1': Uint[8],
+#         'test2': Uint[8]
+#     },
+#     'test2': Uint[8]
+# },
+#               width=10)
+
+seq = [(2, 1 << 22, 2)]
 verif(
-    drv(t=Tuple[Uint[20], Uint[20], Uint[2]], seq=seq),
+    drv(t=Tuple[Uint[32], Uint[32], Uint[2]], seq=seq),
     f=rng(sim_cls=SimVerilated),
     ref=rng(name='ref_model'))
 
+# from pygears.cookbook.verif import directed
+# from pygears.common.rom import rom
+
+# data = list(range(2000))
+# addr = list(range(2000))
+
+# directed(
+#     drv(t=Uint[16], seq=addr),
+#     f=rom(sim_cls=SimVerilated, data=data, dtype=Uint[16]),
+#     ref=data)
+
+import os
+os.system("cd /tools/gtkwave/_install/gtkwave-gtk3-3.3.98/src; make install")
+
+# bind('svgen/debug_intfs', ['/rng/cfg'])
 bind('svgen/debug_intfs', ['*'])
 # sim(outdir='build', extens=[VCD])
 sim(outdir='build',
