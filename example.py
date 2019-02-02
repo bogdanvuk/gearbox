@@ -51,7 +51,7 @@ from pygears.cookbook.verif import verif
 from pygears.sim import sim
 from pygears.sim.modules.drv import drv
 
-from gearbox import PyGearsView
+from gearbox import Gearbox
 from pygears.sim.extens.vcd import VCD
 from pygears import bind
 
@@ -116,4 +116,4 @@ bind('svgen/debug_intfs', ['*'])
 # sim(outdir='build', extens=[VCD])
 sim(outdir='build',
     check_activity=True,
-    extens=[partial(PyGearsView, live=True, reload=True)])
+    extens=[partial(Gearbox, live=True, reload=True)])

@@ -20,7 +20,7 @@ from .timekeep import TimeKeep
 from pygears.sim.modules import SimVerilated
 
 
-class PyGearsView(PyGearsBridgeServer):
+class Gearbox(PyGearsBridgeServer):
     def __init__(self, top=None, live=False, reload=True):
         super().__init__(top)
 

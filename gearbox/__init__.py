@@ -1,4 +1,4 @@
-from gearbox.main import main, PyGearsView
+from gearbox.main import main, Gearbox
 import gearbox.graph
 import gearbox.actions
 
