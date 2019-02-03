@@ -22,6 +22,74 @@ def active_intf():
     active_buffer()
 
 
+class PyGearsVCDMap:
+    def __init__(
+            self,
+            vcd,
+            gtkwave_intf,
+    ):
+        self.gtkwave_intf = gtkwave_intf
+        self.vcd = vcd
+        self.item_signals = {}
+        self.pipe_to_port_map = {}
+
+    @property
+    @reg_inject
+    def subgraph(self, graph=Inject('viewer/graph_model')):
+        return graph
+
+    @property
+    def name(self):
+        return "Main"
+
+    @property
+    def vcd_fn(self):
+        return self.vcd.trace_fn
+
+    def pipe_data_signal_stem(self, item):
+        return self.item_name_stem(item) + '.data'
+
+    def pipe_handshake_signals(self, item):
+        return (self.item_name_stem(item) + '.valid',
+                self.item_name_stem(item) + '.ready')
+
+    def item_basename(self, item):
+        item_name_stem = item.name[1:]
+        return item_name_stem.replace('/', '.')
+
+    def item_name_stem(self, item):
+        port = self.pipe_to_port_map[item]
+        return self.item_basename(port)
+
+    def get_signals_for_item(self, item):
+        if item not in self.item_signals:
+            if not hasattr(self, 'signal_list'):
+                self.signal_list = [
+                    s.strip() for s in self.gtkwave_intf.command(
+                        'list_signals').split('\n')
+                ]
+
+            if isinstance(item, NodeModel):
+                self.item_signals[item] = []
+            elif isinstance(item, PipeModel):
+                producer_port = item.rtl.producer
+                self.item_signals[item] = []
+                try:
+                    while (not self.item_signals[item] and producer_port):
+                        self.pipe_to_port_map[item] = producer_port
+                        match = self.item_basename(producer_port) + '.*'
+                        self.item_signals[item] = fnmatch.filter(
+                            self.signal_list, match)
+
+                        # Try to find next producer port in chain
+                        producer_port = producer_port.producer.producer
+
+                except AttributeError:
+                    pass
+
+        return self.item_signals[item]
+
+
 class VerilatorVCDMap:
     @reg_inject
     def __init__(self,
@@ -34,6 +102,25 @@ class VerilatorVCDMap:
         self.path_prefix = '.'.join(['TOP', sim_module.wrap_name])
         self.item_signals = {}
         self.signal_name_map = {}
+
+    @property
+    @reg_inject
+    def subgraph(self, graph=Inject('viewer/graph_model')):
+        return graph[self.sim_module.gear.name[1:]]
+
+    def pipe_data_signal_stem(self, item):
+        return self.item_name_stem(item) + '_data'
+
+    def pipe_handshake_signals(self, item):
+        return (self.item_name_stem(item) + '_valid',
+                self.item_name_stem(item) + '_ready')
+
+    def item_basename(self, item):
+        item_name_stem = item.name[1:]
+        return item_name_stem.replace('/', '.')
+
+    def item_name_stem(self, item):
+        return '.'.join((self.path_prefix, self.item_basename(item)))
 
     @property
     def name(self):
@@ -100,20 +187,7 @@ class GraphItemCollector(HierVisitorBase):
 
     def PipeModel(self, pipe):
         if pipe not in self.vcd_pipes:
-            try:
-                all_sigs = self.vcd_map.get_signals_for_item(pipe)
-                # print(f'PipeModel: {pipe} ({rtl_intf.name}) -> {all_sigs}')
-
-                stem = ''
-                for s in all_sigs:
-                    if s.endswith('_valid'):
-                        stem = s[:-6]
-                        break
-
-                if stem:
-                    self.vcd_pipes[pipe] = stem
-            except:
-                pass
+            self.vcd_pipes[pipe] = self.vcd_map.get_signals_for_item(pipe)
 
     def NodeModel(self, node):
         if not node.rtl.is_hierarchical:
@@ -121,11 +195,18 @@ class GraphItemCollector(HierVisitorBase):
                 self.vcd_nodes[node] = self.vcd_map.get_signals_for_item(node)
 
 
+class PyGearsGraphItemCollector(GraphItemCollector):
+    def NodeModel(self, node):
+        if ('sim_cls' in node.rtl.params
+                and node.rtl.params['sim_cls'] is not None):
+            return True
+        else:
+            super().NodeModel(node)
+
+
 class GtkWave:
-    @reg_inject
-    def __init__(self, graph=Inject('viewer/graph_model')):
+    def __init__(self):
         super().__init__()
-        self.graph = graph
 
         timestep_event_register(self.update)
 
@@ -133,25 +214,36 @@ class GtkWave:
         self.instances = []
         self.buffers = []
 
+        try:
+            self.create_gtkwave_instance(
+                registry('VCD'), PyGearsVCDMap, PyGearsGraphItemCollector)
+        except KeyError:
+            pass
+
         for m in find_cosim_modules():
             if not isinstance(m, SimVerilated):
                 continue
 
-            if hasattr(m, 'shmid'):
-                trace_fn = m.shmid
-            else:
-                trace_fn = m.trace_fn
+            self.create_gtkwave_instance(m, VerilatorVCDMap,
+                                         GraphItemCollector)
 
-            instance = GtkWaveWindow(trace_fn)
-            vcd_map = VerilatorVCDMap(m, instance)
-            intf = GtkWaveGraphIntf(
-                vcd_map, instance, graph=graph[m.gear.name[1:]])
+    def create_gtkwave_instance(self, vcd_trace_obj, vcd_map_cls,
+                                graph_item_collector_cls):
+        if hasattr(vcd_trace_obj, 'shmid'):
+            trace_fn = vcd_trace_obj.shmid
+        else:
+            trace_fn = vcd_trace_obj.trace_fn
 
-            buffer = GtkWaveBuffer(intf, instance, f'gtkwave - {vcd_map.name}')
+        instance = GtkWaveWindow(trace_fn)
+        vcd_map = vcd_map_cls(vcd_trace_obj, instance)
+        intf = GtkWaveGraphIntf(vcd_map, instance,
+                                graph_item_collector_cls(vcd_map))
 
-            self.graph_intfs.append(intf)
-            self.instances.append(instance)
-            self.buffers.append(buffer)
+        buffer = GtkWaveBuffer(intf, instance, f'gtkwave - {vcd_map.name}')
+
+        self.graph_intfs.append(intf)
+        self.instances.append(instance)
+        self.buffers.append(buffer)
 
     def item_gtkwave_intf(self, item):
         for intf in self.graph_intfs:
@@ -238,17 +330,13 @@ class NodeActivityVisitor(HierVisitorBase):
 class GtkWaveGraphIntf(QtCore.QObject):
     vcd_loaded = QtCore.Signal()
 
-    @reg_inject
-    def __init__(self,
-                 vcd_map,
-                 gtkwave_intf,
-                 graph=Inject('viewer/graph_model')):
+    def __init__(self, vcd_map, gtkwave_intf, graph_item_collector):
         super().__init__()
-        self.graph = graph
         self.vcd_map = vcd_map
+        self.graph = vcd_map.subgraph
         self.gtkwave_intf = gtkwave_intf
         self.loaded = False
-        self.item_collect = GraphItemCollector(vcd_map)
+        self.item_collect = graph_item_collector
         self.pipes_on_wave = {}
         self.should_update = False
         self.updating = False
@@ -284,13 +372,10 @@ class GtkWaveGraphIntf(QtCore.QObject):
         struct_sigs = collections.defaultdict(dict)
         sig_names = []
 
-        prefix = (
-            self.vcd_map.path_prefix + '.' + self.vcd_map.item_basename(pipe))
-
         intf_name = pipe.name.replace('.', '/')
         status_sig = intf_name + '_state'
-        valid_sig = prefix + '_valid'
-        ready_sig = prefix + '_ready'
+        valid_sig, ready_sig = self.vcd_map.pipe_handshake_signals(pipe)
+        data_sig_stem = self.vcd_map.pipe_data_signal_stem(pipe)
 
         self.pipes_on_wave[pipe] = intf_name
 
@@ -311,9 +396,10 @@ class GtkWaveGraphIntf(QtCore.QObject):
         commands.append(f'gtkwave::installTransFilter 1')
 
         for s in self.vcd_map.get_signals_for_item(pipe):
-            stem = s[len(prefix):]
-            if stem.startswith('_data'):
+            if s.startswith(data_sig_stem):
                 sig_names.append(s)
+
+                stem = s[len(data_sig_stem) - 4:]
                 sig_name_no_width = stem.partition('[')[0]
 
                 path = sig_name_no_width.split('.')
@@ -347,7 +433,7 @@ class GtkWaveGraphIntf(QtCore.QObject):
 
         struct_sigs = dict(struct_sigs)
 
-        groups = list(dfs(intf_name, struct_sigs['_data']))
+        groups = list(dfs(intf_name, struct_sigs['data']))
         for name, selected in reversed(groups):
             commands.append('gtkwave::highlightSignalsFromList {' +
                             " ".join(selected) + '}')
@@ -379,41 +465,52 @@ class GtkWaveGraphIntf(QtCore.QObject):
         if cmd_id != self.cmd_id:
             return
 
-        ts = timestep()
-        if ts is None:
-            ts = 0
+        if self.gtkwave_intf.shmidcat:
+            ts = timestep()
+            if ts is None:
+                ts = 0
 
-        # print('----------------------------------------')
-        # print(ret)
-        # ret = ret.split('\n')[-1]
-        gtkwave_timestep = (int(ret) // 10) - 1
-        self.gtkwave_intf.response.disconnect(self.gtkwave_resp)
+            status, _, ret = ret.rpartition('\n')
+            # print(status)
+            self.timestep = (int(ret) // 10) - 1
+            self.gtkwave_intf.response.disconnect(self.gtkwave_resp)
 
-        if ts - gtkwave_timestep > 1000:
-            self.should_update = False
-            self.gtkwave_intf.response.connect(self.gtkwave_resp)
-            self.gtkwave_intf.command_nb(f'gtkwave::nop', self.cmd_id)
-            return
+            # print(f"Updated: {ts} <-> {self.timestep}")
+            if ts - self.timestep > 1000:
+                self.should_update = False
+                self.gtkwave_intf.response.connect(self.gtkwave_resp)
+                self.gtkwave_intf.command_nb(f'gtkwave::nop', self.cmd_id)
+                # print("Again")
+                return
 
         self.update_pipes(
             p for p in self.item_collect.vcd_pipes if p.view.isVisible())
 
-        self.gtkwave_intf.command(
-            f'set_marker_if_needed {gtkwave_timestep*10}')
+        if self.gtkwave_intf.shmidcat:
+            self.gtkwave_intf.command(
+                f'set_marker_if_needed {self.timestep*10}')
 
         if self.should_update:
             self.should_update = False
             self.gtkwave_intf.response.connect(self.gtkwave_resp)
-            self.gtkwave_intf.command_nb(f'gtkwave::nop', self.cmd_id)
+            # print(f'Updating immediatelly')
+            if self.gtkwave_intf.shmidcat:
+                self.gtkwave_intf.command_nb(f'gtkwave::nop', self.cmd_id)
+            else:
+                self.gtkwave_intf.command_nb(f'gtkwave::reLoadFile',
+                                             self.cmd_id)
+
         else:
             self.updating = False
+
+        # print(f'Exiting')
 
     def update_pipes(self, pipes):
         ts = timestep()
         if ts is None:
             ts = 0
 
-        signal_names = [(pipe, self.item_collect.vcd_pipes[pipe])
+        signal_names = [(pipe, self.vcd_map.pipe_data_signal_stem(pipe)[:-4])
                         for pipe in pipes if pipe.status[0] != ts]
 
         for i in range(0, len(signal_names), 20):
@@ -444,27 +541,32 @@ class GtkWaveGraphIntf(QtCore.QObject):
             # if "File load failure" in ret:
             #     return False
 
+            self.timestep = 0
             self.item_collect.visit(self.graph)
             self.loaded = True
             self.vcd_loaded.emit()
 
-        mts = max_timestep()
-        if mts is None:
-            mts = 0
+        # mts = max_timestep()
+        # if mts is None:
+        #     mts = 0
 
         if timestep is None:
             timestep = 0
 
-        if timestep < mts:
+        # print(f"Updating pipes {timestep} <-> {self.timestep}: {self.cmd_id}")
+
+        if timestep < self.timestep:
             self.update_pipes(
                 p for p in self.item_collect.vcd_pipes if p.view.isVisible())
-            self.gtkwave_intf.command(
-                f'set_marker_if_needed {timestep*10}')
-
+            self.gtkwave_intf.command(f'set_marker_if_needed {timestep*10}')
         elif not self.updating:
             self.should_update = False
             self.updating = True
             self.gtkwave_intf.response.connect(self.gtkwave_resp)
-            self.gtkwave_intf.command_nb(f'gtkwave::nop', self.cmd_id)
+            if self.gtkwave_intf.shmidcat:
+                self.gtkwave_intf.command_nb(f'gtkwave::nop', self.cmd_id)
+            else:
+                self.gtkwave_intf.command_nb(f'gtkwave::reLoadFile',
+                                             self.cmd_id)
         else:
             self.should_update = True

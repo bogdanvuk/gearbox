@@ -61,11 +61,19 @@ def main(pipe=None, layers=Inject('viewer/layers')):
         safe_bind('viewer/sim_bridge_pipe', pipe)
 
     app = QtWidgets.QApplication(sys.argv)
+
+    app.setWindowIcon(QtGui.QIcon('gearbox.png'))
     app.setFont(QtGui.QFont("DejaVu Sans Mono", 11))
 
     timekeep = TimeKeep()
 
     main_window = MainWindow()
+
+    import os
+    import __main__
+    main_window.setWindowIcon(
+        QtGui.QIcon(os.path.join(os.path.dirname(__file__), 'gearbox.png')))
+    main_window.setWindowTitle(f'Gearbox - {os.path.abspath(__main__.__file__)}')
 
     for l in layers:
         l()
@@ -76,8 +84,7 @@ def main(pipe=None, layers=Inject('viewer/layers')):
 
 @reg_inject
 def reloader(
-        outdir=MayInject('sim/artifact_dir'),
-        plugin=Inject('sim/gearbox')):
+        outdir=MayInject('sim/artifact_dir'), plugin=Inject('sim/gearbox')):
     if plugin.reload:
         try:
             runpy.run_path(get_save_file_path())

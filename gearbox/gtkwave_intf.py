@@ -17,7 +17,7 @@ class GtkEventProc(QtCore.QObject):
     @reg_inject
     def SetMarker(self, data, timekeep=Inject('viewer/timekeep')):
         print(f'SetMarker: {data}')
-        timekeep.timestep = (int(data)//10 - 1)
+        timekeep.timestep = (int(data) // 10 - 1)
 
     def KeyPress(self, data):
         native_modifiers, native_key = map(int, data.split(','))
@@ -59,6 +59,7 @@ class GtkWaveProc(QtCore.QObject):
         self.moveToThread(self.gtkwave_thread)
         self.exiting = False
         self.cmd_id = None
+        self.shmidcat = (os.path.splitext(self.trace_fn)[-1] != '.vcd')
         self.gtkwave_thread.started.connect(self.run)
         self.gtkwave_thread.finished.connect(self.quit)
         self.gtkwave_thread.start()
@@ -70,15 +71,21 @@ class GtkWaveProc(QtCore.QObject):
         #     stdout=subprocess.PIPE)
 
         # vcd_shr_obj = self.shmid_proc.stdout.readline().decode().strip()
-        print(f'Shared mem addr: {self.trace_fn}')
 
         local_dir = os.path.abspath(os.path.dirname(__file__))
         script_fn = os.path.join(local_dir, "gtkwave.tcl")
         gtkwaverc_fn = os.path.join(local_dir, "gtkwaverc")
 
-        print(f'gtkwave -W -I -T {script_fn} {self.trace_fn}')
-        self.p = pexpect.spawnu(
-            f'gtkwave -W -I -r {gtkwaverc_fn} -T {script_fn} {self.trace_fn}')
+        if self.shmidcat:
+            print(f'Shared mem addr: {self.trace_fn}')
+            cmd = f'gtkwave -W -I -r {gtkwaverc_fn} -T {script_fn} {self.trace_fn}'
+
+        else:
+            print(f'VCD file: {self.trace_fn}')
+            cmd = f'gtkwave -W -r {gtkwaverc_fn} -T {script_fn} {self.trace_fn}'
+
+        print(cmd)
+        self.p = pexpect.spawnu(cmd)
         self.p.setecho(False)
         self.p.expect('%')
         version = re.search(r"GTKWave Analyzer v(\d{1}\.\d{1}.\d{2})",
@@ -92,59 +99,8 @@ class GtkWaveProc(QtCore.QObject):
         print(f'Window id: {window_id} -> {int(window_id)}')
         self.window_up.emit(version, self.p.pid, int(window_id))
 
-        # while (1):
-        #     self.gtkwave_thread.eventDispatcher().processEvents(
-        #         QtCore.QEventLoop.AllEvents)
-
-        #     # if self.cmd_id is not None:
-        #     #     continue
-
-        #     try:
-        #         data = ''
-        #         while True:
-        #             data += self.p.read_nonblocking(size=4096, timeout=0.01)
-        #     except pexpect.TIMEOUT:
-        #         pass
-
-        #     for d in data.strip().split('\n'):
-        #         # print(f'Unsollicited: {data}')
-        #         res = re.search(r"KeyPress:(\d+),(\d+)", d)
-
-        #         if not res:
-        #             continue
-
-        #         native_modifiers, native_key = int(res.group(1)), int(
-        #             res.group(2))
-
-        #         modifiers = 0
-        #         text = ''
-        #         key = native_key
-
-        #         if key < 127:
-        #             text = chr(key)
-
-        #             if chr(key).islower():
-        #                 key = ord(chr(key).upper())
-
-        #         key = native_key_map.get(key, key)
-
-        #         if native_modifiers & 0x4:
-        #             modifiers += QtCore.Qt.CTRL
-
-        #         if ((native_modifiers & 0x1)
-        #                 and (key > 127 or chr(key).isalpha())):
-        #             modifiers += QtCore.Qt.SHIFT
-
-        #         if native_modifiers & 0x8:
-        #             modifiers += QtCore.Qt.ALT
-
-        #         self.key_press.emit(key, modifiers, text)
-
-        #         self.gtkwave_thread.eventDispatcher().processEvents(
-        #             QtCore.QEventLoop.AllEvents)
-
         # while (self.event_proc is not None):
-        while (1):
+        while(1):
             self.gtkwave_thread.eventDispatcher().processEvents(
                 QtCore.QEventLoop.AllEvents)
 
@@ -164,13 +120,12 @@ class GtkWaveProc(QtCore.QObject):
 
                 if res:
                     self.gtk_event.emit(res.group(1), res.group(2))
-                    print(res.group(1), res.group(2))
                     self.gtkwave_thread.eventDispatcher().processEvents(
                         QtCore.QEventLoop.AllEvents)
 
     def command(self, cmd, cmd_id):
         self.cmd_id = cmd_id
-        # print(f'GtkWave> {cmd}')
+        # print(f'GtkWave> {cmd_id}, {cmd}')
         self.p.send(cmd + '\n')
         try:
             self.p.expect('%')
@@ -253,8 +208,8 @@ class GtkWaveWindow(QtCore.QObject):
         QtWidgets.QApplication.instance().aboutToQuit.connect(self.proc.quit)
 
     @property
-    def domain(self):
-        return 'gtkwave'
+    def shmidcat(self):
+        return self.proc.shmidcat
 
     def command_nb(self, cmd, cmd_id=0):
         self.send_command.emit(cmd, cmd_id)

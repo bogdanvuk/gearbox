@@ -1,3 +1,4 @@
 accel "/Help/WAVE Help" (null)
 accel "/File/Read Sim Logfile" (null)
 hide_sst on
+splash_disable on

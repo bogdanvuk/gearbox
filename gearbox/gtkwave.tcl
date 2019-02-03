@@ -169,8 +169,8 @@ proc trace_down {} {
 proc get_values {timestep signals} {
     foreach s $signals {
         if { [catch {
-            set valid_val [gtkwave::signalValueAt ${s}_valid $timestep]
-            set ready_val [gtkwave::signalValueAt ${s}_ready $timestep]
+            set valid_val [gtkwave::signalValueAt ${s}valid $timestep]
+            set ready_val [gtkwave::signalValueAt ${s}ready $timestep]
             puts [format "%s %s" $valid_val $ready_val]
         } err ]} {
             puts "0 0"
