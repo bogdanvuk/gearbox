@@ -438,6 +438,16 @@ def quit():
 register_prefix(None, Qt.Key_W, 'window')
 
 
+@shortcut(None, (Qt.Key_W, Qt.Key_D))
+@reg_inject
+def window_delete(layout=Inject('viewer/layout')):
+    if layout.current_layout.win_num > 1:
+        window = layout.active_window()
+        window.remove()
+
+        next(layout.current_layout.windows()).activate()
+
+
 @shortcut(None, (Qt.Key_W, Qt.Key_Slash))
 @reg_inject
 def split_horizontally(layout=Inject('viewer/layout')):

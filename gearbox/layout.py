@@ -170,7 +170,7 @@ def child_iter(layout):
 
 
 class WindowLayout(QtWidgets.QBoxLayout):
-    def __init__(self, parent, size, position, direction=None):
+    def __init__(self, parent, size, direction=None):
         if direction is None:
             direction = QtWidgets.QBoxLayout.LeftToRight
 
@@ -181,10 +181,11 @@ class WindowLayout(QtWidgets.QBoxLayout):
         self.setMargin(0)
         self.setContentsMargins(0, 0, 0, 0)
 
-        for i in range(size):
-            self.addLayout(Window())
+        if size:
+            for i in range(size):
+                self.addLayout(Window())
 
-        self.equalize_stretch()
+            self.equalize_stretch()
 
     @property
     def current(self):
@@ -223,7 +224,7 @@ class WindowLayout(QtWidgets.QBoxLayout):
     def win_num(self):
         win_cnt = 0
         for i in range(self.count()):
-            win_cnt += self.child(i).win_num()
+            win_cnt += self.child(i).win_num
         return win_cnt
 
     def child_position(self, child):
@@ -272,6 +273,20 @@ class WindowLayout(QtWidgets.QBoxLayout):
         if (self.direction() == QtWidgets.QBoxLayout.LeftToRight):
             pos = self.child_index(child)
             return self.insert_child(pos + 1)
+        else:
+            stretches = [self.stretch(i) for i in range(self.count())]
+            pos = self.child_index(child)
+            child_layout = WindowLayout(
+                self, size=0, direction=QtWidgets.QBoxLayout.LeftToRight)
+            self.insertLayout(pos, child_layout)
+            self.removeItem(child)
+            child_layout.addLayout(child)
+            child_layout.insert_child(0)
+
+            for i, s in enumerate(stretches):
+                self.setStretch(i, s)
+
+            return child_layout.child(0)
 
     def split_vertically(self, child):
         if (self.direction() !=
@@ -281,6 +296,20 @@ class WindowLayout(QtWidgets.QBoxLayout):
         if (self.direction() == QtWidgets.QBoxLayout.TopToBottom):
             pos = self.child_index(child)
             return self.insert_child(pos + 1)
+        else:
+            stretches = [self.stretch(i) for i in range(self.count())]
+            pos = self.child_index(child)
+            child_layout = WindowLayout(
+                self, size=0, direction=QtWidgets.QBoxLayout.TopToBottom)
+            self.insertLayout(pos, child_layout)
+            self.removeItem(child)
+            child_layout.addLayout(child)
+            child_layout.insert_child(0)
+
+            for i, s in enumerate(stretches):
+                self.setStretch(i, s)
+
+            return child_layout.child(0)
 
     def get_window(self, position):
         return self.child(position[0]).get_window(position[1:])
@@ -298,7 +327,7 @@ class BufferStack(QtWidgets.QStackedLayout):
         safe_bind('viewer/layout', self)
 
         # layout = WindowLayout(size=1)
-        self.current_layout = WindowLayout(self, 1, position=tuple())
+        self.current_layout = WindowLayout(self, 1)
         self.current_layout_widget.setLayout(self.current_layout)
         self.addWidget(self.current_layout_widget)
 
