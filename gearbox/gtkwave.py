@@ -116,7 +116,7 @@ class VerilatorVCDMap:
                 self.item_name_stem(item) + '_ready')
 
     def item_basename(self, item):
-        item_name_stem = item.name[1:]
+        item_name_stem = item.name[len(self.rtl_node.parent.name) + 1:]
         return item_name_stem.replace('/', '.')
 
     def item_name_stem(self, item):
@@ -129,10 +129,6 @@ class VerilatorVCDMap:
     @property
     def vcd_fn(self):
         return self.sim_module.trace_fn
-
-    def item_basename(self, item):
-        item_name_stem = item.name[len(self.rtl_node.parent.name) + 1:]
-        return item_name_stem.replace('/', '.')
 
     def make_relative_signal_name_map(self, path_prefix, signal_list):
         signal_name_map = {}

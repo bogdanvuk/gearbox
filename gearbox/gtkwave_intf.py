@@ -1,16 +1,13 @@
 import os
 import re
-import subprocess
 
 import pexpect
 from PySide2 import QtCore, QtGui, QtWidgets
 
-from pygears.conf import Inject, MayInject, bind, reg_inject
+from pygears.conf import Inject, reg_inject
 
 
 class GtkEventProc(QtCore.QObject):
-    key_press = QtCore.Signal(int, int, str)
-
     def gtk_event(self, name, data):
         getattr(self, name, lambda x: x)(data)
 
@@ -19,7 +16,7 @@ class GtkEventProc(QtCore.QObject):
         print(f'SetMarker: {data}')
         timekeep.timestep = (int(data) // 10 - 1)
 
-    def KeyPress(self, data):
+    def detect_key(self, data):
         native_modifiers, native_key = map(int, data.split(','))
         modifiers = 0
         text = ''
@@ -42,7 +39,30 @@ class GtkEventProc(QtCore.QObject):
         if native_modifiers & 0x8:
             modifiers += QtCore.Qt.ALT
 
-        self.key_press.emit(key, modifiers, text)
+        return (key, modifiers, text)
+
+    def KeyPress(self, data):
+
+        app = QtWidgets.QApplication.instance()
+
+        key = self.detect_key(data)
+
+        app.postEvent(app.focusWidget(),
+                      QtGui.QKeyEvent(QtGui.QKeyEvent.ShortcutOverride, *key))
+
+        app.processEvents(QtCore.QEventLoop.AllEvents)
+
+        app.postEvent(app.focusWidget(),
+                      QtGui.QKeyEvent(QtGui.QKeyEvent.KeyPress, *key))
+
+    def KeyRelease(self, data):
+
+        app = QtWidgets.QApplication.instance()
+
+        key = self.detect_key(data)
+
+        app.postEvent(app.focusWidget(),
+                      QtGui.QKeyEvent(QtGui.QKeyEvent.KeyRelease, *key))
 
 
 class GtkWaveProc(QtCore.QObject):
@@ -100,7 +120,7 @@ class GtkWaveProc(QtCore.QObject):
         self.window_up.emit(version, self.p.pid, int(window_id))
 
         # while (self.event_proc is not None):
-        while(1):
+        while (1):
             self.gtkwave_thread.eventDispatcher().processEvents(
                 QtCore.QEventLoop.AllEvents)
 
@@ -200,7 +220,6 @@ class GtkWaveWindow(QtCore.QObject):
         # self.proc = GtkWaveProc(trace_fn, None)
 
         self.proc.gtk_event.connect(self.event_proc.gtk_event)
-        self.event_proc.key_press.connect(self.key_press)
         self.proc.window_up.connect(self.window_up)
         self.send_command.connect(self.proc.command)
         self.response = self.proc.response
@@ -227,36 +246,6 @@ class GtkWaveWindow(QtCore.QObject):
 
         resp = cmd_block.command(cmd, self)
         return resp
-
-    @reg_inject
-    # def key_press(self, key, modifiers, graph=Inject('viewer/graph')):
-    def key_press(self, key, modifiers, text, main=Inject('viewer/main')):
-        app = QtWidgets.QApplication.instance()
-        # app.postEvent(
-        #     graph, QtGui.QKeyEvent(QtGui.QKeyEvent.KeyPress, key, modifiers))
-        # print(f'key: {(key, modifiers, text)} -> {app.focusWidget()}')
-        app.postEvent(
-            app.focusWidget(),
-            QtGui.QKeyEvent(QtGui.QKeyEvent.ShortcutOverride, key, modifiers,
-                            text))
-
-        # print(f'key: {(key, modifiers, text)} -> {app.focusWidget()}')
-        app.processEvents(QtCore.QEventLoop.AllEvents)
-
-        app.postEvent(
-            app.focusWidget(),
-            QtGui.QKeyEvent(QtGui.QKeyEvent.KeyPress, key, modifiers, text))
-
-        app.processEvents(QtCore.QEventLoop.AllEvents)
-
-        # app.postEvent(
-        #     graph, QtGui.QKeyEvent(QtGui.QKeyEvent.KeyRelease, key, modifiers))
-        app.postEvent(
-            # main.centralWidget(),
-            app.focusWidget(),
-            QtGui.QKeyEvent(QtGui.QKeyEvent.KeyRelease, key, modifiers, text))
-
-        app.processEvents(QtCore.QEventLoop.AllEvents)
 
     @reg_inject
     def window_up(self, version, pid, window_id, graph=Inject('viewer/graph')):
