@@ -220,8 +220,9 @@ class GtkWave:
             if not isinstance(m, SimVerilated):
                 continue
 
-            self.create_gtkwave_instance(m, VerilatorVCDMap,
-                                         GraphItemCollector)
+            if m.trace_fn is not None:
+                self.create_gtkwave_instance(m, VerilatorVCDMap,
+                                             GraphItemCollector)
 
     def create_gtkwave_instance(self, vcd_trace_obj, vcd_map_cls,
                                 graph_item_collector_cls):
@@ -333,7 +334,7 @@ class GtkWaveGraphIntf(QtCore.QObject):
         self.gtkwave_intf = gtkwave_intf
         self.loaded = False
         self.item_collect = graph_item_collector
-        self.pipes_on_wave = {}
+        self.items_on_wave = {}
         self.should_update = False
         self.updating = False
         gtkwave_intf.initialized.connect(self.update)
@@ -345,6 +346,7 @@ class GtkWaveGraphIntf(QtCore.QObject):
             return item in self.item_collect.vcd_nodes
 
     def show_item(self, item):
+
         if isinstance(item, PipeModel):
             return self.show_pipe(item)
         elif isinstance(item, NodeModel):
@@ -361,6 +363,8 @@ class GtkWaveGraphIntf(QtCore.QObject):
 
         self.gtkwave_intf.command(commands)
 
+        self.items_on_wave[node] = node.name
+
         return node.name
 
     def show_pipe(self, pipe):
@@ -372,8 +376,7 @@ class GtkWaveGraphIntf(QtCore.QObject):
         status_sig = intf_name + '_state'
         valid_sig, ready_sig = self.vcd_map.pipe_handshake_signals(pipe)
         data_sig_stem = self.vcd_map.pipe_data_signal_stem(pipe)
-
-        self.pipes_on_wave[pipe] = intf_name
+        self.items_on_wave[pipe] = intf_name
 
         commands = []
 

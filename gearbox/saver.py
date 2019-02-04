@@ -48,8 +48,8 @@ def load_after_vcd_loaded(
         return
 
 {% for intf in intfs %}
-{% for pipe in intf.pipes_on_wave %}
-    gtkwave.show_item(graph_model["{{pipe.name}}"])
+{% for item in intf.items_on_wave %}
+    gtkwave.show_item(graph_model["{{item.name}}"])
 {% endfor %}
 {% endfor %}
 

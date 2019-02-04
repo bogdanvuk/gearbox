@@ -14,7 +14,7 @@ class GtkEventProc(QtCore.QObject):
     @reg_inject
     def SetMarker(self, data, timekeep=Inject('viewer/timekeep')):
         print(f'SetMarker: {data}')
-        timekeep.timestep = (int(data) // 10 - 1)
+        timekeep.timestep = (int(data) // 10)
 
     def detect_key(self, data):
         native_modifiers, native_key = map(int, data.split(','))

@@ -705,7 +705,7 @@ class GraphGtkwaveSelectSync(QtCore.QObject):
             else:
                 continue
 
-            wave_intf = gtkwave_intf.pipes_on_wave.get(s.model, None)
+            wave_intf = gtkwave_intf.items_on_wave.get(s.model, None)
             if wave_intf:
                 selected_wave_pipes[gtkwave_intf].append(wave_intf)
 
