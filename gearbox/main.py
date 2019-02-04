@@ -12,6 +12,7 @@ from gearbox.which_key import which_key
 from gearbox.gtkwave import gtkwave
 from gearbox.sniper import sniper
 from gearbox.description import description
+from pygears.sim.extens.vcd import SimVCDPlugin
 from pygears.conf import Inject, reg_inject, safe_bind, PluginBase, registry, bind, MayInject
 from .pygears_proxy import PyGearsBridgeServer, sim_bridge
 from .saver import get_save_file_path
@@ -21,7 +22,7 @@ from pygears.sim.modules import SimVerilated
 
 
 class Gearbox(PyGearsBridgeServer):
-    def __init__(self, top=None, live=False, reload=True):
+    def __init__(self, top=None, live=True, reload=True):
         super().__init__(top)
 
         bind('sim/gearbox', self)
@@ -92,8 +93,10 @@ def reloader(
             print(f'Loading save file failed: {e}')
 
 
-class SimPlugin(PluginBase):
+class SimPlugin(SimVCDPlugin):
     @classmethod
     def bind(cls):
         safe_bind('viewer/layers',
                   [which_key, graph, gtkwave, sniper, description, reloader])
+        safe_bind('sim/extens/vcd/shmidcat', True)
+        safe_bind('sim/extens/vcd/vcd_fifo', True)
