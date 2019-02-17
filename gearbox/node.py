@@ -393,7 +393,7 @@ class NodeItem(AbstractNodeItem):
                  layout,
                  parent=None,
                  model=None,
-                 graph=Inject('viewer/graph')):
+                 graph=Inject('gearbox/graph')):
         super().__init__(name)
 
         self._layout = layout

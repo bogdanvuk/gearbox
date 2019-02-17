@@ -51,7 +51,7 @@ from pygears.cookbook.verif import verif
 from pygears.sim import sim
 from pygears.sim.modules.drv import drv
 
-from gearbox import Gearbox
+# from gearbox import Gearbox
 from pygears.sim.extens.vcd import VCD
 from pygears import bind
 
@@ -91,10 +91,12 @@ from pygears.typing_common.pprint import pprint
 # },
 #               width=10)
 
-seq = [(2, 1 << 22, 2)]
+bind('svgen/debug_intfs', ['*'])
+seq = [(2, 1 << 14, 2)]
 verif(
     drv(t=Tuple[Uint[32], Uint[32], Uint[2]], seq=seq),
     f=rng(sim_cls=SimVerilated),
+    # f=rng(),
     ref=rng(name='ref_model'))
 
 # from pygears.cookbook.verif import directed
@@ -108,12 +110,20 @@ verif(
 #     f=rom(sim_cls=SimVerilated, data=data, dtype=Uint[16]),
 #     ref=data)
 
-import os
-os.system("cd /tools/gtkwave/_install/gtkwave-gtk3-3.3.98/src; make install")
+# import os
+# os.system("cd /tools/gtkwave/_install/gtkwave-gtk3-3.3.98/src; make install")
 
-# bind('svgen/debug_intfs', ['/rng/cfg'])
-bind('svgen/debug_intfs', ['*'])
-# sim(outdir='build', extens=[VCD])
-sim(outdir='build',
-    check_activity=True,
-    extens=[partial(Gearbox, live=True, reload=True)])
+# from pygears.sim.extens.sim_timing import SimTiming
+# # bind('svgen/debug_intfs', ['/rng/cfg'])
+# bind('svgen/debug_intfs', ['*'])
+# # sim(outdir='build', extens=[VCD])
+# sim(outdir='build',
+#     check_activity=False,
+#     extens=[
+#         # partial(VCD, shmidcat=True, vcd_fifo=True),
+#         # partial(VCD),
+#         VCD,
+#         # Gearbox
+#         # SimTiming,
+#         # partial(VCD, shmidcat=False),
+#     ])

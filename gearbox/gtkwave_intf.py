@@ -12,7 +12,7 @@ class GtkEventProc(QtCore.QObject):
         getattr(self, name, lambda x: x)(data)
 
     @reg_inject
-    def SetMarker(self, data, timekeep=Inject('viewer/timekeep')):
+    def SetMarker(self, data, timekeep=Inject('gearbox/timekeep')):
         print(f'SetMarker: {data}')
         timekeep.timestep = (int(data) // 10)
 
@@ -248,7 +248,7 @@ class GtkWaveWindow(QtCore.QObject):
         return resp
 
     @reg_inject
-    def window_up(self, version, pid, window_id, graph=Inject('viewer/graph')):
+    def window_up(self, version, pid, window_id, graph=Inject('gearbox/graph')):
         print(f'GtkWave started: {version}, {pid}, {window_id}')
         self.window_id = window_id
         self.gtkwave_win = QtGui.QWindow.fromWinId(window_id)

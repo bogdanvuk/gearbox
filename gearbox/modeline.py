@@ -14,7 +14,7 @@ class Modeline(QtWidgets.QLabel):
         timestep_event_register(self.update)
 
     @reg_inject
-    def remove(self, timekeep=Inject('viewer/timekeep')):
+    def remove(self, timekeep=Inject('gearbox/timekeep')):
         timekeep.timestep_changed.disconnect(self.update)
         self.setParent(None)
         self.deleteLater()
@@ -23,7 +23,7 @@ class Modeline(QtWidgets.QLabel):
         print("Deleting the modeline")
 
     @reg_inject
-    def update(self, timestep=Inject('viewer/timestep')):
+    def update(self, timestep=Inject('gearbox/timestep')):
         if self.window.buff is not None:
             name = self.window.buff.name
         else:

@@ -35,7 +35,7 @@ class PyGearsVCDMap:
 
     @property
     @reg_inject
-    def subgraph(self, graph=Inject('viewer/graph_model')):
+    def subgraph(self, graph=Inject('gearbox/graph_model')):
         return graph
 
     @property
@@ -105,7 +105,7 @@ class VerilatorVCDMap:
 
     @property
     @reg_inject
-    def subgraph(self, graph=Inject('viewer/graph_model')):
+    def subgraph(self, graph=Inject('gearbox/graph_model')):
         return graph[self.sim_module.gear.name[1:]]
 
     def pipe_data_signal_stem(self, item):
@@ -164,10 +164,13 @@ class VerilatorVCDMap:
         return [self.signal_name_map[s] for s in signals]
 
 
-def gtkwave():
-    status = GtkWave()
-    bind('viewer/gtkwave', status)
-    # status.update()
+@reg_inject
+def gtkwave(sim_bridge=Inject('gearbox/sim_bridge')):
+    sim_bridge.sim_started.connect(gtkwave_create)
+
+
+def gtkwave_create():
+    bind('gearbox/gtkwave', GtkWave())
 
 
 class Signals(NamedTuple):
@@ -275,7 +278,7 @@ class GtkWave:
         return item_intf.show_item(item)
 
     @reg_inject
-    def update(self, timestep=Inject('viewer/timestep')):
+    def update(self, timestep=Inject('gearbox/timestep')):
         if timestep is None:
             timestep = 0
 
@@ -292,7 +295,7 @@ class GtkWaveBuffer(Buffer):
         self.window = None
 
     @reg_inject
-    def load(self, main=Inject('viewer/main')):
+    def load(self, main=Inject('gearbox/main')):
         main.add_buffer(self)
         # main.add_buffer(self.name, self.window.widget)
 
@@ -529,10 +532,10 @@ class GtkWaveGraphIntf(QtCore.QObject):
             for wave_status, (pipe, _) in zip(rtl_status, cur_names):
                 self.update_rtl_intf(pipe, wave_status.strip())
 
-        NodeActivityVisitor().visit(registry('viewer/graph_model'))
+        NodeActivityVisitor().visit(registry('gearbox/graph_model'))
 
     @reg_inject
-    def update(self, timestep=Inject('viewer/timestep')):
+    def update(self, timestep=Inject('gearbox/timestep')):
         if not self.loaded:
             # ret = self.gtkwave_intf.command(
             #     f'gtkwave::loadFile {self.vcd_map.vcd_fn}')

@@ -5,17 +5,17 @@ from pygears.conf import reg_inject, Inject, inject_async, bind
 
 
 @reg_inject
-def timestep(timekeep=Inject('viewer/timekeep')):
+def timestep(timekeep=Inject('gearbox/timekeep')):
     return timekeep.timestep
 
 
 @reg_inject
-def max_timestep(timekeep=Inject('viewer/timekeep')):
+def max_timestep(timekeep=Inject('gearbox/timekeep')):
     return timekeep.max_timestep
 
 
 @reg_inject
-def timetep_event_register_connect(slot, timekeep=Inject('viewer/timekeep')):
+def timetep_event_register_connect(slot, timekeep=Inject('gearbox/timekeep')):
     timekeep.timestep_changed.connect(slot)
 
 
@@ -31,11 +31,11 @@ class TimeKeep(QtCore.QObject):
         self._timestep = sim_timestep()
         self._time_target = None
         self._cont_refresh_step = cont_refresh_step
-        bind('viewer/timekeep', self)
-        bind('viewer/timestep', self.max_timestep)
+        bind('gearbox/timekeep', self)
+        bind('gearbox/timestep', self.max_timestep)
         inject_async(self.sim_bridge_connect)
 
-    def sim_bridge_connect(self, sim_bridge=Inject('viewer/sim_bridge')):
+    def sim_bridge_connect(self, sim_bridge=Inject('gearbox/sim_bridge')):
         sim_bridge.sim_refresh.connect(self.sim_break)
 
     def sim_break(self):
@@ -59,7 +59,7 @@ class TimeKeep(QtCore.QObject):
 
     @timestep.setter
     @reg_inject
-    def timestep(self, val, sim_bridge=Inject('viewer/sim_bridge')):
+    def timestep(self, val, sim_bridge=Inject('gearbox/sim_bridge')):
         if (self.max_timestep is None) or (val > self.max_timestep):
             self._time_target = val
             sim_bridge.breakpoints.add(self.break_on_timestep)
@@ -68,7 +68,7 @@ class TimeKeep(QtCore.QObject):
         else:
             if val != self._timestep:
                 self._timestep = val
-                bind('viewer/timestep', self._timestep)
+                bind('gearbox/timestep', self._timestep)
                 self.timestep_changed.emit(self._timestep)
 
     @property

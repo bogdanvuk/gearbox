@@ -16,7 +16,7 @@ from functools import partial
 expand_func_template = """
 
 @reg_inject
-def expand(graph_model=Inject('viewer/graph_model'), graph=Inject('viewer/graph')):
+def expand(graph_model=Inject('gearbox/graph_model'), graph=Inject('gearbox/graph')):
   {% if expanded %}
     {% for name in expanded %}
     graph_model['{{name}}'].view.expand()
@@ -41,8 +41,8 @@ gtkwave_load_func_template = """
 
 @reg_inject
 def load_after_vcd_loaded(
-        graph_model=Inject('viewer/graph_model'),
-        gtkwave=Inject('viewer/gtkwave')):
+        graph_model=Inject('gearbox/graph_model'),
+        gtkwave=Inject('gearbox/gtkwave')):
 
     if any(not intf.loaded for intf in gtkwave.graph_intfs):
         return
@@ -55,7 +55,7 @@ def load_after_vcd_loaded(
 
 
 @inject_async
-def gtkwave_load(gtkwave=Inject('viewer/gtkwave')):
+def gtkwave_load(gtkwave=Inject('gearbox/gtkwave')):
     for i, intf in enumerate(gtkwave.graph_intfs):
         if intf.loaded:
             load_after_vcd_loaded()
@@ -67,7 +67,7 @@ def gtkwave_load(gtkwave=Inject('viewer/gtkwave')):
 layout_load_func_tempalte = """
 
 @inject_async
-def layout_load(layout=Inject('viewer/layout')):
+def layout_load(layout=Inject('gearbox/layout')):
     win = layout.current_layout
     win.setDirection({{top_direction}})
     win.child(0).remove()
@@ -93,7 +93,7 @@ class GraphStatusSaver(HierYielderBase):
 
 @reg_inject
 def save_expanded(
-        root=Inject('viewer/graph_model'), graph=Inject('viewer/graph')):
+        root=Inject('gearbox/graph_model'), graph=Inject('gearbox/graph')):
     expanded = list(GraphStatusSaver().visit(root))
 
     selected = graph.selected_items()
@@ -109,7 +109,7 @@ def save_expanded(
 
 
 @reg_inject
-def save_gtkwave(gtkwave=Inject('viewer/gtkwave')):
+def save_gtkwave(gtkwave=Inject('gearbox/gtkwave')):
     return load_str_template(gtkwave_load_func_template).render({
         'intfs':
         gtkwave.graph_intfs
@@ -138,7 +138,7 @@ for i, s in enumerate({streches}):
 
 
 @reg_inject
-def save_layout(layout=Inject('viewer/layout')):
+def save_layout(layout=Inject('gearbox/layout')):
     return load_str_template(layout_load_func_tempalte).render({
         'commands':
         save_win_layout('win', layout.current_layout),

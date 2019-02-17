@@ -27,7 +27,7 @@ class MinibufferWaiter(QtCore.QEventLoop):
     def wait(self,
              message=None,
              completer=None,
-             minibuffer=Inject('viewer/minibuffer')):
+             minibuffer=Inject('gearbox/minibuffer')):
         minibuffer.complete(message, completer)
         minibuffer.completed.connect(self.completed)
         self.exec_()
@@ -62,9 +62,9 @@ def shortcut(domain, shortcut):
                 }
                 func(**kwds)
 
-            registry('viewer/shortcuts').append((domain, shortcut, arg_func))
+            registry('gearbox/shortcuts').append((domain, shortcut, arg_func))
         else:
-            registry('viewer/shortcuts').append((domain, shortcut, func))
+            registry('gearbox/shortcuts').append((domain, shortcut, func))
 
     return wrapper
 
@@ -72,7 +72,7 @@ def shortcut(domain, shortcut):
 def single_select_action(func):
     @wraps(func)
     @reg_inject
-    def wrapper(graph=Inject('viewer/graph')):
+    def wrapper(graph=Inject('gearbox/graph')):
         items = graph.selected_items()
         if len(items) == 1:
             func(items[0], graph)
@@ -159,19 +159,19 @@ register_prefix('graph', Qt.Key_Z, 'zoom')
 
 @shortcut('graph', (Qt.Key_Z, Qt.Key_Z))
 @reg_inject
-def zoom_selected(graph=Inject('viewer/graph')):
+def zoom_selected(graph=Inject('gearbox/graph')):
     graph.zoom_to_nodes(graph.selected_nodes())
 
 
 @shortcut('graph', (Qt.Key_Z, Qt.Key_A))
 @reg_inject
-def zoom_all(graph=Inject('viewer/graph')):
+def zoom_all(graph=Inject('gearbox/graph')):
     graph.fit_all()
 
 
 @shortcut('graph', Qt.Key_K)
 @reg_inject
-def node_up(graph=Inject('viewer/graph')):
+def node_up(graph=Inject('gearbox/graph')):
     nodes = graph.selected_nodes()
     if len(nodes) > 1:
         return
@@ -217,7 +217,7 @@ def trace_toggle():
 
 @shortcut('graph', Qt.Key_J)
 @reg_inject
-def node_down(graph=Inject('viewer/graph')):
+def node_down(graph=Inject('gearbox/graph')):
     nodes = graph.selected_nodes()
     if len(nodes) > 1:
         return
@@ -243,7 +243,7 @@ def node_down(graph=Inject('viewer/graph')):
 
 @shortcut(None, Qt.CTRL + Qt.Key_H)
 @reg_inject
-def toggle_help(which_key=Inject('viewer/which_key')):
+def toggle_help(which_key=Inject('gearbox/which_key')):
     if which_key.isVisible():
         which_key.hide()
     else:
@@ -252,7 +252,7 @@ def toggle_help(which_key=Inject('viewer/which_key')):
 
 class BufferCompleter(QtWidgets.QCompleter):
     @reg_inject
-    def __init__(self, layout=Inject('viewer/layout')):
+    def __init__(self, layout=Inject('gearbox/layout')):
         super().__init__()
 
         self.layout = layout
@@ -275,7 +275,7 @@ register_prefix(None, Qt.Key_B, 'buffers')
 @reg_inject
 def select_buffer(
         buff=Interactive('buffer: ', BufferCompleter),
-        layout=Inject('viewer/layout')):
+        layout=Inject('gearbox/layout')):
 
     if buff is not None:
         layout.current_window.place_buffer(buff)
@@ -310,19 +310,19 @@ def describe_inst(node, graph):
 
 @shortcut('description', Qt.Key_J)
 @reg_inject
-def line_down(desc=Inject('viewer/description')):
+def line_down(desc=Inject('gearbox/description')):
     desc.moveCursor(QtGui.QTextCursor.Down)
 
 
 @shortcut('description', Qt.Key_K)
 @reg_inject
-def line_up(desc=Inject('viewer/description')):
+def line_up(desc=Inject('gearbox/description')):
     desc.moveCursor(QtGui.QTextCursor.Up)
 
 
 @shortcut('description', Qt.Key_N)
 @reg_inject
-def trace_next(desc=Inject('viewer/description')):
+def trace_next(desc=Inject('gearbox/description')):
     if desc.trace is not None:
         if desc.trace_pos > 0:
             desc.set_trace_pos(desc.trace_pos - 1)
@@ -330,7 +330,7 @@ def trace_next(desc=Inject('viewer/description')):
 
 @shortcut('description', Qt.Key_P)
 @reg_inject
-def trace_prev(desc=Inject('viewer/description')):
+def trace_prev(desc=Inject('gearbox/description')):
     if desc.trace is not None:
         if desc.trace_pos < len(desc.trace) - 1:
             desc.set_trace_pos(desc.trace_pos + 1)
@@ -338,7 +338,7 @@ def trace_prev(desc=Inject('viewer/description')):
 
 @shortcut('description', Qt.Key_E)
 @reg_inject
-def open_external(desc=Inject('viewer/description')):
+def open_external(desc=Inject('gearbox/description')):
     if desc.fn is not None:
         lineno = desc.lineno
         if isinstance(lineno, slice):
@@ -399,7 +399,7 @@ def toggle_expand(node, graph):
 
 @shortcut(None, Qt.Key_S)
 @reg_inject
-def step_simulator(sim_bridge=Inject('viewer/sim_bridge')):
+def step_simulator(sim_bridge=Inject('gearbox/sim_bridge')):
     sim_bridge.breakpoints.add(lambda: (True, False))
     if not sim_bridge.running:
         sim_bridge.cont()
@@ -407,7 +407,7 @@ def step_simulator(sim_bridge=Inject('viewer/sim_bridge')):
 
 @shortcut('graph', Qt.Key_C)
 @reg_inject
-def cont_simulator(sim_bridge=Inject('viewer/sim_bridge')):
+def cont_simulator(sim_bridge=Inject('gearbox/sim_bridge')):
     sim_bridge.cont()
 
 
@@ -440,7 +440,7 @@ register_prefix(None, Qt.Key_W, 'window')
 
 @shortcut(None, (Qt.Key_W, Qt.Key_D))
 @reg_inject
-def window_delete(layout=Inject('viewer/layout')):
+def window_delete(layout=Inject('gearbox/layout')):
     if layout.current_layout.win_num > 1:
         window = layout.active_window()
         window.remove()
@@ -450,7 +450,7 @@ def window_delete(layout=Inject('viewer/layout')):
 
 @shortcut(None, (Qt.Key_W, Qt.Key_Slash))
 @reg_inject
-def split_horizontally(layout=Inject('viewer/layout')):
+def split_horizontally(layout=Inject('gearbox/layout')):
     window = layout.active_window()
     new_window = window.split_horizontally()
 
@@ -462,7 +462,7 @@ def split_horizontally(layout=Inject('viewer/layout')):
 
 @shortcut(None, (Qt.Key_W, Qt.Key_Underscore))
 @reg_inject
-def split_vertically(layout=Inject('viewer/layout')):
+def split_vertically(layout=Inject('gearbox/layout')):
     window = layout.active_window()
     new_window = window.split_vertically()
     for b in layout.buffers:
@@ -491,19 +491,19 @@ def change_perc_size(window, diff):
 
 @shortcut(None, (Qt.Key_W, Qt.Key_Plus))
 @reg_inject
-def increase_height(layout=Inject('viewer/layout')):
+def increase_height(layout=Inject('gearbox/layout')):
     change_perc_size(layout.active_window(), +3)
 
 
 @shortcut(None, (Qt.Key_W, Qt.Key_Minus))
 @reg_inject
-def decrease_height(layout=Inject('viewer/layout')):
+def decrease_height(layout=Inject('gearbox/layout')):
     change_perc_size(layout.active_window(), -3)
 
 
 @shortcut(None, (Qt.Key_W, Qt.Key_J))
 @reg_inject
-def window_down(main=Inject('viewer/main')):
+def window_down(main=Inject('gearbox/main')):
     def go_topmost_down(window):
         if isinstance(window, Window):
             return window
@@ -527,7 +527,7 @@ def window_down(main=Inject('viewer/main')):
 
 @shortcut(None, (Qt.Key_W, Qt.Key_K))
 @reg_inject
-def window_up(main=Inject('viewer/main')):
+def window_up(main=Inject('gearbox/main')):
     def go_bottommost_down(window):
         if isinstance(window, Window):
             return window
@@ -552,7 +552,7 @@ def window_up(main=Inject('viewer/main')):
 
 @shortcut(None, (Qt.Key_W, Qt.Key_L))
 @reg_inject
-def window_right(main=Inject('viewer/main')):
+def window_right(main=Inject('gearbox/main')):
     def go_leftmost_down(window):
         if isinstance(window, Window):
             return window
@@ -576,7 +576,7 @@ def window_right(main=Inject('viewer/main')):
 
 @shortcut(None, (Qt.Key_W, Qt.Key_H))
 @reg_inject
-def window_left(main=Inject('viewer/main')):
+def window_left(main=Inject('gearbox/main')):
     def go_rightmost_down(window):
         if isinstance(window, Window):
             return window
@@ -601,7 +601,7 @@ def window_left(main=Inject('viewer/main')):
 @shortcut('graph', Qt.Key_P)
 @reg_inject
 def send_to_wave(
-        graph=Inject('viewer/graph'), gtkwave=Inject('viewer/gtkwave')):
+        graph=Inject('gearbox/graph'), gtkwave=Inject('gearbox/gtkwave')):
 
     added = []
     selected_item = graph.selected_items()
@@ -635,25 +635,25 @@ class ShortcutRepeat(QtCore.QObject):
 
 
 @inject_async
-def create_shortcut_repeater(main=Inject('viewer/main')):
-    bind('viewer/shortcut_repeater', ShortcutRepeat(main))
+def create_shortcut_repeater(main=Inject('gearbox/main')):
+    bind('gearbox/shortcut_repeater', ShortcutRepeat(main))
 
 
 @reg_inject
-def node_expand_toggle(status, node, gtkwave=Inject('viewer/gtkwave')):
+def node_expand_toggle(status, node, gtkwave=Inject('gearbox/gtkwave')):
     if status:
         gtkwave.update_pipe_statuses(node.pipes)
 
 
 @inject_async
-def create_node_expand_toggle(graph=Inject('viewer/graph')):
+def create_node_expand_toggle(graph=Inject('gearbox/graph')):
     graph.node_expand_toggled.connect(node_expand_toggle)
 
 
 @shortcut('graph', Qt.Key_Slash)
 @reg_inject
 def node_search(
-        minibuffer=Inject('viewer/minibuffer'), graph=Inject('viewer/graph')):
+        minibuffer=Inject('gearbox/minibuffer'), graph=Inject('gearbox/graph')):
 
     items = graph.selected_items()
     if len(items) == 1:
@@ -682,7 +682,7 @@ def node_search(
 @shortcut(None, Qt.Key_Colon)
 @reg_inject
 def time_search(
-        time=Interactive('Time: '), timekeep=Inject('viewer/timekeep')):
+        time=Interactive('Time: '), timekeep=Inject('gearbox/timekeep')):
 
     try:
         time = int(time)
@@ -693,18 +693,18 @@ def time_search(
 
 
 @inject_async
-def graph_gtkwave_select_sync(graph=Inject('viewer/graph')):
-    bind('viewer/graph_gtkwave_select_sync', GraphGtkwaveSelectSync(graph))
+def graph_gtkwave_select_sync(graph=Inject('gearbox/graph')):
+    bind('gearbox/graph_gtkwave_select_sync', GraphGtkwaveSelectSync(graph))
 
 
 # TODO: broken when using gtkwave save file
 class GraphGtkwaveSelectSync(QtCore.QObject):
     @reg_inject
-    def __init__(self, graph=Inject('viewer/graph')):
+    def __init__(self, graph=Inject('gearbox/graph')):
         graph.selection_changed.connect(self.selection_changed)
 
     @reg_inject
-    def selection_changed(self, selected, gtkwave=Inject('viewer/gtkwave')):
+    def selection_changed(self, selected, gtkwave=Inject('gearbox/gtkwave')):
 
         selected_wave_pipes = {}
         for s in selected:
@@ -728,13 +728,13 @@ class GraphGtkwaveSelectSync(QtCore.QObject):
 
 @shortcut('graph', (Qt.Key_Z, Qt.Key_Plus))
 @reg_inject
-def zoom_in(graph=Inject('viewer/graph')):
+def zoom_in(graph=Inject('gearbox/graph')):
     zoom = graph.get_zoom() + 0.1
     graph.set_zoom(zoom)
 
 
 @shortcut('graph', (Qt.Key_Z, Qt.Key_Minus))
 @reg_inject
-def zoom_out(graph=Inject('viewer/graph')):
+def zoom_out(graph=Inject('gearbox/graph')):
     zoom = graph.get_zoom() - 0.2
     graph.set_zoom(zoom)

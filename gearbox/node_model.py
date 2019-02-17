@@ -95,7 +95,7 @@ class PipeModel(NamedHierNode):
         self.set_status('empty')
 
     @reg_inject
-    def set_status(self, status, timestep=Inject('sim/timestep')):
+    def set_status(self, status, timestep=Inject('gearbox/timekeep')):
         self.status = (timestep, status)
         self.status = status
         self.view.set_status(status)
@@ -188,7 +188,7 @@ class NodeModel(NamedHierNode):
         self.set_status('empty')
 
     @reg_inject
-    def set_status(self, status, timestep=Inject('sim/timestep')):
+    def set_status(self, status, timestep=Inject('gearbox/timekeep')):
         self.status = (timestep, status)
         self.view.set_status(status)
 

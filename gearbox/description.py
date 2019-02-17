@@ -112,7 +112,7 @@ class DescriptionBuffer(Buffer):
 
 
 @reg_inject
-def description(main=Inject('viewer/main')):
+def description(main=Inject('gearbox/main')):
     viewer = Description()
 
     #     viewer.setHtml("""
@@ -122,7 +122,7 @@ def description(main=Inject('viewer/main')):
     #     """)
 
     main.add_buffer(DescriptionBuffer(viewer, 'description'))
-    bind('viewer/description', viewer)
+    bind('gearbox/description', viewer)
 
     # describe_file(
     #     '/tools/home/gearbox/gearbox/html_utils.py', lineno=15)
@@ -196,15 +196,15 @@ class Description(QtWidgets.QTextEdit):
 
 
 @reg_inject
-def describe_text(text, desc=Inject('viewer/description')):
+def describe_text(text, desc=Inject('gearbox/description')):
     desc.display_text(text)
 
 
 @reg_inject
-def describe_file(fn, lineno=1, desc=Inject('viewer/description')):
+def describe_file(fn, lineno=1, desc=Inject('gearbox/description')):
     desc.display_file(fn, lineno)
 
 
 @reg_inject
-def describe_trace(trace, desc=Inject('viewer/description')):
+def describe_trace(trace, desc=Inject('gearbox/description')):
     desc.display_trace(trace)

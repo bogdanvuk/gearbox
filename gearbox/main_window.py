@@ -1,3 +1,5 @@
+import os
+
 from PySide2 import QtCore, QtWidgets, QtGui
 from pygears.conf import PluginBase, registry, safe_bind, reg_inject, Inject, bind
 
@@ -8,7 +10,7 @@ from .layout import BufferStack
 
 class Shortcut(QtCore.QObject):
     @reg_inject
-    def __init__(self, domain, key, callback, main=Inject('viewer/main')):
+    def __init__(self, domain, key, callback, main=Inject('gearbox/main')):
         super().__init__()
 
         if not isinstance(key, tuple):
@@ -49,7 +51,7 @@ class Shortcut(QtCore.QObject):
 
 
 @reg_inject
-def register_prefix(domain, prefix, name, prefixes=Inject('viewer/prefixes')):
+def register_prefix(domain, prefix, name, prefixes=Inject('gearbox/prefixes')):
     if not isinstance(prefix, tuple):
         prefix = (prefix, )
 
@@ -57,7 +59,7 @@ def register_prefix(domain, prefix, name, prefixes=Inject('viewer/prefixes')):
 
 
 @reg_inject
-def message(message, minibuffer=Inject('viewer/minibuffer')):
+def message(message, minibuffer=Inject('gearbox/minibuffer')):
     minibuffer.message(message)
 
 
@@ -70,6 +72,10 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def __init__(self, sim_pipe=None, parent=None):
         super().__init__(parent)
+
+        self.setWindowIcon(
+            QtGui.QIcon(
+                os.path.join(os.path.dirname(__file__), 'gearbox.png')))
 
         desktop = QtWidgets.QDesktopWidget()
         desktop_frame = desktop.availableGeometry(self)
@@ -84,7 +90,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.vbox.setMargin(0)
         self.vbox.setContentsMargins(0, 0, 0, 0)
 
-        safe_bind('viewer/main', self)
+        safe_bind('gearbox/main', self)
 
         self.buffers = BufferStack(main=self)
         self.vbox.addLayout(self.buffers)
@@ -95,14 +101,14 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.minibuffer = Minibuffer()
         # self.minibuffer.completed.connect(self._minibuffer_completed)
-        safe_bind('viewer/minibuffer', self.minibuffer)
+        safe_bind('gearbox/minibuffer', self.minibuffer)
         self.vbox.addLayout(self.minibuffer.view)
 
         self.setCentralWidget(mainWidget)
 
         self._init_actions()
 
-        for domain, key, callback in registry('viewer/shortcuts'):
+        for domain, key, callback in registry('gearbox/shortcuts'):
             Shortcut(domain, key, callback)
 
     # def event(self, event):
@@ -112,8 +118,8 @@ class MainWindow(QtWidgets.QMainWindow):
     #     # if (event.type() is QtCore.QEvent.Type.Leave) or (
     #     #         event.type() is QtCore.QEvent.Type.Enter) or (
     #     #             event.type() is QtCore.QEvent.Type.HoverMove):
-    #     #     editor = registry('viewer/editor')
-    #     #     graph = registry('viewer/graph')
+    #     #     editor = registry('gearbox/editor')
+    #     #     graph = registry('gearbox/graph')
     #     #     graph.clearFocus()
     #     #     editor.win.widget.activateWindow()
     #     #     editor.win.widget.setFocus()
@@ -134,9 +140,8 @@ class MainWindow(QtWidgets.QMainWindow):
             QtGui.QKeySequence(QtCore.Qt.CTRL + QtCore.Qt.Key_G),
             self).activated.connect(self._key_cancel_event)
 
-        QtWidgets.QShortcut(
-            QtGui.QKeySequence(QtCore.Qt.Key_Escape),
-            self).activated.connect(self._key_cancel_event)
+        QtWidgets.QShortcut(QtGui.QKeySequence(QtCore.Qt.Key_Escape),
+                            self).activated.connect(self._key_cancel_event)
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
@@ -156,12 +161,12 @@ class MainWindow(QtWidgets.QMainWindow):
         print("Ambiguous shortcut!")
 
     def change_domain(self, domain):
-        bind('viewer/domain', domain)
+        bind('gearbox/domain', domain)
         self.domain_changed.emit(domain)
 
 
 class MainWindowPlugin(PluginBase):
     @classmethod
     def bind(cls):
-        safe_bind('viewer/shortcuts', [])
-        safe_bind('viewer/prefixes', {})
+        safe_bind('gearbox/shortcuts', [])
+        safe_bind('gearbox/prefixes', {})

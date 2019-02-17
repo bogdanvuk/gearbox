@@ -21,7 +21,7 @@ class GraphPipeCollector(GraphVisitor):
 
 
 class GraphSimStatus:
-    def __init__(self, graph=Inject('viewer/graph')):
+    def __init__(self, graph=Inject('gearbox/graph')):
         self.graph = graph
         self.pipe_collect = GraphPipeCollector()
         self.pipe_collect.visit(self.graph.top)

@@ -129,8 +129,8 @@ class Minibuffer(QtCore.QObject):
     def complete(self,
                  message=None,
                  completer=None,
-                 main=Inject('viewer/main'),
-                 domain=Inject('viewer/domain')):
+                 main=Inject('gearbox/main'),
+                 domain=Inject('gearbox/domain')):
         self.previous_domain = domain
         main.change_domain('minibuffer')
         self.input_box.setDisabled(False)
@@ -158,7 +158,7 @@ class Minibuffer(QtCore.QObject):
             self.cleanup(None)
 
     @reg_inject
-    def cleanup(self, result, main=Inject('viewer/main')):
+    def cleanup(self, result, main=Inject('gearbox/main')):
         self.completed.emit(result)
         main.change_domain(self.previous_domain)
         self.input_box.setText('')

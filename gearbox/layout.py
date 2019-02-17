@@ -6,7 +6,7 @@ from .stylesheet import STYLE_MINIBUFFER
 
 
 @reg_inject
-def active_buffer(layout=Inject('viewer/layout')):
+def active_buffer(layout=Inject('gearbox/layout')):
     return layout.current.buff
 
 
@@ -108,7 +108,7 @@ class Window(QtWidgets.QVBoxLayout):
         self.deleteLater()
 
     @reg_inject
-    def activate(self, layout=Inject('viewer/layout')):
+    def activate(self, layout=Inject('gearbox/layout')):
         if self.buff:
             self.buff.activate()
 
@@ -141,7 +141,7 @@ class Window(QtWidgets.QVBoxLayout):
 
     @property
     @reg_inject
-    def active(self, layout=Inject('viewer/layout')):
+    def active(self, layout=Inject('gearbox/layout')):
         return layout.current_window is self
 
     @property
@@ -260,7 +260,7 @@ class WindowLayout(QtWidgets.QBoxLayout):
         return child
 
     @reg_inject
-    def remove_child(self, child, layout=Inject('viewer/layout')):
+    def remove_child(self, child, layout=Inject('gearbox/layout')):
         pos = self.child_index(child)
         self.removeItem(self.itemAt(pos))
         layout.current_window = None
@@ -324,7 +324,7 @@ class BufferStack(QtWidgets.QStackedLayout):
         self.current_layout_widget = QtWidgets.QWidget()
         self.current_window = None
 
-        safe_bind('viewer/layout', self)
+        safe_bind('gearbox/layout', self)
 
         # layout = WindowLayout(size=1)
         self.current_layout = WindowLayout(self, 1)

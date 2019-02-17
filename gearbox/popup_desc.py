@@ -10,7 +10,7 @@ class PopupDesc(QtWidgets.QTextEdit):
     def __init__(self,
                  max_width=500,
                  max_height=500,
-                 main=Inject('viewer/main')):
+                 main=Inject('gearbox/main')):
         super().__init__()
         self.setParent(main)
         self.max_width = max_width
@@ -100,9 +100,9 @@ class PopupDesc(QtWidgets.QTextEdit):
 
 
 @reg_inject
-def popup_desc(text, w=MayInject('viewer/popup_desc')):
+def popup_desc(text, w=MayInject('gearbox/popup_desc')):
     if w is None:
         w = PopupDesc()
-        bind('viewer/popup_desc', w)
+        bind('gearbox/popup_desc', w)
 
     w.popup(text)

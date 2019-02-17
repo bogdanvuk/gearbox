@@ -203,7 +203,7 @@ class ForeignWindow(QtCore.QObject):
         QtWidgets.QApplication.instance().aboutToQuit.connect(self.proc.quit)
 
     @reg_inject
-    def key_press(self, key, modifiers, text, main=Inject('viewer/main')):
+    def key_press(self, key, modifiers, text, main=Inject('gearbox/main')):
         app = QtWidgets.QApplication.instance()
         # app.postEvent(
         #     graph, QtGui.QKeyEvent(QtGui.QKeyEvent.KeyPress, key, modifiers))
@@ -239,7 +239,7 @@ class ForeignWindow(QtCore.QObject):
         return QtCore.QObject.eventFilter(self, obj, event)
 
     @reg_inject
-    def window_up(self, window_id, graph=Inject('viewer/graph')):
+    def window_up(self, window_id, graph=Inject('gearbox/graph')):
         self.window_id = window_id
         print(f'Window id: {window_id}: {hex(self.window_id)}')
         self.window = QtGui.QWindow.fromWinId(window_id)

@@ -73,7 +73,7 @@ class NodeSearchCompleter(QtWidgets.QCompleter):
         return self.node[text].name
 
     @reg_inject
-    def filled(self, text, minibuffer=Inject('viewer/minibuffer')):
+    def filled(self, text, minibuffer=Inject('gearbox/minibuffer')):
         if text == '..':
             node = self.node.parent
         elif text == '/':

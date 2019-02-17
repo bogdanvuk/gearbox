@@ -34,8 +34,7 @@ class SnipeCodeItem(QtWidgets.QGraphicsTextItem):
 class Sniper:
     @reg_inject
     def __init__(self,
-                 main=Inject('viewer/main'),
-                 graph=Inject('viewer/graph')):
+                 main=Inject('gearbox/main')):
 
         Shortcut('graph', QtCore.Qt.Key_F, self.snipe_select)
         Shortcut('graph', QtCore.Qt.CTRL + QtCore.Qt.Key_F,
@@ -44,22 +43,24 @@ class Sniper:
                  self.snipe_select_pipes)
 
         self.main = main
-        self.graph = graph
-        self.main.key_cancel.connect(self.snipe_cancel)
 
-    def snipe_cancel(self):
+    @reg_inject
+    def snipe_cancel(self, graph=Inject('gearbox/graph')):
+        self.main.key_cancel.disconnect(self.snipe_cancel)
         for text, s in snipe_shortcuts:
             s.setParent(None)
-            self.graph.scene().removeItem(text)
+            graph.scene().removeItem(text)
 
         self.main.change_domain('graph')
         snipe_shortcuts.clear()
 
-    def snipe_shot(self, pipe):
-        self.graph.select(pipe)
+    @reg_inject
+    def snipe_shot(self, pipe, graph=Inject('gearbox/graph')):
+        graph.select(pipe)
         self.snipe_cancel()
 
-    def snipe_shot_prefix(self, prefix):
+    @reg_inject
+    def snipe_shot_prefix(self, prefix, graph=Inject('gearbox/graph')):
         import pdb
         pdb.set_trace()
         for text, s in snipe_shortcuts:
@@ -67,7 +68,7 @@ class Sniper:
                 continue
 
             s.setParent(None)
-            self.graph.scene().removeItem(text)
+            graph.scene().removeItem(text)
 
     def snipe_shot_prefix_test(self):
         print("Ambiguous")
@@ -89,17 +90,20 @@ class Sniper:
     def snipe_select_pipes(self):
         self.snipe_select(objtype=Pipe)
 
-    def snipe_select(self, objtype=None):
-        nodes = self.graph.selected_nodes()
+    @reg_inject
+    def snipe_select(self, objtype=None, graph=Inject('gearbox/graph')):
+        self.main.key_cancel.connect(self.snipe_cancel)
+
+        nodes = graph.selected_nodes()
 
         nodes = [
             node.parent if node.collapsed else node for node in nodes
         ]
 
         if not nodes:
-            pipes = self.graph.selected_pipes()
+            pipes = graph.selected_pipes()
             if not pipes:
-                nodes = [self.graph.top]
+                nodes = [graph.top]
             else:
                 nodes = [pipe.parent for pipe in pipes]
 
@@ -115,7 +119,7 @@ class Sniper:
                 text = SnipeCodeItem(snipe_text)
 
                 text.setZValue(100)
-                self.graph.scene().addItem(text)
+                graph.scene().addItem(text)
 
                 if isinstance(obj, NodeItem):
                     text.setPos(
