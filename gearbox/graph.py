@@ -56,6 +56,7 @@ def graph(
 
 @reg_inject
 def graph_create(main=Inject('gearbox/main'), root=Inject('gear/hier_root')):
+    print("Are we here?")
     if not root.child:
         return
 

@@ -54,40 +54,42 @@ def pygears_proc(script_fn):
 
 
 @reg_inject
+def set_main_win_title(
+        script_fn=Inject('gearbox/model_script_name'),
+        main=Inject('gearbox/main')):
+
+    main.setWindowTitle(f'Gearbox - {script_fn}')
+
+
+@reg_inject
 def main_loop(script_fn, layers=Inject('gearbox/layers')):
     app = QtWidgets.QApplication(sys.argv)
+
+    timekeep = TimeKeep()
 
     app.setWindowIcon(QtGui.QIcon('gearbox.png'))
     app.setFont(QtGui.QFont("DejaVu Sans Mono", 11))
 
-    sim_bridge()
-
-    registry('gearbox/sim_bridge').invoke_method(
-        'run_model', script_fn=script_fn)
-
-    # QtCore.QMetaObject.invokeMethod(
-    #     registry('gearbox/sim_bridge'),
-    #     'run_model',
-    #     # QtCore.Qt.AutoConnection,
-    #     # val0=script_fn)
-    #     QtCore.Qt.AutoConnection,
-    #     QtCore.QGenericArgument('script_fn', script_fn)
-    #     )
-
-    timekeep = TimeKeep()
-
     main_window = MainWindow()
+    main_window.setWindowTitle(f'Gearbox')
 
-    import os
-    import __main__
-    main_window.setWindowTitle(
-        f'Gearbox - {os.path.abspath(__main__.__file__)}')
+    sim_bridge_inst = sim_bridge()
+    sim_bridge_inst.model_loaded.connect(set_main_win_title)
+
+    if script_fn:
+        sim_bridge_inst.invoke_method('run_model', script_fn=script_fn)
+
+
+    # import os
+    # import __main__
+    # main_window.setWindowTitle(
+    #     f'Gearbox - {os.path.abspath(__main__.__file__)}')
 
     for l in layers:
         l()
 
-    registry('gearbox/sim_bridge').invoke_method(
-        'run_sim')
+    if script_fn:
+        registry('gearbox/sim_bridge').invoke_method('run_sim')
 
     main_window.show()
     app.exec_()
@@ -98,7 +100,8 @@ def main(argv=sys.argv, layers=Inject('gearbox/layers')):
     parser = argparse.ArgumentParser(
         prog="Gearbox - GUI for the PyGears framework")
 
-    parser.add_argument('script', help="PyGears script")
+    parser.add_argument(
+        'script', help="PyGears script", default=None, nargs='?')
 
     args = parser.parse_args(argv[1:])
 

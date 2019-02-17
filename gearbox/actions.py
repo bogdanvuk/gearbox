@@ -653,7 +653,8 @@ def create_node_expand_toggle(graph=Inject('gearbox/graph')):
 @shortcut('graph', Qt.Key_Slash)
 @reg_inject
 def node_search(
-        minibuffer=Inject('gearbox/minibuffer'), graph=Inject('gearbox/graph')):
+        minibuffer=Inject('gearbox/minibuffer'),
+        graph=Inject('gearbox/graph')):
 
     items = graph.selected_items()
     if len(items) == 1:
@@ -738,3 +739,20 @@ def zoom_in(graph=Inject('gearbox/graph')):
 def zoom_out(graph=Inject('gearbox/graph')):
     zoom = graph.get_zoom() - 0.2
     graph.set_zoom(zoom)
+
+
+@shortcut(None, (Qt.Key_Space, Qt.Key_F))
+@reg_inject
+def open_file(sim_bridge=Inject('gearbox/sim_bridge')):
+    ret = QtWidgets.QFileDialog.getOpenFileName(
+        caption='Open file',
+        dir=os.getcwd(),
+        filter="PyGears script (*.py);;All files (*)")
+
+    script_fn = ret[0]
+
+    if script_fn:
+        registry('gearbox/sim_bridge').invoke_method(
+            'run_model', script_fn=script_fn)
+
+        registry('gearbox/sim_bridge').invoke_method('run_sim')

@@ -76,10 +76,10 @@ class Gearbox(SimExtend):
             main()
 
 
-
 def sim_bridge():
     sim_bridge = PyGearsClient()
     safe_bind('gearbox/sim_bridge', sim_bridge)
+    return sim_bridge
 
 
 class PyGearsProc(QtCore.QObject):
@@ -90,10 +90,12 @@ class PyGearsProc(QtCore.QObject):
         self.moveToThread(self.thrd)
         self.thrd.started.connect(self.run)
         self.thrd.finished.connect(self.quit)
-        self.thrd.start()
-        self.queue = queue.Queue()
 
-        self.plugin = functools.partial(Gearbox, standalone=True, sim_queue=self.queue)
+        self.queue = queue.Queue()
+        self.plugin = functools.partial(
+            Gearbox, standalone=True, sim_queue=self.queue)
+
+        self.thrd.start()
 
     def run(self):
         try:
@@ -101,7 +103,6 @@ class PyGearsProc(QtCore.QObject):
         except Exception as e:
             import traceback
             traceback.print_exc()
-
 
     def quit(self):
         self.thrd.quit()
@@ -159,6 +160,7 @@ class PyGearsClient(QtCore.QObject):
         clear()
         bind('gearbox', gearbox_registry)
         runpy.run_path(script_fn)
+        bind('gearbox/model_script_name', script_fn)
         self.model_loaded.emit()
 
     def cont(self):
@@ -221,13 +223,13 @@ class PyGearsClient(QtCore.QObject):
         while self.queue is None:
             self.thrd.eventDispatcher().processEvents(
                 QtCore.QEventLoop.AllEvents)
+            time.sleep(0.1)
 
         try:
             self.queue_loop()
         except Exception:
             import traceback
             traceback.print_exc()
-
 
     def quit(self):
         # self.plugin.done = True
