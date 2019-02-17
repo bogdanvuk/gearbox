@@ -8,6 +8,47 @@ from .minibuffer import Minibuffer
 from .layout import BufferStack
 
 
+class Action(QtWidgets.QAction):
+    activated = QtCore.Signal()
+
+    @reg_inject
+    def __init__(self,
+                 domain,
+                 key,
+                 callback,
+                 name,
+                 main=Inject('gearbox/main')):
+        super().__init__(name.title(), main)
+
+        if not isinstance(key, tuple):
+            key = (key, )
+
+        self.setShortcut(QtGui.QKeySequence(*key))
+        self.setShortcutVisibleInContextMenu(True)
+        self.domain = domain
+        self.key = key
+        self.callback = callback
+        self.name = name
+        main.domain_changed.connect(self.domain_changed)
+        main.add_shortcut(self)
+        self.triggered.connect(callback)
+        self.triggered.connect(self.activated_slot)
+
+    def activated_slot(self):
+        self.activated.emit()
+
+    @property
+    def enabled(self):
+        return self.isEnabled()
+
+    def domain_changed(self, domain):
+        if ((self.domain is None and domain is not None and domain[0] != '_')
+                or (self.domain == domain)):
+            self.setEnabled(True)
+        else:
+            self.setEnabled(False)
+
+
 class Shortcut(QtCore.QObject):
     @reg_inject
     def __init__(self,
@@ -116,8 +157,8 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self._init_actions()
 
-        for domain, key, callback, name in registry('gearbox/shortcuts'):
-            Shortcut(domain, key, callback, name)
+        # for domain, key, callback, name in registry('gearbox/shortcuts'):
+        #     Shortcut(domain, key, callback, name)
 
         self.create_menus()
 
@@ -150,9 +191,8 @@ class MainWindow(QtWidgets.QMainWindow):
                     current_menu = self.get_or_create_submenu(
                         current_menu, menu_name)
                 else:
-                    action = QtWidgets.QAction(name.title(), self)
+                    action = Action(domain, key, callback, name)
                     current_menu.addAction(action)
-                    action.triggered.connect(callback)
 
     def get_submenu(self, menu, title):
         for a in menu.actions():

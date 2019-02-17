@@ -53,7 +53,7 @@ class WhichKey(QLabel):
         if event.type() == QtCore.QEvent.KeyRelease:
             if self.is_prefix(event.key()):
                 self.current_prefix.append(event.key())
-                print(f"Prefix extended: {self.current_prefix}")
+                # print(f"Prefix extended: {self.current_prefix}")
                 if self.isVisible():
                     self.show()
                 else:
@@ -141,7 +141,7 @@ class WhichKey(QLabel):
                 which_key_string[key_name] = (group_name,
                                               html_utils.fontify(
                                                   group_name,
-                                                  color='darkorchid'))
+                                                  color='#749dff'))
 
         max_width = max(
             self.fontMetrics().horizontalAdvance(f'{key_name} -> {s}')

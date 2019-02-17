@@ -155,6 +155,9 @@ class Graph(QtWidgets.QGraphicsView):
         return items
 
     def mousePressEvent(self, event):
+        if event.button() != QtCore.Qt.LeftButton:
+            return
+
         alt_modifier = event.modifiers() == QtCore.Qt.AltModifier
         shift_modifier = event.modifiers() == QtCore.Qt.ShiftModifier
         if event.button() == QtCore.Qt.LeftButton:
