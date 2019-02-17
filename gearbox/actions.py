@@ -35,7 +35,7 @@ def get_minibuffer_input(message=None, completer=None, text=None):
     return MinibufferWaiter().wait(message, completer)
 
 
-def shortcut(domain, shortcut):
+def shortcut(domain, shortcut, name=None):
     def wrapper(func):
         sig = inspect.signature(func)
         # default values in func definition
@@ -44,6 +44,11 @@ def shortcut(domain, shortcut):
             for k, v in sig.parameters.items()
             if isinstance(v.default, Interactive)
         }
+
+        if name is None:
+            sh_name = func.__name__
+        else:
+            sh_name = name
 
         if interactives:
 
@@ -55,9 +60,11 @@ def shortcut(domain, shortcut):
                 }
                 func(**kwds)
 
-            registry('gearbox/shortcuts').append((domain, shortcut, arg_func))
+            registry('gearbox/shortcuts').append((domain, shortcut, arg_func,
+                                                  sh_name))
         else:
-            registry('gearbox/shortcuts').append((domain, shortcut, func))
+            registry('gearbox/shortcuts').append((domain, shortcut, func,
+                                                  sh_name))
 
     return wrapper
 

@@ -10,7 +10,7 @@ from .saver import save
 register_prefix(None, (Qt.Key_Space, Qt.Key_F), 'file')
 
 
-@shortcut(None, (Qt.Key_Space, Qt.Key_F, Qt.Key_F))
+@shortcut(None, (Qt.Key_Space, Qt.Key_F, Qt.Key_F), 'open')
 @reg_inject
 def open_file(sim_bridge=Inject('gearbox/sim_bridge')):
     ret = QtWidgets.QFileDialog.getOpenFileName(
@@ -30,7 +30,7 @@ def open_file(sim_bridge=Inject('gearbox/sim_bridge')):
 register_prefix(None, (Qt.Key_Space, Qt.Key_W), 'window')
 
 
-@shortcut(None, (Qt.Key_Space, Qt.Key_W, Qt.Key_D))
+@shortcut(None, (Qt.Key_Space, Qt.Key_W, Qt.Key_D), 'delete')
 @reg_inject
 def window_delete(layout=Inject('gearbox/layout')):
     if layout.current_layout.win_num > 1:
@@ -40,7 +40,7 @@ def window_delete(layout=Inject('gearbox/layout')):
         next(layout.current_layout.windows()).activate()
 
 
-@shortcut(None, (Qt.Key_Space, Qt.Key_W, Qt.Key_Slash))
+@shortcut(None, (Qt.Key_Space, Qt.Key_W, Qt.Key_Slash), 'split horizontally')
 @reg_inject
 def split_horizontally(layout=Inject('gearbox/layout')):
     window = layout.active_window()
@@ -52,7 +52,7 @@ def split_horizontally(layout=Inject('gearbox/layout')):
             return
 
 
-@shortcut(None, (Qt.Key_Space, Qt.Key_W, Qt.Key_Underscore))
+@shortcut(None, (Qt.Key_Space, Qt.Key_W, Qt.Key_Underscore), 'split vertically')
 @reg_inject
 def split_vertically(layout=Inject('gearbox/layout')):
     window = layout.active_window()
@@ -81,19 +81,19 @@ def change_perc_size(window, diff):
                 i, round(prev_remain_stretch / prev_stretch * remain_stretch))
 
 
-@shortcut(None, (Qt.Key_Space, Qt.Key_W, Qt.Key_Plus))
+@shortcut(None, (Qt.Key_Space, Qt.Key_W, Qt.Key_Plus), 'increase')
 @reg_inject
-def increase_height(layout=Inject('gearbox/layout')):
+def increase_size(layout=Inject('gearbox/layout')):
     change_perc_size(layout.active_window(), +3)
 
 
-@shortcut(None, (Qt.Key_Space, Qt.Key_W, Qt.Key_Minus))
+@shortcut(None, (Qt.Key_Space, Qt.Key_W, Qt.Key_Minus), 'decrease')
 @reg_inject
-def decrease_height(layout=Inject('gearbox/layout')):
+def decrease_size(layout=Inject('gearbox/layout')):
     change_perc_size(layout.active_window(), -3)
 
 
-@shortcut(None, (Qt.Key_Space, Qt.Key_W, Qt.Key_J))
+@shortcut(None, (Qt.Key_Space, Qt.Key_W, Qt.Key_J), 'down')
 @reg_inject
 def window_down(main=Inject('gearbox/main')):
     def go_topmost_down(window):
@@ -117,7 +117,7 @@ def window_down(main=Inject('gearbox/main')):
         window.activate()
 
 
-@shortcut(None, (Qt.Key_Space, Qt.Key_W, Qt.Key_K))
+@shortcut(None, (Qt.Key_Space, Qt.Key_W, Qt.Key_K), 'up')
 @reg_inject
 def window_up(main=Inject('gearbox/main')):
     def go_bottommost_down(window):
@@ -142,7 +142,7 @@ def window_up(main=Inject('gearbox/main')):
         window.activate()
 
 
-@shortcut(None, (Qt.Key_Space, Qt.Key_W, Qt.Key_L))
+@shortcut(None, (Qt.Key_Space, Qt.Key_W, Qt.Key_L), 'right')
 @reg_inject
 def window_right(main=Inject('gearbox/main')):
     def go_leftmost_down(window):
@@ -166,7 +166,7 @@ def window_right(main=Inject('gearbox/main')):
         window.activate()
 
 
-@shortcut(None, (Qt.Key_Space, Qt.Key_W, Qt.Key_H))
+@shortcut(None, (Qt.Key_Space, Qt.Key_W, Qt.Key_H), 'left')
 @reg_inject
 def window_left(main=Inject('gearbox/main')):
     def go_rightmost_down(window):
@@ -193,12 +193,12 @@ def window_left(main=Inject('gearbox/main')):
 register_prefix(None, (Qt.Key_Space, Qt.Key_Q), 'quit')
 
 
-@shortcut(None, (Qt.Key_Space, Qt.Key_Q, Qt.Key_S))
+@shortcut(None, (Qt.Key_Space, Qt.Key_Q, Qt.Key_S), 'save layout')
 def save_layout():
     save()
     QtWidgets.QApplication.instance().quit()
 
 
-@shortcut(None, (Qt.Key_Space, Qt.Key_Q, Qt.Key_Q))
+@shortcut(None, (Qt.Key_Space, Qt.Key_Q, Qt.Key_Q), 'quit')
 def quit():
     QtWidgets.QApplication.instance().quit()

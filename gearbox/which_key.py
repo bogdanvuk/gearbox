@@ -127,8 +127,7 @@ class WhichKey(QLabel):
             key_name = "-".join(keys)
 
             if not key_group:
-                which_key_string[key_name] = (s.callback.__name__,
-                                              s.callback.__name__)
+                which_key_string[key_name] = (s.name, s.name)
             else:
                 group_name = prefixes.get((domain,
                                            tuple(self.current_prefix) + key))

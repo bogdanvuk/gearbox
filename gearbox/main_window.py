@@ -10,7 +10,12 @@ from .layout import BufferStack
 
 class Shortcut(QtCore.QObject):
     @reg_inject
-    def __init__(self, domain, key, callback, main=Inject('gearbox/main')):
+    def __init__(self,
+                 domain,
+                 key,
+                 callback,
+                 name,
+                 main=Inject('gearbox/main')):
         super().__init__()
 
         if not isinstance(key, tuple):
@@ -27,6 +32,7 @@ class Shortcut(QtCore.QObject):
         self.domain = domain
         self.key = key
         self.callback = callback
+        self.name = name
         main.domain_changed.connect(self.domain_changed)
 
     def activated_slot(self):
@@ -61,13 +67,6 @@ def register_prefix(domain, prefix, name, prefixes=Inject('gearbox/prefixes')):
 @reg_inject
 def message(message, minibuffer=Inject('gearbox/minibuffer')):
     minibuffer.message(message)
-
-
-def get_submenu(menu, title):
-    for a in menu.actions():
-        if a.menu():
-            if a.menu().title() == title:
-                return a.menu()
 
 
 class MainWindow(QtWidgets.QMainWindow):
@@ -109,35 +108,71 @@ class MainWindow(QtWidgets.QMainWindow):
         self.minibuffer = Minibuffer()
         # self.minibuffer.completed.connect(self._minibuffer_completed)
         safe_bind('gearbox/minibuffer', self.minibuffer)
+        safe_bind('gearbox/domain', None)
+
         self.vbox.addLayout(self.minibuffer.view)
 
         self.setCentralWidget(mainWidget)
 
         self._init_actions()
 
-        prefixes = registry('gearbox/prefixes')
+        for domain, key, callback, name in registry('gearbox/shortcuts'):
+            Shortcut(domain, key, callback, name)
 
-        for domain, key, callback in registry('gearbox/shortcuts'):
-            Shortcut(domain, key, callback)
+        self.create_menus()
 
+    @reg_inject
+    def create_menus(self,
+                     prefixes=Inject('gearbox/prefixes'),
+                     shortcuts=Inject('gearbox/shortcuts')):
+        for domain, key, callback, name in registry('gearbox/shortcuts'):
             if not isinstance(key, tuple):
                 key = (key, )
 
-            if (domain is None) and (key[0] == QtCore.Qt.Key_Space):
-                current_menu = self.menuBar()
-                for i in range(2, len(key) + 1):
-                    if i < len(key):
-                        menu_name = prefixes.get((None, key[:i]), 'group').title()
-                        submenu = get_submenu(current_menu, menu_name)
-                        if submenu is None:
-                            submenu = QtWidgets.QMenu(menu_name, self)
-                            current_menu.addMenu(submenu)
-                        current_menu = submenu
-                    else:
-                        action_name = callback.__name__
-                        action = QtWidgets.QAction(action_name, self)
-                        current_menu.addAction(action)
-                        action.triggered.connect(callback)
+            current_menu = self.menuBar()
+            if (domain is None):
+                if (key[0] != QtCore.Qt.Key_Space):
+                    continue
+
+                start_skip = 2
+            else:
+                submenu = self.get_or_create_submenu(current_menu,
+                                                     domain.title())
+                action = self.get_subaction(current_menu, domain.title())
+                action.setVisible(False)
+                current_menu = submenu
+                start_skip = 1
+
+            for i in range(start_skip, len(key) + 1):
+                if i < len(key):
+                    menu_name = prefixes.get((domain, key[:i]),
+                                             'group').title()
+                    current_menu = self.get_or_create_submenu(
+                        current_menu, menu_name)
+                else:
+                    action = QtWidgets.QAction(name.title(), self)
+                    current_menu.addAction(action)
+                    action.triggered.connect(callback)
+
+    def get_submenu(self, menu, title):
+        for a in menu.actions():
+            if a.menu():
+                if a.menu().title() == title:
+                    return a.menu()
+
+    def get_subaction(self, menu, title):
+        for a in menu.actions():
+            if a.menu():
+                if a.menu().title() == title:
+                    return a
+
+    def get_or_create_submenu(self, menu, title):
+        submenu = self.get_submenu(menu, title)
+        if submenu is None:
+            submenu = QtWidgets.QMenu(title, self)
+            menu.addMenu(submenu)
+
+        return submenu
 
     # def event(self, event):
     #     # if isinstance(event, (QtGui.QEnterEvent, QtGui.QHoverEvent)):
@@ -189,7 +224,22 @@ class MainWindow(QtWidgets.QMainWindow):
         print("Ambiguous shortcut!")
 
     def change_domain(self, domain):
+        current_menu = self.menuBar()
+        prev_domain = registry('gearbox/domain')
+
+        if prev_domain:
+            action = self.get_subaction(current_menu,
+                                        registry('gearbox/domain').title())
+            if action:
+                action.setVisible(False)
+
         bind('gearbox/domain', domain)
+
+        if domain:
+            action = self.get_subaction(current_menu, domain.title())
+            if action:
+                action.setVisible(True)
+
         self.domain_changed.emit(domain)
 
 

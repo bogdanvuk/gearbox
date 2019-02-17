@@ -25,7 +25,8 @@ class BufferCompleter(QtWidgets.QCompleter):
         return self.layout.get_buffer_by_name(text)
 
 
-@shortcut(None, (QtCore.Qt.Key_Space, QtCore.Qt.Key_B, QtCore.Qt.Key_B))
+@shortcut(None, (QtCore.Qt.Key_Space, QtCore.Qt.Key_B, QtCore.Qt.Key_B),
+          'select')
 @reg_inject
 def select_buffer(
         buff=Interactive('buffer: ', BufferCompleter),

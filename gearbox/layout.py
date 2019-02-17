@@ -11,7 +11,13 @@ def active_buffer(layout=Inject('gearbox/layout')):
 
 
 class Buffer:
-    def __init__(self, view, name):
+    @reg_inject
+    def __init__(self, view, name, main=Inject('gearbox/main')):
+        view.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        menu = main.get_submenu(main.menuBar(), self.domain.title())
+        view.customContextMenuRequested.connect(
+            lambda pos: menu.popup(view.mapToGlobal(pos)))
+
         self.view = view
         self.name = name
         self.window = None
