@@ -158,7 +158,9 @@ class Window(QtWidgets.QVBoxLayout):
 
     @property
     def current(self):
-        if self.buff.view.hasFocus():
+        if self.buff is None:
+            return None
+        elif self.buff.view.hasFocus():
             return self
         else:
             return None

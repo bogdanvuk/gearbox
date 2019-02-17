@@ -63,6 +63,13 @@ def message(message, minibuffer=Inject('gearbox/minibuffer')):
     minibuffer.message(message)
 
 
+def get_submenu(menu, title):
+    for a in menu.actions():
+        if a.menu():
+            if a.menu().title() == title:
+                return a.menu()
+
+
 class MainWindow(QtWidgets.QMainWindow):
 
     key_cancel = QtCore.Signal()
@@ -108,8 +115,29 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self._init_actions()
 
+        prefixes = registry('gearbox/prefixes')
+
         for domain, key, callback in registry('gearbox/shortcuts'):
             Shortcut(domain, key, callback)
+
+            if not isinstance(key, tuple):
+                key = (key, )
+
+            if (domain is None) and (key[0] == QtCore.Qt.Key_Space):
+                current_menu = self.menuBar()
+                for i in range(2, len(key) + 1):
+                    if i < len(key):
+                        menu_name = prefixes.get((None, key[:i]), 'group').title()
+                        submenu = get_submenu(current_menu, menu_name)
+                        if submenu is None:
+                            submenu = QtWidgets.QMenu(menu_name, self)
+                            current_menu.addMenu(submenu)
+                        current_menu = submenu
+                    else:
+                        action_name = callback.__name__
+                        action = QtWidgets.QAction(action_name, self)
+                        current_menu.addAction(action)
+                        action.triggered.connect(callback)
 
     # def event(self, event):
     #     # if isinstance(event, (QtGui.QEnterEvent, QtGui.QHoverEvent)):

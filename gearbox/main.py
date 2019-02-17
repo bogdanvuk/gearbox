@@ -15,6 +15,13 @@ from pygears.conf import Inject, reg_inject, safe_bind, PluginBase, registry, bi
 from .pygears_proxy import sim_bridge
 from .saver import get_save_file_path
 from .timekeep import TimeKeep
+# import gearbox.graph
+from . import actions
+from . import window_actions
+from . import graph_actions
+from . import buffer_actions
+from . import gtkwave_actions
+from . import description_actions
 
 # @reg_inject
 # def main(layers=Inject('gearbox/layers')):
