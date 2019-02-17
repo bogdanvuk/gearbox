@@ -741,7 +741,11 @@ def zoom_out(graph=Inject('gearbox/graph')):
     graph.set_zoom(zoom)
 
 
-@shortcut(None, (Qt.Key_Space, Qt.Key_F))
+register_prefix(None, Qt.Key_Space, 'SPC')
+register_prefix(None, (Qt.Key_Space, Qt.Key_F), 'file')
+
+
+@shortcut(None, (Qt.Key_Space, Qt.Key_F, Qt.Key_F))
 @reg_inject
 def open_file(sim_bridge=Inject('gearbox/sim_bridge')):
     ret = QtWidgets.QFileDialog.getOpenFileName(

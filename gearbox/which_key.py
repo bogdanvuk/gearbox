@@ -49,17 +49,18 @@ class WhichKey(QLabel):
                 return True
 
     def eventFilter(self, obj, event):
-        if event.type() == QtCore.QEvent.ShortcutOverride:
+        # if event.type() == QtCore.QEvent.ShortcutOverride:
+        if event.type() == QtCore.QEvent.KeyRelease:
             if self.is_prefix(event.key()):
                 self.current_prefix.append(event.key())
-                # print(f"Prefix extended: {self.current_prefix}")
+                print(f"Prefix extended: {self.current_prefix}")
                 if self.isVisible():
                     self.show()
                 else:
                     self.timer.start()
 
                 self.prefix_detected = True
-        elif event.type() == QtCore.QEvent.KeyRelease:
+
             if self.current_prefix and (not self.prefix_detected):
                 self.cancel()
 
@@ -89,10 +90,10 @@ class WhichKey(QLabel):
             key = s.key
 
             if self.current_prefix:
-                if s.key[0] != self.current_prefix[0]:
+                if any(k != p for k, p in zip(s.key, self.current_prefix)):
                     continue
                 else:
-                    key = key[1:]
+                    key = key[len(self.current_prefix):]
 
             key_group = False
             if len(key) > 1:
