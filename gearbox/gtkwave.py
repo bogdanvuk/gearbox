@@ -98,6 +98,9 @@ class VerilatorVCDMap:
                  rtl_map=Inject('rtl/gear_node_map')):
         self.gtkwave_intf = gtkwave_intf
         self.sim_module = sim_module
+        if self.sim_module.gear not in rtl_map:
+            import pdb; pdb.set_trace()
+
         self.rtl_node = rtl_map[self.sim_module.gear]
         self.path_prefix = '.'.join(['TOP', sim_module.wrap_name])
         self.item_signals = {}
@@ -169,8 +172,19 @@ def gtkwave(sim_bridge=Inject('gearbox/sim_bridge')):
     sim_bridge.sim_started.connect(gtkwave_create)
 
 
-def gtkwave_create():
-    bind('gearbox/gtkwave', GtkWave())
+@reg_inject
+def gtkwave_create(sim_bridge=Inject('gearbox/sim_bridge')):
+    gtkwave = GtkWave()
+    bind('gearbox/gtkwave', gtkwave)
+
+    sim_bridge.model_closed.connect(gktwave_delete)
+
+    for b in gtkwave.buffers:
+        sim_bridge.model_closed.connect(b.delete)
+
+
+def gktwave_delete():
+    bind('gearbox/gtkwave', None)
 
 
 class Signals(NamedTuple):
@@ -307,6 +321,20 @@ class GtkWaveBuffer(Buffer):
     def deactivate(self):
         super().deactivate()
         # self.instance.gtkwave_win.setKeyboardGrabEnabled(False)
+
+    # def delete(self):
+    #     self.instance.close()
+    #     super().delete()
+
+    @reg_inject
+    def delete(self, main=Inject('gearbox/main')):
+        if self.window:
+            self.window.remove_buffer()
+
+        main.remove_buffer(self)
+        self.window = None
+        self.instance.close()
+        self.view.close()
 
     @property
     def view(self):

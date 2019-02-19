@@ -3,6 +3,7 @@ from PySide2 import QtCore
 from .actions import shortcut
 from .layout import active_buffer
 from pygears.conf import Inject, inject_async, reg_inject, bind
+from .sim_actions import time_search, step_simulator, cont_simulator
 
 
 @reg_inject
@@ -68,3 +69,7 @@ class GraphGtkwaveSelectSync(QtCore.QObject):
                 'gtkwave::/Edit/UnHighlight_All',
                 f'gtkwave::highlightSignalsFromList {{{" ".join(wave_list)}}}'
             ])
+
+shortcut('gtkwave', Qt.Key_S)(step_simulator)
+shortcut('gtkwave', Qt.Key_C)(cont_simulator)
+shortcut('gtkwave', Qt.Key_Colon)(time_search)

@@ -48,29 +48,38 @@ class GraphBuffer(Buffer):
 
 @reg_inject
 def graph(
-        sim_bridge=Inject('gearbox/sim_bridge'), root=Inject('gear/hier_root')):
+        sim_bridge=Inject('gearbox/sim_bridge'),
+        root=Inject('gear/hier_root')):
     sim_bridge.model_loaded.connect(graph_create)
     if root.child:
         graph_create()
 
 
+def graph_delete():
+    bind('gearbox/graph', None)
+    bind('gearbox/graph_model', None)
+
+
 @reg_inject
-def graph_create(main=Inject('gearbox/main'), root=Inject('gear/hier_root')):
-    print("Are we here?")
+def graph_create(
+        root=Inject('gear/hier_root'),
+        sim_bridge=Inject('gearbox/sim_bridge')):
     if not root.child:
         return
 
-    viewer = Graph()
-    main.add_buffer(GraphBuffer(viewer, 'graph'))
-    bind('gearbox/graph', viewer)
+    view = Graph()
+    buff = GraphBuffer(view, 'graph')
 
-    # top = NodeItem(root)
+    sim_bridge.model_closed.connect(graph_delete)
+    sim_bridge.model_closed.connect(buff.delete)
+
+    bind('gearbox/graph', view)
     root = rtlgen(root)
     top_model = NodeModel(root)
     bind('gearbox/graph_model', top_model)
-    viewer.top = top_model.view
+    view.top = top_model.view
     top_model.view.layout()
-    viewer.fit_all()
+    view.fit_all()
 
 
 class Graph(QtWidgets.QGraphicsView):
@@ -83,7 +92,7 @@ class Graph(QtWidgets.QGraphicsView):
     node_expand_toggled = QtCore.Signal(bool, object)
 
     @reg_inject
-    def __init__(self, parent=None, sim_proxy=MayInject('gearbox/sim_proxy')):
+    def __init__(self, parent=None):
         super().__init__(parent)
         self.setScene(NodeScene(self))
         self.scene().selectionChanged.connect(self.selection_changed_slot)

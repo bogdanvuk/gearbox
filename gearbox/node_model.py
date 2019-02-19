@@ -30,7 +30,6 @@ def pprint_Partial(printer, object, stream, indent, allowance, context, level):
 pprint.PrettyPrinter._dispatch[Partial.__repr__] = pprint_Partial
 
 
-@functools.lru_cache()
 @reg_inject
 def find_cosim_modules(top=Inject('gear/hier_root')):
     class CosimVisitor(HierVisitorBase):

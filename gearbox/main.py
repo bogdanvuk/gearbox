@@ -18,6 +18,7 @@ from .timekeep import TimeKeep
 # import gearbox.graph
 from . import actions
 from . import window_actions
+from . import file_actions
 from . import graph_actions
 from . import buffer_actions
 from . import gtkwave_actions
@@ -83,20 +84,12 @@ def main_loop(script_fn, layers=Inject('gearbox/layers')):
     sim_bridge_inst = sim_bridge()
     sim_bridge_inst.model_loaded.connect(set_main_win_title)
 
-    if script_fn:
-        sim_bridge_inst.invoke_method('run_model', script_fn=script_fn)
-
-
-    # import os
-    # import __main__
-    # main_window.setWindowTitle(
-    #     f'Gearbox - {os.path.abspath(__main__.__file__)}')
-
     for l in layers:
         l()
 
     if script_fn:
-        registry('gearbox/sim_bridge').invoke_method('run_sim')
+        sim_bridge_inst.invoke_method('run_model', script_fn=script_fn)
+        sim_bridge_inst.invoke_method('run_sim')
 
     main_window.show()
     app.exec_()

@@ -112,20 +112,10 @@ class DescriptionBuffer(Buffer):
 
 
 @reg_inject
-def description(main=Inject('gearbox/main')):
+def description():
     viewer = Description()
-
-    #     viewer.setHtml("""
-    # <div class="highlight">
-    # <pre><span class="k">print</span> <span class="s">&quot;Hello World&quot;</span></pre>
-    # </div>
-    #     """)
-
-    main.add_buffer(DescriptionBuffer(viewer, 'description'))
+    DescriptionBuffer(viewer, 'description')
     bind('gearbox/description', viewer)
-
-    # describe_file(
-    #     '/tools/home/gearbox/gearbox/html_utils.py', lineno=15)
 
 
 class Description(QtWidgets.QTextEdit):

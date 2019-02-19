@@ -132,7 +132,8 @@ class GtkWaveProc(QtCore.QObject):
                 while True:
                     data += self.p.read_nonblocking(size=4096, timeout=0.01)
             except pexpect.TIMEOUT:
-                pass
+                if self.exiting:
+                    return
 
             for d in data.strip().split('\n'):
                 # print(f'Unsollicited: {data}')
@@ -166,8 +167,11 @@ class GtkWaveProc(QtCore.QObject):
 
     def quit(self):
         self.p.close()
-        # self.shmid_proc.terminate()
+
+    def close(self):
+        self.exiting = True
         self.gtkwave_thread.quit()
+        # self.gtkwave_thread.wait()
 
 
 class GtkWaveCmdBlock(QtCore.QEventLoop):
@@ -212,6 +216,7 @@ native_key_map = {
 class GtkWaveWindow(QtCore.QObject):
     send_command = QtCore.Signal(str, int)
     initialized = QtCore.Signal()
+    deleted = QtCore.Signal()
 
     def __init__(self, trace_fn, parent=None):
         super().__init__(parent)
@@ -224,6 +229,7 @@ class GtkWaveWindow(QtCore.QObject):
         self.send_command.connect(self.proc.command)
         self.response = self.proc.response
 
+        self.deleted.connect(self.proc.close)
         QtWidgets.QApplication.instance().aboutToQuit.connect(self.proc.quit)
 
     @property
@@ -262,3 +268,8 @@ class GtkWaveWindow(QtCore.QObject):
         self.command(f'gtkwave::setZoomFactor -7')
 
         self.initialized.emit()
+
+    def close(self):
+        self.widget.close()
+        self.deleted.emit()
+        self.proc.gtkwave_thread.wait()

@@ -171,18 +171,19 @@ class MainWindow(QtWidgets.QMainWindow):
                 key = (key, )
 
             current_menu = self.menuBar()
+            start_skip = 1
             if (domain is None):
                 if (key[0] != QtCore.Qt.Key_Space):
-                    continue
+                    Shortcut(domain, key, callback, name)
 
                 start_skip = 2
+
             else:
                 submenu = self.get_or_create_submenu(current_menu,
                                                      domain.title())
                 action = self.get_subaction(current_menu, domain.title())
                 action.setVisible(False)
                 current_menu = submenu
-                start_skip = 1
 
             for i in range(start_skip, len(key) + 1):
                 if i < len(key):
@@ -256,6 +257,9 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def add_buffer(self, widget):
         self.buffers.add(widget)
+
+    def remove_buffer(self, widget):
+        self.buffers.remove(widget)
 
     def _key_cancel_event(self):
         self.key_cancel.emit()

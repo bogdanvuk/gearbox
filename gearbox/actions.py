@@ -1,12 +1,10 @@
 #!/usr/bin/python
 import inspect
 from PySide2.QtCore import Qt
-from PySide2 import QtWidgets, QtGui, QtCore
+from PySide2 import QtCore
 from pygears.conf import Inject, reg_inject, registry, inject_async, bind
-from .layout import active_buffer
 from functools import wraps
 from .main_window import Shortcut, register_prefix
-import os
 
 
 class Interactive:
@@ -78,21 +76,16 @@ def toggle_help(which_key=Inject('gearbox/which_key')):
         which_key.show()
 
 
-@shortcut(None, Qt.Key_S)
-@reg_inject
-def step_simulator(sim_bridge=Inject('gearbox/sim_bridge')):
-    sim_bridge.breakpoints.add(lambda: (True, False))
-    if not sim_bridge.running:
-        sim_bridge.cont()
-
-
 class ShortcutRepeat(QtCore.QObject):
     def __init__(self, main):
         super().__init__()
         self.last_shortcut = None
         main.shortcut_triggered.connect(self.shortcut_triggered)
         self.repeat_shortcut = Shortcut(
-            domain=None, key=Qt.Key_Period, callback=self.repeat)
+            domain=None,
+            key=Qt.Key_Period,
+            callback=self.repeat,
+            name='repeat command')
 
     def repeat(self):
         if self.last_shortcut:
@@ -106,19 +99,6 @@ class ShortcutRepeat(QtCore.QObject):
 @inject_async
 def create_shortcut_repeater(main=Inject('gearbox/main')):
     bind('gearbox/shortcut_repeater', ShortcutRepeat(main))
-
-
-@shortcut(None, Qt.Key_Colon)
-@reg_inject
-def time_search(
-        time=Interactive('Time: '), timekeep=Inject('gearbox/timekeep')):
-
-    try:
-        time = int(time)
-    except TypeError:
-        return
-
-    timekeep.timestep = time
 
 
 register_prefix(None, Qt.Key_Space, 'SPC')

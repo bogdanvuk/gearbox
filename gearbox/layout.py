@@ -21,6 +21,7 @@ class Buffer:
         self.view = view
         self.name = name
         self.window = None
+        main.add_buffer(self)
 
     @property
     def active(self):
@@ -46,6 +47,15 @@ class Buffer:
 
     def deactivate(self):
         pass
+
+    @reg_inject
+    def delete(self, main=Inject('gearbox/main')):
+        if self.window:
+            self.window.remove_buffer()
+
+        main.remove_buffer(self)
+        self.window = None
+        self.view.close()
 
 
 class Window(QtWidgets.QVBoxLayout):
@@ -383,6 +393,9 @@ class BufferStack(QtWidgets.QStackedLayout):
                 return b
         else:
             return None
+
+    def remove(self, buf):
+        self.buffers.remove(buf)
 
     def add(self, buf):
         self.buffers.append(buf)

@@ -5,11 +5,10 @@ import queue
 import time
 import sys
 from PySide2 import QtCore, QtWidgets
-from pygears.conf import Inject, reg_inject, safe_bind, bind
+from pygears.conf import Inject, reg_inject, safe_bind, bind, PluginBase, registry
 from pygears.sim.extens.sim_extend import SimExtend
 from .node_model import find_cosim_modules
 from pygears.sim.modules import SimVerilated
-from pygears.conf import Inject, bind, reg_inject, registry, safe_bind
 from pygears.sim import sim
 from pygears import clear
 
@@ -36,10 +35,8 @@ class Gearbox(SimExtend):
         self.standalone = standalone
 
     def handle_event(self, name):
-        print(f"Sending event: {name}")
         self.queue.put(name)
         self.queue.join()
-        print(f"Event done: {name}")
 
         if self.done:
             sys.exit(0)
@@ -109,6 +106,7 @@ class PyGearsProc(QtCore.QObject):
 
 
 class PyGearsClient(QtCore.QObject):
+    model_closed = QtCore.Signal()
     model_loaded = QtCore.Signal()
     sim_started = QtCore.Signal()
     after_run = QtCore.Signal()
@@ -131,6 +129,9 @@ class PyGearsClient(QtCore.QObject):
         self.queue = None
 
         QtWidgets.QApplication.instance().aboutToQuit.connect(self.quit)
+        self.start_thread()
+
+    def start_thread(self):
         self.thrd = QtCore.QThread()
         self.moveToThread(self.thrd)
         self.loop.moveToThread(self.thrd)
@@ -152,8 +153,17 @@ class PyGearsClient(QtCore.QObject):
         f()
 
     def run_sim(self):
+        print("Running sim")
         self.pygears_proc = PyGearsProc()
         self.queue = self.pygears_proc.queue
+        print("Sim run")
+
+    def close_model(self):
+        if registry('gearbox/model_script_name'):
+            bind('gearbox/model_script_name', None)
+            self.queue = None
+            self.model_closed.emit()
+            self.loop.quit()
 
     def run_model(self, script_fn):
         gearbox_registry = registry('gearbox')
@@ -184,7 +194,7 @@ class PyGearsClient(QtCore.QObject):
         return triggered
 
     def queue_loop(self):
-        while True:
+        while self.queue is not None:
 
             self.thrd.eventDispatcher().processEvents(
                 QtCore.QEventLoop.AllEvents)
@@ -192,44 +202,46 @@ class PyGearsClient(QtCore.QObject):
             try:
                 msg = self.queue.get(0.001)
             except queue.Empty:
-                continue
+                if registry('gearbox/model_script_name') is None:
+                    print("HERE?")
+                    self.queue = None
+                    return
+                else:
+                    continue
 
             if msg == "after_timestep":
                 self.after_timestep.emit()
-
                 if self._should_break():
                     self.running = False
                     self.sim_refresh.emit()
                     self.loop.exec_()
-                    self.running = True
-
-                self.queue.task_done()
-
             elif msg == "after_run":
                 self.sim_refresh.emit()
                 self.after_run.emit()
                 self.quit()
                 self.queue.task_done()
                 return
-
             elif msg == "before_run":
                 self.sim_started.emit()
                 self.running = False
                 self.loop.exec_()
                 self.running = True
+
+            if self.queue:
                 self.queue.task_done()
 
     def run(self):
-        while self.queue is None:
-            self.thrd.eventDispatcher().processEvents(
-                QtCore.QEventLoop.AllEvents)
-            time.sleep(0.1)
+        while True:
+            while self.queue is None:
+                self.thrd.eventDispatcher().processEvents(
+                    QtCore.QEventLoop.AllEvents)
+                time.sleep(0.1)
 
-        try:
-            self.queue_loop()
-        except Exception:
-            import traceback
-            traceback.print_exc()
+            try:
+                self.queue_loop()
+            except Exception:
+                import traceback
+                traceback.print_exc()
 
     def quit(self):
         # self.plugin.done = True
@@ -237,3 +249,9 @@ class PyGearsClient(QtCore.QObject):
 
     def refresh_timeout(self):
         self.sim_refresh.emit()
+
+
+class MainWindowPlugin(PluginBase):
+    @classmethod
+    def bind(cls):
+        safe_bind('gearbox/model_script_name', None)

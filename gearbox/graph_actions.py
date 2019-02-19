@@ -5,10 +5,11 @@ from functools import wraps
 from PySide2.QtCore import Qt
 from pygears.conf import Inject, reg_inject
 from .main_window import register_prefix, message
-from .actions import shortcut, get_minibuffer_input
+from .actions import shortcut, get_minibuffer_input, Interactive
 from .description import describe_text, describe_trace, describe_file
 from .gtkwave import ItemNotTraced
 from .node_search import node_search_completer
+from .sim_actions import time_search, step_simulator, cont_simulator
 
 
 def single_select_action(func):
@@ -273,10 +274,9 @@ def send_to_wave(
         message('Waves added: ' + ' '.join(added))
 
 
-@shortcut('graph', Qt.Key_C)
-@reg_inject
-def cont_simulator(sim_bridge=Inject('gearbox/sim_bridge')):
-    sim_bridge.cont()
+shortcut('graph', Qt.Key_S)(step_simulator)
+shortcut('graph', Qt.Key_C)(cont_simulator)
+shortcut('graph', Qt.Key_Colon)(time_search)
 
 
 @shortcut('graph', Qt.Key_Slash)

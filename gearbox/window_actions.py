@@ -1,31 +1,10 @@
-import os
 from PySide2.QtCore import Qt
 from PySide2 import QtWidgets
-from pygears.conf import Inject, reg_inject, registry
+from pygears.conf import Inject, reg_inject
 from .layout import Window, WindowLayout
 from .main_window import register_prefix
 from .actions import shortcut
 from .saver import save
-
-register_prefix(None, (Qt.Key_Space, Qt.Key_F), 'file')
-
-
-@shortcut(None, (Qt.Key_Space, Qt.Key_F, Qt.Key_F), 'open')
-@reg_inject
-def open_file(sim_bridge=Inject('gearbox/sim_bridge')):
-    ret = QtWidgets.QFileDialog.getOpenFileName(
-        caption='Open file',
-        dir=os.getcwd(),
-        filter="PyGears script (*.py);;All files (*)")
-
-    script_fn = ret[0]
-
-    if script_fn:
-        registry('gearbox/sim_bridge').invoke_method(
-            'run_model', script_fn=script_fn)
-
-        registry('gearbox/sim_bridge').invoke_method('run_sim')
-
 
 register_prefix(None, (Qt.Key_Space, Qt.Key_W), 'window')
 
@@ -52,7 +31,8 @@ def split_horizontally(layout=Inject('gearbox/layout')):
             return
 
 
-@shortcut(None, (Qt.Key_Space, Qt.Key_W, Qt.Key_Underscore), 'split vertically')
+@shortcut(None, (Qt.Key_Space, Qt.Key_W, Qt.Key_Underscore),
+          'split vertically')
 @reg_inject
 def split_vertically(layout=Inject('gearbox/layout')):
     window = layout.active_window()
