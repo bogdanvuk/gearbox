@@ -78,7 +78,7 @@ def graph_create(
     top_model.view.layout()
     view.fit_all()
 
-    GraphBuffer(view, 'graph')
+    return GraphBuffer(view, 'graph')
 
 
 class Graph(QtWidgets.QGraphicsView):

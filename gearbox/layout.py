@@ -439,7 +439,7 @@ class BufferStack(QtWidgets.QStackedLayout):
         return list(self.current_layout.windows())
 
     def active_window(self):
-        return self.current_layout.current
+        return self.current_window
 
     def window_activated(self, win):
         last_window = self.current_window

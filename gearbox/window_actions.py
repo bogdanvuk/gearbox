@@ -81,7 +81,7 @@ def decrease_size(layout=Inject('gearbox/layout')):
 
 @shortcut(None, (Qt.Key_Space, Qt.Key_W, Qt.Key_J), 'down')
 @reg_inject
-def window_down(main=Inject('gearbox/main')):
+def window_down(layout=Inject('gearbox/layout')):
     def go_topmost_down(window):
         if isinstance(window, Window):
             return window
@@ -98,14 +98,14 @@ def window_down(main=Inject('gearbox/main')):
             parent = window.parent
             return go_down(parent, parent.child_index(window))
 
-    window = go_down(main.buffers.active_window(), 0)
+    window = go_down(layout.active_window(), 0)
     if window:
         window.activate()
 
 
 @shortcut(None, (Qt.Key_Space, Qt.Key_W, Qt.Key_K), 'up')
 @reg_inject
-def window_up(main=Inject('gearbox/main')):
+def window_up(layout=Inject('gearbox/layout')):
     def go_bottommost_down(window):
         if isinstance(window, Window):
             return window
@@ -122,7 +122,7 @@ def window_up(main=Inject('gearbox/main')):
             parent = window.parent
             return go_up(parent, parent.child_index(window))
 
-    window = go_up(main.buffers.active_window(), 0)
+    window = go_up(layout.active_window(), 0)
 
     if window:
         window.activate()
@@ -130,7 +130,7 @@ def window_up(main=Inject('gearbox/main')):
 
 @shortcut(None, (Qt.Key_Space, Qt.Key_W, Qt.Key_L), 'right')
 @reg_inject
-def window_right(main=Inject('gearbox/main')):
+def window_right(layout=Inject('gearbox/layout')):
     def go_leftmost_down(window):
         if isinstance(window, Window):
             return window
@@ -147,14 +147,14 @@ def window_right(main=Inject('gearbox/main')):
             parent = window.parent
             return go_right(parent, parent.child_index(window))
 
-    window = go_right(main.buffers.active_window(), 0)
+    window = go_right(layout.active_window(), 0)
     if window:
         window.activate()
 
 
 @shortcut(None, (Qt.Key_Space, Qt.Key_W, Qt.Key_H), 'left')
 @reg_inject
-def window_left(main=Inject('gearbox/main')):
+def window_left(layout=Inject('gearbox/layout')):
     def go_rightmost_down(window):
         if isinstance(window, Window):
             return window
@@ -171,7 +171,7 @@ def window_left(main=Inject('gearbox/main')):
             parent = window.parent
             return go_left(parent, parent.child_index(window))
 
-    window = go_left(main.buffers.active_window(), 0)
+    window = go_left(layout.active_window(), 0)
     if window:
         window.activate()
 

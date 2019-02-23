@@ -1,8 +1,10 @@
 from PySide2 import QtCore
 from PySide2 import QtWidgets
 from pygears.conf import Inject, reg_inject
+from .layout import active_buffer
 from .main_window import register_prefix
 from .actions import shortcut, Interactive
+from .graph import graph_create
 
 register_prefix(None, (QtCore.Qt.Key_Space, QtCore.Qt.Key_B), 'buffers')
 
@@ -34,3 +36,25 @@ def select_buffer(
 
     if buff is not None:
         layout.current_window.place_buffer(buff)
+
+
+@shortcut(None, (QtCore.Qt.Key_Space, QtCore.Qt.Key_B, QtCore.Qt.Key_D),
+          'delete')
+@reg_inject
+def delete_buffer(layout=Inject('gearbox/layout')):
+
+    active_buffer().delete()
+
+
+@shortcut(None, (QtCore.Qt.Key_Space, QtCore.Qt.Key_B, QtCore.Qt.Key_G),
+          'graph')
+@reg_inject
+def graph(layout=Inject('gearbox/layout')):
+
+    for b in layout.buffers:
+        if b.name == 'graph':
+            buff = b
+    else:
+        buff = graph_create()
+
+    layout.show_buffer(buff)
