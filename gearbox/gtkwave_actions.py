@@ -2,7 +2,8 @@ from PySide2.QtCore import Qt
 from PySide2 import QtCore
 from .actions import shortcut
 from .layout import active_buffer
-from pygears.conf import Inject, inject_async, reg_inject, bind
+from .graph import GraphBufferPlugin
+from pygears.conf import Inject, inject_async, reg_inject, bind, registry, MayInject
 from .sim_actions import time_search, step_simulator, cont_simulator
 
 
@@ -13,7 +14,8 @@ def node_expand_toggle(status, node, gtkwave=Inject('gearbox/gtkwave')):
 
 
 @inject_async
-def create_node_expand_toggle(graph=Inject('gearbox/graph')):
+def create_node_expand_toggle(
+        graph=Inject('gearbox/graph'), gtkwave=Inject('gearbox/gtkwave')):
     graph.node_expand_toggled.connect(node_expand_toggle)
 
 
@@ -37,19 +39,24 @@ def trace_toggle():
     active_buffer().instance.command('gtkwave::/Edit/Toggle_Group_Open|Close')
 
 
-@inject_async
-def graph_gtkwave_select_sync(graph=Inject('gearbox/graph')):
-    bind('gearbox/graph_gtkwave_select_sync', GraphGtkwaveSelectSync(graph))
+# @inject_async
+# def graph_gtkwave_select_sync(graph=Inject('gearbox/graph')):
+#     bind('gearbox/graph_gtkwave_select_sync', GraphGtkwaveSelectSync(graph))
 
 
 # TODO: broken when using gtkwave save file
 class GraphGtkwaveSelectSync(QtCore.QObject):
     @reg_inject
-    def __init__(self, graph=Inject('gearbox/graph')):
-        graph.selection_changed.connect(self.selection_changed)
+    def __init__(self, buff):
+        print("Here?")
+        buff.view.selection_changed.connect(self.selection_changed)
 
     @reg_inject
-    def selection_changed(self, selected, gtkwave=Inject('gearbox/gtkwave')):
+    def selection_changed(self, selected,
+                          gtkwave=MayInject('gearbox/gtkwave')):
+
+        if not gtkwave:
+            return
 
         selected_wave_pipes = {}
         for s in selected:
@@ -70,6 +77,14 @@ class GraphGtkwaveSelectSync(QtCore.QObject):
                 f'gtkwave::highlightSignalsFromList {{{" ".join(wave_list)}}}'
             ])
 
+
 shortcut('gtkwave', Qt.Key_S)(step_simulator)
 shortcut('gtkwave', Qt.Key_C)(cont_simulator)
 shortcut('gtkwave', Qt.Key_Colon)(time_search)
+
+
+class GtkwaveActionsPlugin(GraphBufferPlugin):
+    @classmethod
+    def bind(cls):
+        registry('gearbox/plugins/graph'
+                 )['GraphGtkwaveSelectSync'] = GraphGtkwaveSelectSync

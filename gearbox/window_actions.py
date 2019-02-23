@@ -19,6 +19,12 @@ def window_delete(layout=Inject('gearbox/layout')):
         next(layout.current_layout.windows()).activate()
 
 
+@shortcut(None, (Qt.Key_Space, Qt.Key_W, Qt.Key_C), 'clear')
+@reg_inject
+def clear_layout(layout=Inject('gearbox/layout')):
+    layout.clear_layout()
+
+
 @shortcut(None, (Qt.Key_Space, Qt.Key_W, Qt.Key_Slash), 'split horizontally')
 @reg_inject
 def split_horizontally(layout=Inject('gearbox/layout')):

@@ -12,11 +12,11 @@ from .port import PortItem
 from .scene import NodeScene
 from .node import NodeItem
 from .node_model import NodeModel
-from .layout import Buffer
+from .layout import Buffer, LayoutPlugin
 from .html_utils import tabulate, fontify
 
 from pygears.rtl import rtlgen
-from pygears.conf import Inject, reg_inject, bind, MayInject, registry
+from pygears.conf import Inject, reg_inject, bind, MayInject, registry, safe_bind
 
 ZOOM_MIN = -0.95
 ZOOM_MAX = 2.0
@@ -68,10 +68,7 @@ def graph_create(
         return
 
     view = Graph()
-    buff = GraphBuffer(view, 'graph')
-
     sim_bridge.model_closed.connect(graph_delete)
-    sim_bridge.model_closed.connect(buff.delete)
 
     bind('gearbox/graph', view)
     root = rtlgen(root)
@@ -80,6 +77,9 @@ def graph_create(
     view.top = top_model.view
     top_model.view.layout()
     view.fit_all()
+
+    buff = GraphBuffer(view, 'graph')
+    sim_bridge.model_closed.connect(buff.delete)
 
 
 class Graph(QtWidgets.QGraphicsView):
@@ -274,12 +274,6 @@ class Graph(QtWidgets.QGraphicsView):
         return pipes
 
     def selection_changed_slot(self):
-        selected = self.selected_items()
-        if selected:
-            if hasattr(selected[0].model, 'description'):
-                from .popup_desc import popup_desc
-                popup_desc(selected[0].model.description)
-
         self.selection_changed.emit(self.selected_items())
 
     def select(self, obj):
@@ -457,3 +451,9 @@ class Graph(QtWidgets.QGraphicsView):
 
         if self.get_zoom() > 0.1:
             self.reset_zoom()
+
+
+class GraphBufferPlugin(LayoutPlugin):
+    @classmethod
+    def bind(cls):
+        safe_bind('gearbox/plugins/graph', {})

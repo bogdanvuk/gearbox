@@ -1,3 +1,4 @@
+import runpy
 import os
 from pygears.conf import Inject, reg_inject, MayInject
 from .graph import GraphVisitor
@@ -16,7 +17,7 @@ from functools import partial
 expand_func_template = """
 
 @reg_inject
-def expand(graph_model=Inject('gearbox/graph_model'), graph=Inject('gearbox/graph')):
+def expand(buff, graph_model=Inject('gearbox/graph_model')):
   {% if expanded %}
     {% for name in expanded %}
     graph_model['{{name}}'].view.expand()
@@ -24,7 +25,7 @@ def expand(graph_model=Inject('gearbox/graph_model'), graph=Inject('gearbox/grap
   {% endif %}
 
   {% if selected %}
-    graph.select(graph_model['{{selected.model.name}}'].view)
+    buff.view.select(graph_model['{{selected.model.name}}'].view)
   {% endif %}
 
   {% if (not selected) and (not expanded) %}
@@ -64,17 +65,44 @@ def gtkwave_load(gtkwave=Inject('gearbox/gtkwave')):
 
 """
 
-layout_load_func_tempalte = """
+layout_load_func_template = """
+
+@reg_inject
+def place_buffer(buff, window, layout=Inject('gearbox/layout')):
+    layout.windows[window].place_buffer(buff)
+
+buffer_init_commands = {
+{% for k,v in buffer_init_commands.items() -%}
+  {% if v %}
+    '{{k}}': [{{v|join(',')}}],
+  {% endif %}
+{% endfor %}
+}
+
+
+@reg_inject
+def buffer_initializer(buff, layout=Inject('gearbox/layout')):
+    if buff.name in buffer_init_commands:
+        for f in buffer_init_commands[buff.name]:
+            f(buff)
+
+        del [buffer_init_commands[buff.name]]
+        if not buffer_init_commands:
+            layout.new_buffer.disconnect(buffer_initializer)
+
 
 @inject_async
 def layout_load(layout=Inject('gearbox/layout')):
+    layout.clear_layout()
     win = layout.current_layout
     win.setDirection({{top_direction}})
     win.child(0).remove()
 
 {{commands|indent(4,True)}}
 
-    list(layout.windows())[0].activate()
+    layout.windows[0].activate()
+
+    layout.new_buffer.connect(buffer_initializer)
 
 """
 
@@ -92,13 +120,16 @@ class GraphStatusSaver(HierYielderBase):
 
 
 @reg_inject
-def save_expanded(
-        root=Inject('gearbox/graph_model'), graph=Inject('gearbox/graph')):
+def save_expanded(buffer_init_commands,
+                  root=Inject('gearbox/graph_model'),
+                  graph=Inject('gearbox/graph')):
     expanded = list(GraphStatusSaver().visit(root))
 
     selected = graph.selected_items()
     if selected:
         selected = selected[0]
+
+    buffer_init_commands['graph'].append('expand')
 
     return load_str_template(expand_func_template).render({
         'expanded':
@@ -120,9 +151,7 @@ def save_win_layout(name, layout):
     res = ''
     for i, child in enumerate(layout):
         if isinstance(child, Window):
-            res += (f"{name}.addLayout(Window("
-                    f"parent=None, buff=layout.get_buffer_by_name("
-                    f"\"{child.buff.name}\")))\n")
+            res += (f"{name}.addLayout(Window(" f"parent=None))\n")
         else:
             res += save_layout(child, name + str(i))
             res += f"{name}.addLayout({name + str(i)})\n"
@@ -138,8 +167,18 @@ for i, s in enumerate({streches}):
 
 
 @reg_inject
-def save_layout(layout=Inject('gearbox/layout')):
-    return load_str_template(layout_load_func_tempalte).render({
+def save_layout(buffer_init_commands, layout=Inject('gearbox/layout')):
+
+    for i, w in enumerate(layout.windows):
+        if w.buff:
+            buffer_init_commands[w.buff.name].append(
+                f'partial(place_buffer, window={i})')
+
+    return load_str_template(layout_load_func_template).render({
+        'buffer_init_commands':
+        buffer_init_commands,
+        'layout':
+        layout,
         'commands':
         save_win_layout('win', layout.current_layout),
         'top_direction':
@@ -147,17 +186,27 @@ def save_layout(layout=Inject('gearbox/layout')):
     })
 
 
-def save():
+def load():
+    try:
+        runpy.run_path(get_save_file_path())
+    except Exception as e:
+        print(f'Loading save file failed: {e}')
+
+
+@reg_inject
+def save(layout=Inject('gearbox/layout')):
     with open(get_save_file_path(), 'w') as f:
+        buffer_init_commands = {b.name: [] for b in layout.buffers}
+
         f.write(save_file_prolog)
 
-        f.write(save_expanded())
+        f.write(save_expanded(buffer_init_commands))
 
-        f.write(save_gtkwave())
+        # f.write(save_gtkwave(buffer_init_commands))
 
-        f.write(save_layout())
+        f.write(save_layout(buffer_init_commands))
 
-        f.write(save_file_epilog)
+        # f.write(save_file_epilog)
 
 
 @reg_inject

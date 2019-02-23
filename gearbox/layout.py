@@ -1,6 +1,6 @@
 import os
 from .modeline import Modeline
-from pygears.conf import Inject, reg_inject, safe_bind
+from pygears.conf import Inject, reg_inject, safe_bind, PluginBase, registry
 from PySide2 import QtCore, QtWidgets, QtGui
 from .stylesheet import STYLE_MINIBUFFER
 
@@ -15,6 +15,7 @@ class Buffer:
     def __init__(self,
                  view,
                  name,
+                 plugins=None,
                  main=Inject('gearbox/main'),
                  layout=Inject('gearbox/layout')):
         view.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
@@ -25,6 +26,14 @@ class Buffer:
         self.view = view
         self.name = name
         layout.add(self)
+
+        if plugins is None:
+            try:
+                plugins = registry(f'gearbox/plugins/{self.domain}')
+            except KeyError:
+                plugins = {}
+
+        self.plugins = {name: cls(self) for name, cls in plugins.items()}
 
     @property
     @reg_inject
@@ -57,6 +66,11 @@ class Buffer:
 
     @reg_inject
     def delete(self, layout=Inject('gearbox/layout')):
+        for name, plugin in self.plugins:
+            plugin.delete()
+
+        plugin.clear()
+
         if self.window:
             self.window.remove_buffer()
 
@@ -334,7 +348,7 @@ class WindowLayout(QtWidgets.QBoxLayout):
 
 
 class BufferStack(QtWidgets.QStackedLayout):
-    buffer_added = QtCore.Signal(object)
+    new_buffer = QtCore.Signal(object)
 
     def __init__(self, main, parent=None):
         super().__init__(parent)
@@ -386,7 +400,7 @@ class BufferStack(QtWidgets.QStackedLayout):
 
     @property
     def windows(self):
-        yield from self.current_layout.windows()
+        return list(self.current_layout.windows())
 
     def active_window(self):
         return self.current_layout.current
@@ -416,31 +430,25 @@ class BufferStack(QtWidgets.QStackedLayout):
         self.buffers.remove(buf)
 
     def add(self, buf):
+        print(f"Adding {buf.name} to layout")
         self.buffers.append(buf)
-        self.buffer_added.emit(buf)
+        self.new_buffer.emit(buf)
 
-        def find_empty_position(layout):
-            if isinstance(layout, Window):
-                if layout.buff is None:
-                    return layout
-            else:
-                for i in range(layout.count()):
-                    buff = find_empty_position(layout.child(i))
-                    if buff is not None:
-                        return buff
+        # def find_empty_position(layout):
+        #     if isinstance(layout, Window):
+        #         if layout.buff is None:
+        #             return layout
+        #     else:
+        #         for i in range(layout.count()):
+        #             buff = find_empty_position(layout.child(i))
+        #             if buff is not None:
+        #                 return buff
 
-        empty_pos = find_empty_position(self.current_layout)
+        # empty_pos = find_empty_position(self.current_layout)
 
-        if empty_pos:
-            empty_pos.place_buffer(buf)
-            empty_pos.activate()
-
-    # def current_changed(self):
-    #     self.main.modeline.setText(self.current.name)
-    #     if hasattr(self.current, 'activate'):
-    #         self.current.activate()
-
-    #     self.main.change_domain(self.current.domain)
+        # if empty_pos:
+        #     empty_pos.place_buffer(buf)
+        #     empty_pos.activate()
 
     @property
     def current(self):
@@ -458,3 +466,9 @@ class BufferStack(QtWidgets.QStackedLayout):
             return self.current.buff.name
         else:
             return None
+
+
+class LayoutPlugin(PluginBase):
+    @classmethod
+    def bind(cls):
+        safe_bind('gearbox/plugins', {})

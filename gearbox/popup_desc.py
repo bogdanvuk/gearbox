@@ -8,13 +8,17 @@ from .layout import active_buffer
 class PopupDesc(QtWidgets.QTextEdit):
     @reg_inject
     def __init__(self,
+                 buff,
                  max_width=500,
                  max_height=500,
                  main=Inject('gearbox/main')):
         super().__init__()
         self.setParent(main)
         self.max_width = max_width
-        self.buff = None
+
+        self.buff = buff
+        self.buff.view.resized.connect(self.reposition)
+
         # self.max_height = max_height
         self.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         self.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
@@ -62,17 +66,13 @@ class PopupDesc(QtWidgets.QTextEdit):
         self.reposition()
         self.delay_timer.stop()
 
-    def popup(self, text, buff=None, delay=1000, timeout=None):
-        if buff is None:
-            buff = active_buffer()
-
+    def popup(self, text, delay=1000, timeout=None):
         if self.buff is not None:
             try:
                 self.buff.view.resized.disconnect(self.reposition)
             except AttributeError:
                 pass
 
-        self.buff = buff
         try:
             self.buff.view.resized.connect(self.reposition)
         except AttributeError:
@@ -92,6 +92,12 @@ class PopupDesc(QtWidgets.QTextEdit):
             self.delay_timer.start()
         else:
             self.show()
+
+    def delete(self, main=Inject('gearbox/main')):
+        self.cancel()
+        self.buff.view.resized.disconnect(self.reposition)
+        main.key_cancel.discconnect(self.cancel)
+        self.deleteLater()
 
     def cancel(self):
         self.hide()

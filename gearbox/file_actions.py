@@ -5,6 +5,7 @@ from PySide2 import QtWidgets
 from pygears.conf import Inject, reg_inject, registry
 from .main_window import register_prefix
 from .actions import shortcut
+from .saver import save
 
 register_prefix(None, (Qt.Key_Space, Qt.Key_F), 'file')
 
@@ -46,6 +47,7 @@ def close_file(
         sim_bridge=Inject('gearbox/sim_bridge'),
         layout=Inject('gearbox/layout')):
     sim_bridge.invoke_method('close_model')
+    save()
     layout.clear_layout()
 
 

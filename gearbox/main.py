@@ -16,6 +16,7 @@ from .pygears_proxy import sim_bridge
 from .saver import get_save_file_path
 from .timekeep import TimeKeep
 # import gearbox.graph
+from .saver import load
 from . import actions
 from . import window_actions
 from . import file_actions
@@ -70,6 +71,14 @@ def set_main_win_title(
 
 
 @reg_inject
+def main_load(buffer, layout=Inject('gearbox/layout')):
+    if buffer.name == "gtkwave - rng":
+        print(f'Buffer: {buffer.name}')
+        new_window = layout.active_window().split_horizontally()
+        new_window.place_buffer(buffer)
+
+
+@reg_inject
 def main_loop(script_fn, layers=Inject('gearbox/layers')):
     app = QtWidgets.QApplication(sys.argv)
 
@@ -79,10 +88,12 @@ def main_loop(script_fn, layers=Inject('gearbox/layers')):
     app.setFont(QtGui.QFont("DejaVu Sans Mono", 11))
 
     main_window = MainWindow()
+    # registry('gearbox/layout').new_buffer.connect(main_load)
     main_window.setWindowTitle(f'Gearbox')
 
     sim_bridge_inst = sim_bridge()
     sim_bridge_inst.model_loaded.connect(set_main_win_title)
+    sim_bridge_inst.model_loaded.connect(load)
 
     for l in layers:
         l()
@@ -113,7 +124,7 @@ class SimPlugin(SimVCDPlugin):
     def bind(cls):
         safe_bind(
             'gearbox/layers',
-            # [which_key, graph, gtkwave, sniper, description, reloader])
-            [which_key, graph, gtkwave, sniper, description])
+            # [which_key, graph, main, sniper, description, reloader])
+            [which_key, graph, gtkwave, sniper])
         safe_bind('sim/extens/vcd/shmidcat', True)
         safe_bind('sim/extens/vcd/vcd_fifo', True)

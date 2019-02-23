@@ -1,3 +1,4 @@
+import os
 import runpy
 import functools
 import threading
@@ -169,6 +170,8 @@ class PyGearsClient(QtCore.QObject):
         gearbox_registry = registry('gearbox')
         clear()
         bind('gearbox', gearbox_registry)
+        bind('sim/artifact_dir',
+             os.path.join(os.path.dirname(script_fn), 'build'))
         runpy.run_path(script_fn)
         bind('gearbox/model_script_name', script_fn)
         self.model_loaded.emit()

@@ -1,9 +1,11 @@
 import os
 import inspect
+from .graph import GraphBufferPlugin
 from .pipe import Pipe
+from .popup_desc import PopupDesc
 from functools import wraps
 from PySide2.QtCore import Qt
-from pygears.conf import Inject, reg_inject
+from pygears.conf import Inject, reg_inject, registry
 from .main_window import register_prefix, message
 from .actions import shortcut, get_minibuffer_input, Interactive
 from .description import describe_text, describe_trace, describe_file
@@ -307,3 +309,25 @@ def node_search(
         node = node[basename]
 
     graph.select(node.view)
+
+
+class GraphDescription:
+    def __init__(self, buff):
+        self.popup_desc = PopupDesc(buff)
+        buff.view.selection_changed.connect(self.selection_changed)
+
+    def selection_changed(self, selected):
+        if selected:
+            if hasattr(selected[0].model, 'description'):
+                self.popup_desc.popup(selected[0].model.description)
+
+    def delete(self):
+        self.popup_desc.delete()
+
+
+class GtkwaveActionsPlugin(GraphBufferPlugin):
+    @classmethod
+    def bind(cls):
+        pass
+        # registry(
+        #     'gearbox/plugins/graph')['GraphDescription'] = GraphDescription
