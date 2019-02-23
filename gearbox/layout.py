@@ -10,6 +10,11 @@ def active_buffer(layout=Inject('gearbox/layout')):
     return layout.current.buff
 
 
+@reg_inject
+def show_buffer(buff, layout=Inject('gearbox/layout')):
+    return layout.show_buffer(buff)
+
+
 class Buffer(QtCore.QObject):
     shown = QtCore.Signal()
     hidden = QtCore.Signal()
@@ -447,26 +452,36 @@ class BufferStack(QtWidgets.QStackedLayout):
         print(f"Removing {buf} from layout")
         self.buffers.remove(buf)
 
+    def show_buffer(self, buf):
+        def find_empty_position(layout):
+            if isinstance(layout, Window):
+                if layout.buff is None:
+                    return layout
+            else:
+                for i in range(layout.count()):
+                    buff = find_empty_position(layout.child(i))
+                    if buff is not None:
+                        return buff
+
+        empty_pos = find_empty_position(self.current_layout)
+
+        if empty_pos:
+            win = empty_pos
+        elif len(self.windows) == 1:
+            win = self.windows[0]
+        else:
+            for w in self.windows:
+                if w is not self.current:
+                    win = w
+                    break
+
+        win.place_buffer(buf)
+        win.activate()
+
     def add(self, buf):
         print(f"Adding {buf.name} to layout")
         self.buffers.append(buf)
         self.new_buffer.emit(buf)
-
-        # def find_empty_position(layout):
-        #     if isinstance(layout, Window):
-        #         if layout.buff is None:
-        #             return layout
-        #     else:
-        #         for i in range(layout.count()):
-        #             buff = find_empty_position(layout.child(i))
-        #             if buff is not None:
-        #                 return buff
-
-        # empty_pos = find_empty_position(self.current_layout)
-
-        # if empty_pos:
-        #     empty_pos.place_buffer(buf)
-        #     empty_pos.activate()
 
     @property
     def current(self):

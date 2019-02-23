@@ -191,10 +191,30 @@ def describe_text(text, desc=Inject('gearbox/description')):
 
 
 @reg_inject
-def describe_file(fn, lineno=1, desc=Inject('gearbox/description')):
-    desc.display_file(fn, lineno)
+def describe_file(fn, name=None, lineno=1, layout=Inject('gearbox/layout')):
+    if name is None:
+        name = fn
+
+    for b in layout.buffers:
+        if b.name == fn:
+            buff = b
+            break
+    else:
+        buff = DescriptionBuffer(Description(), fn)
+
+    buff.view.display_file(fn, lineno)
+
+    return buff
 
 
 @reg_inject
-def describe_trace(trace, desc=Inject('gearbox/description')):
-    desc.display_trace(trace)
+def describe_trace(trace, name, layout=Inject('gearbox/layout')):
+    for b in layout.buffers:
+        if b.name == name:
+            buff = b
+            break
+    else:
+        buff = DescriptionBuffer(Description(), name)
+
+    buff.view.display_trace(trace)
+    return buff

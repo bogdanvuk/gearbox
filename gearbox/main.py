@@ -71,14 +71,6 @@ def set_main_win_title(
 
 
 @reg_inject
-def main_load(buffer, layout=Inject('gearbox/layout')):
-    if buffer.name == "gtkwave - rng":
-        print(f'Buffer: {buffer.name}')
-        new_window = layout.active_window().split_horizontally()
-        new_window.place_buffer(buffer)
-
-
-@reg_inject
 def main_loop(script_fn, layers=Inject('gearbox/layers')):
     app = QtWidgets.QApplication(sys.argv)
 
@@ -86,7 +78,6 @@ def main_loop(script_fn, layers=Inject('gearbox/layers')):
     app.setFont(QtGui.QFont("DejaVu Sans Mono", 11))
 
     main_window = MainWindow()
-    # registry('gearbox/layout').new_buffer.connect(main_load)
     main_window.setWindowTitle(f'Gearbox')
 
     sim_bridge_inst = sim_bridge()

@@ -1,5 +1,6 @@
 import os
 import inspect
+from .layout import show_buffer
 from .graph import GraphBufferPlugin
 from .pipe import Pipe
 from .popup_desc import PopupDesc
@@ -191,7 +192,9 @@ def describe_item(node, graph):
 @single_select_action
 def describe_inst(node, graph):
     if not isinstance(node, Pipe):
-        describe_trace(node.model.rtl.gear.trace)
+        buff = describe_trace(
+            node.model.rtl.gear.trace, name=f'inst - {node.model.rtl.name}')
+        show_buffer(buff)
 
 
 @shortcut('graph', (Qt.Key_Z, Qt.Key_Plus))
@@ -215,7 +218,8 @@ def describe_definition(node, graph):
         func = node.model.definition.__wrapped__
         fn = inspect.getfile(func)
         lines, lineno = inspect.getsourcelines(func)
-        describe_file(fn, lineno=slice(lineno, lineno + len(lines)))
+        buff = describe_file(fn, lineno=slice(lineno, lineno + len(lines)))
+        show_buffer(buff)
 
 
 @shortcut('graph', (Qt.Key_D, Qt.SHIFT + Qt.Key_D))
@@ -234,7 +238,8 @@ def describe_rtl_source(node, graph):
     if not isinstance(node, Pipe):
         rtl_source = node.model.rtl_source
         if rtl_source:
-            describe_file(rtl_source)
+            buff = describe_file(rtl_source)
+            show_buffer(buff)
 
 
 @shortcut('graph', (Qt.Key_D, Qt.Key_R))
@@ -243,7 +248,8 @@ def describe_rtl_inst(node, graph):
     if not isinstance(node, Pipe):
         rtl_source = node.model.rtl_source
         if rtl_source:
-            describe_file(rtl_source)
+            buff = describe_file(rtl_source)
+            show_buffer(buff)
 
 
 @shortcut('graph', Qt.Key_Return)
