@@ -180,9 +180,6 @@ def gtkwave_create(sim_bridge=Inject('gearbox/sim_bridge')):
 
     sim_bridge.model_closed.connect(gktwave_delete)
 
-    for b in gtkwave.buffers:
-        sim_bridge.model_closed.connect(b.delete)
-
 
 def gktwave_delete():
     bind('gearbox/gtkwave', None)

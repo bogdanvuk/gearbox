@@ -78,8 +78,7 @@ def graph_create(
     top_model.view.layout()
     view.fit_all()
 
-    buff = GraphBuffer(view, 'graph')
-    sim_bridge.model_closed.connect(buff.delete)
+    GraphBuffer(view, 'graph')
 
 
 class Graph(QtWidgets.QGraphicsView):

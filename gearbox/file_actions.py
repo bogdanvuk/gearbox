@@ -23,8 +23,7 @@ def close_file(
         sim_bridge=Inject('gearbox/sim_bridge'),
         layout=Inject('gearbox/layout')):
     sim_bridge.invoke_method('close_model')
-    layout.clear_layout()
-    # layout.buffers.clear()
+    layout.clear()
 
 
 @shortcut(None, (Qt.Key_Space, Qt.Key_F, Qt.Key_F), 'open')

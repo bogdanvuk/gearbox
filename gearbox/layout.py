@@ -393,6 +393,14 @@ class BufferStack(QtWidgets.QStackedLayout):
         self.buffers = []
         # self.currentChanged.connect(self.current_changed)
 
+    def clear(self):
+        self.clear_layout()
+        self.clear_buffers()
+
+    def clear_buffers(self):
+        for b in self.buffers:
+            b.delete()
+
     def clear_layout(self):
         if self.current_layout:
             for w in self.windows:
