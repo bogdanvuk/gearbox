@@ -131,6 +131,7 @@ class Description(QtWidgets.QTextEdit):
         inset grey;
         """)
         self.document().setDefaultStyleSheet(dark_theme)
+        self.clean()
 
     def resizeEvent(self, event):
         super().resizeEvent(event)

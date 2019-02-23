@@ -10,6 +10,7 @@ save_file_prolog = """
 from pygears.conf import Inject, reg_inject, MayInject, inject_async
 from gearbox.utils import trigger, single_shot_connect
 from gearbox.layout import Window, WindowLayout
+from gearbox.description import describe_file
 from PySide2 import QtWidgets
 from functools import partial
 """
@@ -88,6 +89,7 @@ def buffer_initializer(buff, layout=Inject('gearbox/layout')):
 @inject_async
 def layout_load(layout=Inject('gearbox/layout')):
     layout.clear_layout()
+    layout.buffers.clear()
     win = layout.current_layout
     win.setDirection({{top_direction}})
     win.child(0).remove()
@@ -97,6 +99,8 @@ def layout_load(layout=Inject('gearbox/layout')):
     layout.windows[0].activate()
 
     layout.new_buffer.connect(buffer_initializer)
+
+    descriptions_load()
 
 """
 
@@ -146,6 +150,36 @@ def save_gtkwave(buffer_init_commands, layout=Inject('gearbox/layout')):
         return load_str_template(gtkwave_load_func_template).render({
             'buffers':
             buffers
+        })
+
+    return ''
+
+
+description_load_template = """
+
+@reg_inject
+def descriptions_load(layout=Inject('gearbox/layout')):
+{% if commands %}
+{{commands|indent(4,True)}}
+{% else %}
+    pass
+{% endif %}
+
+"""
+
+
+@reg_inject
+def save_description(buffer_init_commands, layout=Inject('gearbox/layout')):
+    buffers = [buff for buff in layout.buffers if buff.domain == "description"]
+    res = ''
+    for b in buffers:
+        if hasattr(b.view, 'fn'):
+            res += f'describe_file("{b.view.fn}", lineno={b.view.lineno})\n'
+
+    if res:
+        return load_str_template(description_load_template).render({
+            'commands':
+            res
         })
 
     return ''
@@ -207,6 +241,8 @@ def save(layout=Inject('gearbox/layout')):
         f.write(save_expanded(buffer_init_commands))
 
         f.write(save_gtkwave(buffer_init_commands))
+
+        f.write(save_description(buffer_init_commands))
 
         f.write(save_layout(buffer_init_commands))
 

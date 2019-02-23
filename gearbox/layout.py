@@ -183,6 +183,10 @@ class Window(QtWidgets.QVBoxLayout):
     def place_buffer(self, buff, position=None):
         self.remove_buffer()
         self.placeholder.hide()
+
+        if buff.window:
+            buff.window.remove_buffer()
+
         self.insertWidget(0, buff.view, stretch=1)
         self.buff = buff
         self.buff.show()
@@ -404,6 +408,7 @@ class BufferStack(QtWidgets.QStackedLayout):
         self.addWidget(self.current_layout_widget)
 
         self.current_window = None
+        self.activate_window([0])
 
         # for b in self.buffers:
         #     b.hide()
