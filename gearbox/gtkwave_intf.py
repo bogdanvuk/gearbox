@@ -47,10 +47,10 @@ class GtkEventProc(QtCore.QObject):
 
         key = self.detect_key(data)
 
-        app.postEvent(app.focusWidget(),
-                      QtGui.QKeyEvent(QtGui.QKeyEvent.ShortcutOverride, *key))
+        # app.postEvent(app.focusWidget(),
+        #               QtGui.QKeyEvent(QtGui.QKeyEvent.ShortcutOverride, *key))
 
-        app.processEvents(QtCore.QEventLoop.AllEvents)
+        # app.processEvents(QtCore.QEventLoop.AllEvents)
 
         app.postEvent(app.focusWidget(),
                       QtGui.QKeyEvent(QtGui.QKeyEvent.KeyPress, *key))
@@ -210,6 +210,11 @@ native_key_map = {
     0xff55: QtCore.Qt.Key_PageUp,
     0xff56: QtCore.Qt.Key_PageDown,
     0xff57: QtCore.Qt.Key_End,
+    0xffe1: QtCore.Qt.Key_Shift,
+    0xffe2: QtCore.Qt.Key_Shift,
+    0xffe3: QtCore.Qt.Key_Control,
+    0xffe9: QtCore.Qt.Key_Alt,
+    0xffea: QtCore.Qt.Key_Alt
 }
 
 
@@ -254,7 +259,8 @@ class GtkWaveWindow(QtCore.QObject):
         return resp
 
     @reg_inject
-    def window_up(self, version, pid, window_id, graph=Inject('gearbox/graph')):
+    def window_up(self, version, pid, window_id,
+                  graph=Inject('gearbox/graph')):
         print(f'GtkWave started: {version}, {pid}, {window_id}')
         self.window_id = window_id
         self.gtkwave_win = QtGui.QWindow.fromWinId(window_id)

@@ -14,7 +14,7 @@ from pygears.sim.extens.vcd import SimVCDPlugin
 from pygears.conf import Inject, reg_inject, safe_bind, PluginBase, registry, bind, MayInject
 from .pygears_proxy import sim_bridge
 from .saver import get_save_file_path
-from .timekeep import TimeKeep
+from .timekeep import timekeep
 # import gearbox.graph
 from .saver import load
 from . import actions
@@ -82,8 +82,6 @@ def main_load(buffer, layout=Inject('gearbox/layout')):
 def main_loop(script_fn, layers=Inject('gearbox/layers')):
     app = QtWidgets.QApplication(sys.argv)
 
-    timekeep = TimeKeep()
-
     app.setWindowIcon(QtGui.QIcon('gearbox.png'))
     app.setFont(QtGui.QFont("DejaVu Sans Mono", 11))
 
@@ -125,6 +123,6 @@ class SimPlugin(SimVCDPlugin):
         safe_bind(
             'gearbox/layers',
             # [which_key, graph, main, sniper, description, reloader])
-            [which_key, graph, gtkwave, sniper])
+            [timekeep, which_key, graph, gtkwave, sniper])
         safe_bind('sim/extens/vcd/shmidcat', True)
         safe_bind('sim/extens/vcd/vcd_fifo', True)

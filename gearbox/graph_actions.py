@@ -12,6 +12,7 @@ from .description import describe_text, describe_trace, describe_file
 from .gtkwave import ItemNotTraced
 from .node_search import node_search_completer
 from .sim_actions import time_search, step_simulator, cont_simulator
+from .timestep_modeline import TimestepModeline
 
 
 def single_select_action(func):
@@ -328,6 +329,7 @@ class GraphDescription:
 class GtkwaveActionsPlugin(GraphBufferPlugin):
     @classmethod
     def bind(cls):
-        pass
+        registry(
+            'gearbox/plugins/graph')['TimestepModeline'] = TimestepModeline
         # registry(
         #     'gearbox/plugins/graph')['GraphDescription'] = GraphDescription

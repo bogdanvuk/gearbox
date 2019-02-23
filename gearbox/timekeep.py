@@ -23,20 +23,31 @@ def timestep_event_register(slot):
     inject_async(partial(timetep_event_register_connect, slot=slot))
 
 
+def timekeep(sim_bridge=Inject('gearbox/sim_bridge')):
+    bind('gearbox/timekeep', TimeKeep())
+
+
 class TimeKeep(QtCore.QObject):
     timestep_changed = QtCore.Signal(int)
 
-    def __init__(self, cont_refresh_step=2000):
+    @reg_inject
+    def __init__(self,
+                 cont_refresh_step=2000,
+                 sim_bridge=Inject('gearbox/sim_bridge')):
         super().__init__()
-        self._timestep = sim_timestep()
+        self._timestep = None
         self._time_target = None
         self._cont_refresh_step = cont_refresh_step
-        bind('gearbox/timekeep', self)
         bind('gearbox/timestep', self.max_timestep)
-        inject_async(self.sim_bridge_connect)
-
-    def sim_bridge_connect(self, sim_bridge=Inject('gearbox/sim_bridge')):
         sim_bridge.sim_refresh.connect(self.sim_break)
+        sim_bridge.model_closed.connect(self.model_closed)
+        sim_bridge.model_loaded.connect(self.model_loaded)
+
+    def model_loaded(self):
+        pass
+
+    def model_closed(self):
+        self._timestep = None
 
     def sim_break(self):
         self.timestep = self.max_timestep

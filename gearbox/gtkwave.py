@@ -5,10 +5,10 @@ from .timekeep import timestep, timestep_event_register, max_timestep
 from pygears.sim.modules import SimVerilated
 from .node_model import find_cosim_modules, PipeModel, NodeModel
 from pygears.core.hier_node import HierVisitorBase
-from pygears.conf import Inject, MayInject, bind, reg_inject, registry
+from pygears.conf import Inject, MayInject, bind, reg_inject, registry, safe_bind
 from typing import NamedTuple
 from .gtkwave_intf import GtkWaveWindow
-from .layout import active_buffer, Buffer
+from .layout import active_buffer, Buffer, LayoutPlugin
 import fnmatch
 import os
 import re
@@ -99,7 +99,8 @@ class VerilatorVCDMap:
         self.gtkwave_intf = gtkwave_intf
         self.sim_module = sim_module
         if self.sim_module.gear not in rtl_map:
-            import pdb; pdb.set_trace()
+            import pdb
+            pdb.set_trace()
 
         self.rtl_node = rtl_map[self.sim_module.gear]
         self.path_prefix = '.'.join(['TOP', sim_module.wrap_name])
@@ -581,3 +582,9 @@ class GtkWaveGraphIntf(QtCore.QObject):
                                              self.cmd_id)
         else:
             self.should_update = True
+
+
+class GtkWaveBufferPlugin(LayoutPlugin):
+    @classmethod
+    def bind(cls):
+        safe_bind('gearbox/plugins/gtkwave', {})

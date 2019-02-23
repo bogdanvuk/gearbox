@@ -2,9 +2,11 @@ from PySide2.QtCore import Qt
 from PySide2 import QtCore
 from .actions import shortcut
 from .layout import active_buffer
+from .gtkwave import GtkWaveBufferPlugin
 from .graph import GraphBufferPlugin
 from pygears.conf import Inject, inject_async, reg_inject, bind, registry, MayInject
 from .sim_actions import time_search, step_simulator, cont_simulator
+from .timestep_modeline import TimestepModeline
 
 
 @reg_inject
@@ -87,8 +89,11 @@ shortcut('gtkwave', Qt.Key_C)(cont_simulator)
 shortcut('gtkwave', Qt.Key_Colon)(time_search)
 
 
-class GtkwaveActionsPlugin(GraphBufferPlugin):
+class GtkwaveActionsPlugin(GraphBufferPlugin, GtkWaveBufferPlugin):
     @classmethod
     def bind(cls):
         registry('gearbox/plugins/graph'
                  )['GraphGtkwaveSelectSync'] = GraphGtkwaveSelectSync
+
+        registry(
+            'gearbox/plugins/gtkwave')['TimestepModeline'] = TimestepModeline

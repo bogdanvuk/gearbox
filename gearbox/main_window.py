@@ -216,6 +216,14 @@ class MainWindow(QtWidgets.QMainWindow):
         return submenu
 
     # def event(self, event):
+    #     if event.type() == QtCore.QEvent.KeyPress:
+    #         print("Press: ", event.key(), int(event.modifiers()), event.text())
+    #     elif event.type() == QtCore.QEvent.KeyRelease:
+    #         print("Release: ", event.key(), int(event.modifiers()),
+    #               event.text())
+
+    #     return super().event(event)
+
     #     # if isinstance(event, (QtGui.QEnterEvent, QtGui.QHoverEvent)):
     #     #     return True
 

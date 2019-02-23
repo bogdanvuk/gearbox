@@ -10,7 +10,10 @@ def active_buffer(layout=Inject('gearbox/layout')):
     return layout.current.buff
 
 
-class Buffer:
+class Buffer(QtCore.QObject):
+    shown = QtCore.Signal()
+    hidden = QtCore.Signal()
+
     @reg_inject
     def __init__(self,
                  view,
@@ -18,6 +21,9 @@ class Buffer:
                  plugins=None,
                  main=Inject('gearbox/main'),
                  layout=Inject('gearbox/layout')):
+
+        super().__init__()
+
         view.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         menu = main.get_submenu(main.menuBar(), self.domain.title())
         view.customContextMenuRequested.connect(
@@ -33,7 +39,12 @@ class Buffer:
             except KeyError:
                 plugins = {}
 
-        self.plugins = {name: cls(self) for name, cls in plugins.items()}
+        self.plugins = {}
+        for name, cls in plugins.items():
+            self.add_plugin(name, cls(self))
+
+    def add_plugin(self, name, plugin):
+        self.plugins[name] = plugin
 
     @property
     @reg_inject
@@ -54,9 +65,11 @@ class Buffer:
 
     def show(self):
         self.view.show()
+        self.shown.emit()
 
     def hide(self):
         self.view.hide()
+        self.hidden.emit()
 
     def activate(self):
         self.view.setFocus(QtCore.Qt.OtherFocusReason)
@@ -78,6 +91,10 @@ class Buffer:
 
 
 class Window(QtWidgets.QVBoxLayout):
+    buffer_changed = QtCore.Signal()
+    activated = QtCore.Signal()
+    deactivated = QtCore.Signal()
+
     @reg_inject
     def __init__(self, parent=None, buff=None):
         super().__init__()
@@ -124,7 +141,7 @@ class Window(QtWidgets.QVBoxLayout):
         if self.buff:
             self.buff.deactivate()
 
-        self.modeline.update()
+        self.deactivated.emit()
 
     def remove(self):
         self.remove_buffer()
@@ -143,7 +160,7 @@ class Window(QtWidgets.QVBoxLayout):
             self.buff.activate()
 
         layout.window_activated(self)
-        self.modeline.update()
+        self.activated.emit()
 
     def remove_buffer(self):
         if self.buff:
@@ -152,10 +169,11 @@ class Window(QtWidgets.QVBoxLayout):
             if self.count() == 3:
                 self.removeItem(self.itemAt(0))
 
+            self.modeline.reset()
             self.placeholder.show()
             self.buff.hide()
             self.buff = None
-            self.modeline.update()
+            self.buffer_changed.emit()
 
     def place_buffer(self, buff, position=None):
         self.remove_buffer()
@@ -164,6 +182,7 @@ class Window(QtWidgets.QVBoxLayout):
         self.buff = buff
         self.buff.show()
         self.activate()
+        self.buffer_changed.emit()
 
     @property
     @reg_inject
