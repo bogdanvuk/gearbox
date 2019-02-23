@@ -270,6 +270,5 @@ class GtkWaveWindow(QtCore.QObject):
         self.initialized.emit()
 
     def close(self):
-        self.widget.close()
         self.deleted.emit()
         self.proc.gtkwave_thread.wait()

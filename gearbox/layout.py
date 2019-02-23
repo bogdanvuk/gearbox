@@ -66,16 +66,15 @@ class Buffer:
 
     @reg_inject
     def delete(self, layout=Inject('gearbox/layout')):
-        for name, plugin in self.plugins:
+        for name, plugin in self.plugins.items():
             plugin.delete()
 
-        plugin.clear()
+        self.plugins.clear()
 
         if self.window:
             self.window.remove_buffer()
 
         layout.remove(self)
-        self.view.close()
 
 
 class Window(QtWidgets.QVBoxLayout):

@@ -48,8 +48,9 @@ def trace_toggle():
 class GraphGtkwaveSelectSync(QtCore.QObject):
     @reg_inject
     def __init__(self, buff):
-        print("Here?")
+        super().__init__()
         buff.view.selection_changed.connect(self.selection_changed)
+        self.buff = buff
 
     @reg_inject
     def selection_changed(self, selected,
@@ -76,6 +77,9 @@ class GraphGtkwaveSelectSync(QtCore.QObject):
                 'gtkwave::/Edit/UnHighlight_All',
                 f'gtkwave::highlightSignalsFromList {{{" ".join(wave_list)}}}'
             ])
+
+    def delete(self):
+        self.deleteLater()
 
 
 shortcut('gtkwave', Qt.Key_S)(step_simulator)

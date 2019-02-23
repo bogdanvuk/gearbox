@@ -307,31 +307,19 @@ class GtkWaveBuffer(Buffer):
         self.instance = instance
         self.instance.initialized.connect(self.load)
 
-    @reg_inject
-    def load(self, main=Inject('gearbox/main')):
-        main.add_buffer(self)
-        # main.add_buffer(self.name, self.window.widget)
+    def load(self):
+        super().__init__(self.instance.widget, self.name)
 
     def activate(self):
         super().activate()
         self.instance.widget.activateWindow()
-        # self.instance.gtkwave_win.setKeyboardGrabEnabled(True)
 
     def deactivate(self):
         super().deactivate()
-        # self.instance.gtkwave_win.setKeyboardGrabEnabled(False)
-
-    # def delete(self):
-    #     self.instance.close()
-    #     super().delete()
 
     def delete(self):
         super().delete()
         self.instance.close()
-
-    @property
-    def view(self):
-        return self.instance.widget
 
     @property
     def domain(self):

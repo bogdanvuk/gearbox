@@ -8,7 +8,7 @@ from .layout import Window
 
 save_file_prolog = """
 from pygears.conf import Inject, reg_inject, MayInject, inject_async
-from gearbox.utils import trigger
+from gearbox.utils import trigger, single_shot_connect
 from gearbox.layout import Window, WindowLayout
 from PySide2 import QtWidgets
 from functools import partial
@@ -34,34 +34,28 @@ def expand(buff, graph_model=Inject('gearbox/graph_model')):
 
 """
 
-save_file_epilog = """
-expand()
-"""
-
 gtkwave_load_func_template = """
 
 @reg_inject
 def load_after_vcd_loaded(
+        buff,
         graph_model=Inject('gearbox/graph_model'),
         gtkwave=Inject('gearbox/gtkwave')):
 
-    if any(not intf.loaded for intf in gtkwave.graph_intfs):
-        return
-
-{% for intf in intfs %}
-{% for item in intf.items_on_wave %}
-    gtkwave.show_item(graph_model["{{item.name}}"])
-{% endfor %}
+{% for buff in buffers %}
+    if buff.name == "{{buff.name}}":
+    {% for item in buff.intf.items_on_wave %}
+        gtkwave.show_item(graph_model["{{item.name}}"])
+    {% endfor %}
 {% endfor %}
 
 
-@inject_async
-def gtkwave_load(gtkwave=Inject('gearbox/gtkwave')):
-    for i, intf in enumerate(gtkwave.graph_intfs):
-        if intf.loaded:
-            load_after_vcd_loaded()
-        else:
-            intf.vcd_loaded.connect(load_after_vcd_loaded)
+def gtkwave_load(buff):
+    if buff.intf.loaded:
+        load_after_vcd_loaded(buff)
+    else:
+        single_shot_connect(buff.intf.vcd_loaded,
+                            partial(load_after_vcd_loaded, buff))
 
 """
 
@@ -74,7 +68,7 @@ def place_buffer(buff, window, layout=Inject('gearbox/layout')):
 buffer_init_commands = {
 {% for k,v in buffer_init_commands.items() -%}
   {% if v %}
-    '{{k}}': [{{v|join(',')}}],
+    '{{k}}': [{{v|join(', ')}}],
   {% endif %}
 {% endfor %}
 }
@@ -140,11 +134,21 @@ def save_expanded(buffer_init_commands,
 
 
 @reg_inject
-def save_gtkwave(gtkwave=Inject('gearbox/gtkwave')):
-    return load_str_template(gtkwave_load_func_template).render({
-        'intfs':
-        gtkwave.graph_intfs
-    })
+def save_gtkwave(buffer_init_commands, layout=Inject('gearbox/layout')):
+    buffers = [
+        buff for buff in layout.buffers
+        if buff.domain == "gtkwave" and buff.intf.items_on_wave
+    ]
+    for b in buffers:
+        buffer_init_commands[b.name].append('gtkwave_load')
+
+    if buffers:
+        return load_str_template(gtkwave_load_func_template).render({
+            'buffers':
+            buffers
+        })
+
+    return ''
 
 
 def save_win_layout(name, layout):
@@ -202,11 +206,9 @@ def save(layout=Inject('gearbox/layout')):
 
         f.write(save_expanded(buffer_init_commands))
 
-        # f.write(save_gtkwave(buffer_init_commands))
+        f.write(save_gtkwave(buffer_init_commands))
 
         f.write(save_layout(buffer_init_commands))
-
-        # f.write(save_file_epilog)
 
 
 @reg_inject
