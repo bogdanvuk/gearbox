@@ -12,7 +12,11 @@ def active_buffer(layout=Inject('gearbox/layout')):
 
 class Buffer:
     @reg_inject
-    def __init__(self, view, name, main=Inject('gearbox/main')):
+    def __init__(self,
+                 view,
+                 name,
+                 main=Inject('gearbox/main'),
+                 layout=Inject('gearbox/layout')):
         view.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         menu = main.get_submenu(main.menuBar(), self.domain.title())
         view.customContextMenuRequested.connect(
@@ -20,8 +24,16 @@ class Buffer:
 
         self.view = view
         self.name = name
-        self.window = None
-        main.add_buffer(self)
+        layout.add(self)
+
+    @property
+    @reg_inject
+    def window(self, layout=Inject('gearbox/layout')):
+        for w in layout.windows:
+            if w.buff is self:
+                return w
+        else:
+            return None
 
     @property
     def active(self):
@@ -31,15 +43,10 @@ class Buffer:
     def visible(self):
         return self.window is not None
 
-    def show(self, window):
-        if self.window:
-            self.window.remove_buffer()
-
-        self.window = window
+    def show(self):
         self.view.show()
 
     def hide(self):
-        self.window = None
         self.view.hide()
 
     def activate(self):
@@ -49,12 +56,11 @@ class Buffer:
         pass
 
     @reg_inject
-    def delete(self, main=Inject('gearbox/main')):
+    def delete(self, layout=Inject('gearbox/layout')):
         if self.window:
             self.window.remove_buffer()
 
-        main.remove_buffer(self)
-        self.window = None
+        layout.remove(self)
         self.view.close()
 
 
@@ -87,15 +93,10 @@ class Window(QtWidgets.QVBoxLayout):
         self.addWidget(self.modeline)
 
         if buff is not None:
-            # self.place_buffer(buff)
             self.placeholder.hide()
-            view = buff.view
-
-            self.insertWidget(0, view, stretch=1)
-            view.show()
-
+            self.insertWidget(0, buff.view, stretch=1)
             self.buff = buff
-            self.buff.show(self)
+            self.buff.show()
 
     def split_horizontally(self):
         return self.parent.split_horizontally(self)
@@ -141,18 +142,14 @@ class Window(QtWidgets.QVBoxLayout):
             self.placeholder.show()
             self.buff.hide()
             self.buff = None
+            self.modeline.update()
 
     def place_buffer(self, buff, position=None):
         self.remove_buffer()
         self.placeholder.hide()
-
-        view = buff.view
-
-        self.insertWidget(0, view, stretch=1)
-        view.show()
-
+        self.insertWidget(0, buff.view, stretch=1)
         self.buff = buff
-        self.buff.show(self)
+        self.buff.show()
         self.activate()
 
     @property
@@ -337,23 +334,42 @@ class WindowLayout(QtWidgets.QBoxLayout):
 
 
 class BufferStack(QtWidgets.QStackedLayout):
+    buffer_added = QtCore.Signal(object)
+
     def __init__(self, main, parent=None):
         super().__init__(parent)
-        self.current_layout_widget = QtWidgets.QWidget()
         self.current_window = None
+        self.current_layout = None
+        self.current_layout_widget = None
 
         safe_bind('gearbox/layout', self)
 
-        # layout = WindowLayout(size=1)
-        self.current_layout = WindowLayout(self, 1)
-        self.current_layout_widget.setLayout(self.current_layout)
-        self.addWidget(self.current_layout_widget)
+        self.clear_layout()
 
         self.main = main
         self.setMargin(0)
         self.setContentsMargins(0, 0, 0, 0)
         self.buffers = []
-        self.currentChanged.connect(self.current_changed)
+        # self.currentChanged.connect(self.current_changed)
+
+    def clear_layout(self):
+        if self.current_layout:
+            for w in self.windows:
+                w.remove_buffer()
+
+        self.current_layout = WindowLayout(self, 1)
+        if self.current_layout_widget:
+            self.removeWidget(self.current_layout_widget)
+            self.current_layout_widget.deleteLater()
+
+        self.current_layout_widget = QtWidgets.QWidget()
+        self.current_layout_widget.setLayout(self.current_layout)
+        self.addWidget(self.current_layout_widget)
+
+        self.current_window = None
+
+        # for b in self.buffers:
+        #     b.hide()
 
     def child_win_id(self, child):
         return 1
@@ -368,6 +384,7 @@ class BufferStack(QtWidgets.QStackedLayout):
     def get_window(self, position):
         return self.current_layout.get_window(position)
 
+    @property
     def windows(self):
         yield from self.current_layout.windows()
 
@@ -395,10 +412,12 @@ class BufferStack(QtWidgets.QStackedLayout):
             return None
 
     def remove(self, buf):
+        print(f"Removing {buf} from layout")
         self.buffers.remove(buf)
 
     def add(self, buf):
         self.buffers.append(buf)
+        self.buffer_added.emit(buf)
 
         def find_empty_position(layout):
             if isinstance(layout, Window):
@@ -416,12 +435,12 @@ class BufferStack(QtWidgets.QStackedLayout):
             empty_pos.place_buffer(buf)
             empty_pos.activate()
 
-    def current_changed(self):
-        self.main.modeline.setText(self.current.name)
-        if hasattr(self.current, 'activate'):
-            self.current.activate()
+    # def current_changed(self):
+    #     self.main.modeline.setText(self.current.name)
+    #     if hasattr(self.current, 'activate'):
+    #         self.current.activate()
 
-        self.main.change_domain(self.current.domain)
+    #     self.main.change_domain(self.current.domain)
 
     @property
     def current(self):

@@ -49,7 +49,8 @@ class Minibuffer(QtCore.QObject):
     filled = QtCore.Signal(str)
     start = QtCore.Signal()
 
-    def __init__(self):
+    @reg_inject
+    def __init__(self, main=Inject('gearbox/main')):
         super().__init__()
         self.view = QtWidgets.QHBoxLayout()
         self.msgLabel = QtWidgets.QLabel()
@@ -66,6 +67,7 @@ class Minibuffer(QtCore.QObject):
 
         self.input_box.tab_key_event.connect(self.tab_key_event)
         self.input_box.cancel.connect(self.cancel)
+        main.key_cancel.connect(self.cancel)
         self.input_box.textEdited.connect(self._singled_out)
         self.input_box.returnPressed.connect(self._on_search_submitted)
 
@@ -222,7 +224,6 @@ class InputBox(QtWidgets.QLineEdit):
         super().focusOutEvent(event)
 
     def event(self, event):
-        # print(f'InputBox event: {event.type()}')
 
         # if (event.type() in [
         #         QtCore.QEvent.KeyRelease, QtCore.QEvent.ShortcutOverride
@@ -231,6 +232,11 @@ class InputBox(QtWidgets.QLineEdit):
         #             and event.modifiers() == QtCore.Qt.NoModifier):
         #         print(f'Tab other')
         #         return True
+
+        if event.type() == QtCore.QEvent.ShortcutOverride:
+            # print(f'InputBox event: {event.type()}')
+            event.ignore()
+            return True
 
         if event.type() == QtCore.QEvent.KeyPress:
             if (event.key() == QtCore.Qt.Key_Tab

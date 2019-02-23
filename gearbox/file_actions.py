@@ -42,8 +42,11 @@ def open_file_interact():
 
 @shortcut(None, (Qt.Key_Space, Qt.Key_F, Qt.Key_C), 'close')
 @reg_inject
-def close_file(sim_bridge=Inject('gearbox/sim_bridge')):
+def close_file(
+        sim_bridge=Inject('gearbox/sim_bridge'),
+        layout=Inject('gearbox/layout')):
     sim_bridge.invoke_method('close_model')
+    layout.clear_layout()
 
 
 @shortcut(None, (Qt.Key_Space, Qt.Key_F, Qt.Key_R), 'reload')
@@ -56,4 +59,3 @@ def reload_file(
         single_shot_connect(sim_bridge.model_closed,
                             partial(open_file, script_fn))
         sim_bridge.invoke_method('close_model')
-

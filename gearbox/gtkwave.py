@@ -306,7 +306,6 @@ class GtkWaveBuffer(Buffer):
         self.name = name
         self.instance = instance
         self.instance.initialized.connect(self.load)
-        self.window = None
 
     @reg_inject
     def load(self, main=Inject('gearbox/main')):
@@ -326,15 +325,9 @@ class GtkWaveBuffer(Buffer):
     #     self.instance.close()
     #     super().delete()
 
-    @reg_inject
-    def delete(self, main=Inject('gearbox/main')):
-        if self.window:
-            self.window.remove_buffer()
-
-        main.remove_buffer(self)
-        self.window = None
+    def delete(self):
+        super().delete()
         self.instance.close()
-        self.view.close()
 
     @property
     def view(self):
