@@ -1,7 +1,7 @@
 import os
 
 from PySide2 import QtCore, QtWidgets, QtGui
-from pygears.conf import PluginBase, registry, safe_bind, reg_inject, Inject, bind, config_def, MayInject
+from pygears.conf import PluginBase, registry, safe_bind, reg_inject, Inject, bind, config, MayInject
 
 from functools import partial
 from .minibuffer import Minibuffer
@@ -310,4 +310,5 @@ class MainWindowPlugin(PluginBase):
             if main:
                 main.menuBar().setVisible(visible)
 
-        config_def('gearbox/main/menus', default=True, setter=menu_visibility)
+        config.define(
+            'gearbox/main/menus', default=True, setter=menu_visibility)

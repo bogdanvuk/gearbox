@@ -1,15 +1,15 @@
 import runpy
 import os
-from pygears.conf import Inject, reg_inject, MayInject
+from pygears.conf import Inject, reg_inject, MayInject, config
 from .graph import GraphVisitor
 from jinja2 import Environment, BaseLoader
 from pygears.core.hier_node import HierYielderBase
 from .layout import Window
 
 save_file_prolog = """
-from pygears.conf import Inject, reg_inject, MayInject, inject_async
-from gearbox.utils import trigger, single_shot_connect
-from gearbox.layout import Window, WindowLayout
+from pygears.conf import Inject, config, inject_async, reg_inject
+from gearbox.utils import single_shot_connect
+from gearbox.layout import Window
 from gearbox.description import describe_file
 from PySide2 import QtWidgets
 from functools import partial
@@ -176,13 +176,10 @@ def save_description(buffer_init_commands, layout=Inject('gearbox/layout')):
         if hasattr(b.view, 'fn'):
             res += f'describe_file("{b.view.fn}", lineno={b.view.lineno})\n'
 
-    if res:
-        return load_str_template(description_load_template).render({
-            'commands':
-            res
-        })
-
-    return ''
+    return load_str_template(description_load_template).render({
+        'commands':
+        res
+    })
 
 
 def save_win_layout(name, layout):
@@ -202,6 +199,25 @@ for i, s in enumerate({streches}):
 """
 
     return res
+
+
+save_configuration_template = """
+{% for k,v in configs.items() -%}
+config['{{k}}'] = {{v}}
+{% endfor %}
+"""
+
+
+def save_configuration():
+    changed = {
+        name: var.val
+        for name, var in config.definitions.items() if var.changed
+    }
+
+    return load_str_template(save_configuration_template).render({
+        'configs':
+        changed
+    })
 
 
 @reg_inject
@@ -238,6 +254,8 @@ def save(layout=Inject('gearbox/layout')):
 
         f.write(save_file_prolog)
 
+        f.write(save_configuration())
+
         f.write(save_expanded(buffer_init_commands))
 
         f.write(save_gtkwave(buffer_init_commands))
@@ -248,5 +266,14 @@ def save(layout=Inject('gearbox/layout')):
 
 
 @reg_inject
-def get_save_file_path(outdir=MayInject('sim/artifact_dir')):
-    return os.path.abspath(os.path.join(outdir, 'gearbox_save.py'))
+def get_save_file_path(
+        outdir=MayInject('sim/artifact_dir'),
+        script_fn=Inject('gearbox/model_script_name')):
+
+    if script_fn is None:
+        script_fn = '.gearbox.py'
+    else:
+        stem = os.path.splitext(os.path.basename(script_fn))[0]
+        script_fn = f'.{stem}_save.py'
+
+    return os.path.abspath(os.path.join(outdir, script_fn))

@@ -5,7 +5,7 @@ from .timekeep import timestep, timestep_event_register, max_timestep
 from pygears.sim.modules import SimVerilated
 from .node_model import find_cosim_modules, PipeModel, NodeModel
 from pygears.core.hier_node import HierVisitorBase
-from pygears.conf import Inject, MayInject, bind, reg_inject, registry, safe_bind, config_def
+from pygears.conf import Inject, MayInject, bind, reg_inject, registry, safe_bind, config
 from typing import NamedTuple
 from .gtkwave_intf import GtkWaveWindow
 from .layout import active_buffer, Buffer, LayoutPlugin
@@ -484,7 +484,7 @@ class GtkWaveGraphIntf(QtCore.QObject):
             self.timestep = (int(ret) // 10) - 1
             self.gtkwave_intf.response.disconnect(self.gtkwave_resp)
 
-            # print(f"Updated: {ts} <-> {self.timestep}")
+            print(f"{self.vcd_map.name}: Updated: {ts} <-> {self.timestep}")
             if ts - self.timestep > 1000:
                 self.should_update = False
                 self.gtkwave_intf.response.connect(self.gtkwave_resp)
@@ -594,5 +594,5 @@ class GtkWaveBufferPlugin(LayoutPlugin):
                 for inst in gtkwave.instances:
                     inst.command('gtkwave::toggleStripGUI')
 
-        config_def(
+        config.define(
             'gearbox/gtkwave/menus', default=False, setter=menu_visibility)
