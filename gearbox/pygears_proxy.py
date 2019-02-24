@@ -10,8 +10,9 @@ from pygears.conf import Inject, reg_inject, safe_bind, bind, PluginBase, regist
 from pygears.sim.extens.sim_extend import SimExtend
 from .node_model import find_cosim_modules
 from pygears.sim.modules import SimVerilated
-from pygears.sim import sim
+from pygears.sim import sim, SimFinish
 from pygears import clear
+from pygears.sim.extens.vcd import VCD
 
 
 class Gearbox(SimExtend):
@@ -40,7 +41,9 @@ class Gearbox(SimExtend):
         self.queue.join()
 
         if self.done:
-            sys.exit(0)
+            self.done = False
+            raise SimFinish
+            # sys.exit(0)
 
         # Let GUI thread do some work
         time.sleep(0.0001)
@@ -53,6 +56,9 @@ class Gearbox(SimExtend):
             thread.start()
 
         self.handle_event('before_run')
+
+    def at_exit(self, sim):
+        self.handle_event('at_exit')
 
     def after_timestep(self, sim, timestep):
         # if timestep > (1 << 15):
@@ -69,9 +75,9 @@ class Gearbox(SimExtend):
                     m.vcd_fifo = True
                     m.shmidcat = True
 
-    def after_cleanup(self, sim):
-        if not self.live:
-            main()
+    # def after_cleanup(self, sim):
+    #     if not self.live:
+    #         main()
 
 
 def sim_bridge():
@@ -87,7 +93,6 @@ class PyGearsProc(QtCore.QObject):
         self.thrd = QtCore.QThread()
         self.moveToThread(self.thrd)
         self.thrd.started.connect(self.run)
-        self.thrd.finished.connect(self.quit)
 
         self.queue = queue.Queue()
         self.plugin = functools.partial(
@@ -97,12 +102,11 @@ class PyGearsProc(QtCore.QObject):
 
     def run(self):
         try:
-            sim(outdir='build', extens=[self.plugin])
-        except Exception as e:
+            sim(outdir='build', extens=[VCD, self.plugin])
+        except Exception:
             import traceback
             traceback.print_exc()
 
-    def quit(self):
         self.thrd.quit()
 
 
@@ -128,6 +132,7 @@ class PyGearsClient(QtCore.QObject):
         self.running = False
         self.invoke_queue = queue.Queue()
         self.queue = None
+        self.closing = False
 
         QtWidgets.QApplication.instance().aboutToQuit.connect(self.quit)
         self.start_thread()
@@ -162,9 +167,14 @@ class PyGearsClient(QtCore.QObject):
     def close_model(self):
         if registry('gearbox/model_script_name'):
             bind('gearbox/model_script_name', None)
-            self.queue = None
-            self.model_closed.emit()
-            self.loop.quit()
+            if self.queue is not None:
+                registry('sim/gearbox').done = True
+                self.closing = True
+                self.cont()
+            else:
+                self.model_closed.emit()
+                # self.queue = None
+            # self.loop.quit()
 
     def run_model(self, script_fn):
         gearbox_registry = registry('gearbox')
@@ -219,10 +229,23 @@ class PyGearsClient(QtCore.QObject):
                     self.sim_refresh.emit()
                     self.loop.exec_()
             elif msg == "after_run":
-                self.sim_refresh.emit()
-                self.after_run.emit()
-                self.quit()
+                if not self.closing:
+                    self.sim_refresh.emit()
+                    self.after_run.emit()
+
+                # self.queue.task_done()
+                # self.queue = None
+                # self.closing = False
+                # return
+
+            elif msg == "at_exit":
+                if self.closing:
+                    self.model_closed.emit()
+
+                # self.quit()
                 self.queue.task_done()
+                self.queue = None
+                self.closing = False
                 return
             elif msg == "before_run":
                 self.sim_started.emit()

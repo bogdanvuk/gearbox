@@ -398,7 +398,7 @@ class BufferStack(QtWidgets.QStackedLayout):
         self.clear_buffers()
 
     def clear_buffers(self):
-        for b in self.buffers:
+        for b in self.buffers.copy():
             b.delete()
 
     def clear_layout(self):

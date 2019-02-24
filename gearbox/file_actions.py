@@ -21,14 +21,20 @@ def open_file(script_fn, sim_bridge=Inject('gearbox/sim_bridge')):
 @reg_inject
 def close_file(
         sim_bridge=Inject('gearbox/sim_bridge'),
+        script_fn=Inject('gearbox/model_script_name'),
         layout=Inject('gearbox/layout')):
-    sim_bridge.invoke_method('close_model')
-    layout.clear()
+
+    if script_fn is not None:
+        sim_bridge.invoke_method('close_model')
+        layout.clear()
 
 
 @shortcut(None, (Qt.Key_Space, Qt.Key_F, Qt.Key_F), 'open')
 @reg_inject
-def open_file_interact():
+def open_file_interact(
+        sim_bridge=Inject('gearbox/sim_bridge'),
+        prev_script_fn=Inject('gearbox/model_script_name'),
+        ):
     ret = QtWidgets.QFileDialog.getOpenFileName(
         caption='Open file',
         dir=os.getcwd(),
@@ -37,7 +43,12 @@ def open_file_interact():
     script_fn = ret[0]
 
     if script_fn:
-        open_file(script_fn)
+        if prev_script_fn:
+            single_shot_connect(sim_bridge.model_closed,
+                                partial(open_file, script_fn))
+            close_file()
+        else:
+            open_file(script_fn)
 
 
 @shortcut(None, (Qt.Key_Space, Qt.Key_F, Qt.Key_C), 'close')

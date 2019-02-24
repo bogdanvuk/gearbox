@@ -44,10 +44,13 @@ class TimeKeep(QtCore.QObject):
         sim_bridge.model_loaded.connect(self.model_loaded)
 
     def model_loaded(self):
-        pass
+        self._timestep = None
+        self._time_target = None
+        self.timestep_changed.emit(self._timestep)
 
     def model_closed(self):
         self._timestep = None
+        self._time_target = None
 
     def sim_break(self):
         self.timestep = self.max_timestep

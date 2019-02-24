@@ -171,6 +171,7 @@ class VerilatorVCDMap:
 @reg_inject
 def gtkwave(sim_bridge=Inject('gearbox/sim_bridge')):
     sim_bridge.sim_started.connect(gtkwave_create)
+    sim_bridge.model_closed.connect(gktwave_delete)
 
 
 @reg_inject
@@ -178,10 +179,11 @@ def gtkwave_create(sim_bridge=Inject('gearbox/sim_bridge')):
     gtkwave = GtkWave()
     bind('gearbox/gtkwave/inst', gtkwave)
 
-    sim_bridge.model_closed.connect(gktwave_delete)
 
-
-def gktwave_delete():
+@reg_inject
+def gktwave_delete(timekeep=Inject('gearbox/timekeep')):
+    print('Gtkwave deleted')
+    timekeep.timestep_changed.disconnect(registry('gearbox/gtkwave/inst').update)
     bind('gearbox/gtkwave/inst', None)
 
 
@@ -480,7 +482,7 @@ class GtkWaveGraphIntf(QtCore.QObject):
                 ts = 0
 
             status, _, ret = ret.rpartition('\n')
-            # print(status)
+            print(status)
             self.timestep = (int(ret) // 10) - 1
             self.gtkwave_intf.response.disconnect(self.gtkwave_resp)
 
