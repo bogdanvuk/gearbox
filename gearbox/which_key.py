@@ -9,7 +9,7 @@ from PySide2 import QtCore
 
 
 @reg_inject
-def which_key(main=Inject('gearbox/main')):
+def which_key(main=Inject('gearbox/main/inst')):
     w = WhichKey(main)
     main.vbox.insertWidget(main.vbox.count() - 1, w)
     bind('gearbox/which_key', w)
@@ -17,7 +17,7 @@ def which_key(main=Inject('gearbox/main')):
 
 class WhichKey(QLabel):
     @reg_inject
-    def __init__(self, parent=None, main=Inject('gearbox/main')):
+    def __init__(self, parent=None, main=Inject('gearbox/main/inst')):
         super().__init__(parent)
         self.setStyleSheet(STYLE_WHICH_KEY)
         self.setMargin(2)
@@ -36,7 +36,7 @@ class WhichKey(QLabel):
         self.timer.setSingleShot(True)
 
     @reg_inject
-    def is_prefix(self, key, main=Inject('gearbox/main')):
+    def is_prefix(self, key, main=Inject('gearbox/main/inst')):
         prefix = self.current_prefix + [key]
         for s in main.shortcuts:
             if not s.enabled:
@@ -69,7 +69,7 @@ class WhichKey(QLabel):
         return super().eventFilter(obj, event)
 
     # @reg_inject
-    # def domain_changed(self, domain, main=Inject('gearbox/main')):
+    # def domain_changed(self, domain, main=Inject('gearbox/main/inst')):
     #     self.prefixes.clear()
     #     for s in main.shortcuts:
     #         if (s.domain is None and domain[0] != '_') or (s.domain == domain):
@@ -78,7 +78,7 @@ class WhichKey(QLabel):
 
     @reg_inject
     def show(self,
-             main=Inject('gearbox/main'),
+             main=Inject('gearbox/main/inst'),
              domain=Inject('gearbox/domain'),
              prefixes=Inject('gearbox/prefixes')):
 

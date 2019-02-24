@@ -1,7 +1,7 @@
 import os
 
 from PySide2 import QtCore, QtWidgets, QtGui
-from pygears.conf import PluginBase, registry, safe_bind, reg_inject, Inject, bind
+from pygears.conf import PluginBase, registry, safe_bind, reg_inject, Inject, bind, config_def, MayInject
 
 from functools import partial
 from .minibuffer import Minibuffer
@@ -17,8 +17,8 @@ class Action(QtWidgets.QAction):
                  key,
                  callback,
                  name,
-                 main=Inject('gearbox/main')):
-        super().__init__(name.title(), main)
+                 main=Inject('gearbox/main/inst')):
+        super().__init__(name.title(), parent=main)
 
         if not isinstance(key, tuple):
             key = (key, )
@@ -56,7 +56,7 @@ class Shortcut(QtCore.QObject):
                  key,
                  callback,
                  name,
-                 main=Inject('gearbox/main')):
+                 main=Inject('gearbox/main/inst')):
         super().__init__()
 
         if not isinstance(key, tuple):
@@ -137,7 +137,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.vbox.setMargin(0)
         self.vbox.setContentsMargins(0, 0, 0, 0)
 
-        safe_bind('gearbox/main', self)
+        safe_bind('gearbox/main/inst', self)
 
         self.buffers = BufferStack(main=self)
         self.vbox.addLayout(self.buffers)
@@ -161,6 +161,9 @@ class MainWindow(QtWidgets.QMainWindow):
         #     Shortcut(domain, key, callback, name)
 
         self.create_menus()
+
+        if not registry('gearbox/main/menus'):
+            self.menuBar().hide()
 
     @reg_inject
     def create_menus(self,
@@ -193,6 +196,7 @@ class MainWindow(QtWidgets.QMainWindow):
                         current_menu, menu_name)
                 else:
                     action = Action(domain, key, callback, name)
+                    self.addAction(action)
                     current_menu.addAction(action)
 
     def get_submenu(self, menu, title):
@@ -300,3 +304,10 @@ class MainWindowPlugin(PluginBase):
     def bind(cls):
         safe_bind('gearbox/shortcuts', [])
         safe_bind('gearbox/prefixes', {})
+
+        @reg_inject
+        def menu_visibility(var, visible, main=MayInject('gearbox/main/inst')):
+            if main:
+                main.menuBar().setVisible(visible)
+
+        config_def('gearbox/main/menus', default=True, setter=menu_visibility)

@@ -11,7 +11,7 @@ class PopupDesc(QtWidgets.QTextEdit):
                  buff,
                  max_width=500,
                  max_height=500,
-                 main=Inject('gearbox/main')):
+                 main=Inject('gearbox/main/inst')):
         super().__init__()
         self.setParent(main)
         self.max_width = max_width
@@ -93,7 +93,7 @@ class PopupDesc(QtWidgets.QTextEdit):
         else:
             self.show()
 
-    def delete(self, main=Inject('gearbox/main')):
+    def delete(self, main=Inject('gearbox/main/inst')):
         self.cancel()
         self.buff.view.resized.disconnect(self.reposition)
         main.key_cancel.discconnect(self.cancel)

@@ -34,7 +34,7 @@ class SnipeCodeItem(QtWidgets.QGraphicsTextItem):
 class Sniper:
     @reg_inject
     def __init__(self,
-                 main=Inject('gearbox/main')):
+                 main=Inject('gearbox/main/inst')):
 
         Shortcut('graph', QtCore.Qt.Key_F, self.snipe_select)
         Shortcut('graph', QtCore.Qt.CTRL + QtCore.Qt.Key_F,

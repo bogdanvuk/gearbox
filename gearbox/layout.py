@@ -24,7 +24,7 @@ class Buffer(QtCore.QObject):
                  view,
                  name,
                  plugins=None,
-                 main=Inject('gearbox/main'),
+                 main=Inject('gearbox/main/inst'),
                  layout=Inject('gearbox/layout')):
 
         super().__init__()

@@ -12,6 +12,7 @@ from gearbox.sniper import sniper
 from gearbox.description import description
 from pygears.sim.extens.vcd import SimVCDPlugin
 from pygears.conf import Inject, reg_inject, safe_bind, PluginBase, registry, bind, MayInject
+from pygears.conf.custom_settings import RCSettings
 from .pygears_proxy import sim_bridge
 from .saver import get_save_file_path
 from .timekeep import timekeep
@@ -65,13 +66,15 @@ def pygears_proc(script_fn):
 @reg_inject
 def set_main_win_title(
         script_fn=Inject('gearbox/model_script_name'),
-        main=Inject('gearbox/main')):
+        main=Inject('gearbox/main/inst')):
 
     main.setWindowTitle(f'Gearbox - {script_fn}')
 
 
 @reg_inject
 def main_loop(script_fn, layers=Inject('gearbox/layers')):
+    settings = RCSettings(rc_fn='.gearbox')
+
     app = QtWidgets.QApplication(sys.argv)
 
     app.setWindowIcon(QtGui.QIcon('gearbox.png'))

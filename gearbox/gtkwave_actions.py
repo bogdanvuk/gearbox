@@ -4,26 +4,26 @@ from .actions import shortcut
 from .layout import active_buffer
 from .gtkwave import GtkWaveBufferPlugin
 from .graph import GraphBufferPlugin
-from pygears.conf import Inject, inject_async, reg_inject, bind, registry, MayInject
+from pygears.conf import Inject, inject_async, reg_inject, bind, registry, MayInject, configure
 from .sim_actions import time_search, step_simulator, cont_simulator
 from .timestep_modeline import TimestepModeline
 
 
 @reg_inject
-def node_expand_toggle(status, node, gtkwave=Inject('gearbox/gtkwave')):
+def node_expand_toggle(status, node, gtkwave=Inject('gearbox/gtkwave/inst')):
     if status:
         gtkwave.update_pipe_statuses(node.pipes)
 
 
 @inject_async
 def create_node_expand_toggle(
-        graph=Inject('gearbox/graph'), gtkwave=Inject('gearbox/gtkwave')):
+        graph=Inject('gearbox/graph'), gtkwave=Inject('gearbox/gtkwave/inst')):
     graph.node_expand_toggled.connect(node_expand_toggle)
 
 
 @shortcut('gtkwave', (Qt.Key_T, Qt.Key_M))
 def toggle_menu():
-    active_buffer().instance.command('gtkwave::toggleStripGUI')
+    configure('gearbox/gtkwave/menus', not registry('gearbox/gtkwave/menus'))
 
 
 @shortcut('gtkwave', Qt.Key_J)
@@ -56,7 +56,7 @@ class GraphGtkwaveSelectSync(QtCore.QObject):
 
     @reg_inject
     def selection_changed(self, selected,
-                          gtkwave=MayInject('gearbox/gtkwave')):
+                          gtkwave=MayInject('gearbox/gtkwave/inst')):
 
         if not gtkwave:
             return

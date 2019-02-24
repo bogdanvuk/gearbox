@@ -1,4 +1,5 @@
 accel "/Help/WAVE Help" (null)
 accel "/File/Read Sim Logfile" (null)
+accel "/Edit/Toggle Group Open|Close" (nil)
 hide_sst on
 splash_disable on

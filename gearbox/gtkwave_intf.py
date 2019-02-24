@@ -4,7 +4,7 @@ import re
 import pexpect
 from PySide2 import QtCore, QtGui, QtWidgets
 
-from pygears.conf import Inject, reg_inject
+from pygears.conf import Inject, reg_inject, registry
 
 
 class GtkEventProc(QtCore.QObject):
@@ -271,6 +271,9 @@ class GtkWaveWindow(QtCore.QObject):
         self.widget.setWindowFlag(QtCore.Qt.BypassWindowManagerHint)
 
         self.command(f'gtkwave::toggleStripGUI')
+        if registry('gearbox/gtkwave/menus'):
+            self.command(f'gtkwave::toggleStripGUI')
+
         self.command(f'gtkwave::setZoomFactor -7')
 
         self.initialized.emit()

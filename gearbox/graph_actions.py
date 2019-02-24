@@ -267,7 +267,7 @@ def toggle_expand(node, graph):
 @shortcut('graph', Qt.Key_P)
 @reg_inject
 def send_to_wave(
-        graph=Inject('gearbox/graph'), gtkwave=Inject('gearbox/gtkwave')):
+        graph=Inject('gearbox/graph'), gtkwave=Inject('gearbox/gtkwave/inst')):
 
     added = []
     selected_item = graph.selected_items()

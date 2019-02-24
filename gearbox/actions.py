@@ -97,7 +97,7 @@ class ShortcutRepeat(QtCore.QObject):
 
 
 @inject_async
-def create_shortcut_repeater(main=Inject('gearbox/main')):
+def create_shortcut_repeater(main=Inject('gearbox/main/inst')):
     bind('gearbox/shortcut_repeater', ShortcutRepeat(main))
 
 

@@ -5,7 +5,7 @@ from .timekeep import timestep, timestep_event_register, max_timestep
 from pygears.sim.modules import SimVerilated
 from .node_model import find_cosim_modules, PipeModel, NodeModel
 from pygears.core.hier_node import HierVisitorBase
-from pygears.conf import Inject, MayInject, bind, reg_inject, registry, safe_bind
+from pygears.conf import Inject, MayInject, bind, reg_inject, registry, safe_bind, config_def
 from typing import NamedTuple
 from .gtkwave_intf import GtkWaveWindow
 from .layout import active_buffer, Buffer, LayoutPlugin
@@ -176,13 +176,13 @@ def gtkwave(sim_bridge=Inject('gearbox/sim_bridge')):
 @reg_inject
 def gtkwave_create(sim_bridge=Inject('gearbox/sim_bridge')):
     gtkwave = GtkWave()
-    bind('gearbox/gtkwave', gtkwave)
+    bind('gearbox/gtkwave/inst', gtkwave)
 
     sim_bridge.model_closed.connect(gktwave_delete)
 
 
 def gktwave_delete():
-    bind('gearbox/gtkwave', None)
+    bind('gearbox/gtkwave/inst', None)
 
 
 class Signals(NamedTuple):
@@ -585,3 +585,14 @@ class GtkWaveBufferPlugin(LayoutPlugin):
     @classmethod
     def bind(cls):
         safe_bind('gearbox/plugins/gtkwave', {})
+
+        @reg_inject
+        def menu_visibility(var,
+                            visible,
+                            gtkwave=MayInject('gearbox/gtkwave/inst')):
+            if gtkwave:
+                for inst in gtkwave.instances:
+                    inst.command('gtkwave::toggleStripGUI')
+
+        config_def(
+            'gearbox/gtkwave/menus', default=False, setter=menu_visibility)

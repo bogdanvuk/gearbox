@@ -50,7 +50,7 @@ class Minibuffer(QtCore.QObject):
     start = QtCore.Signal()
 
     @reg_inject
-    def __init__(self, main=Inject('gearbox/main')):
+    def __init__(self, main=Inject('gearbox/main/inst')):
         super().__init__()
         self.view = QtWidgets.QHBoxLayout()
         self.msgLabel = QtWidgets.QLabel()
@@ -131,7 +131,7 @@ class Minibuffer(QtCore.QObject):
     def complete(self,
                  message=None,
                  completer=None,
-                 main=Inject('gearbox/main'),
+                 main=Inject('gearbox/main/inst'),
                  domain=Inject('gearbox/domain')):
         self.previous_domain = domain
         main.change_domain('minibuffer')
@@ -160,7 +160,7 @@ class Minibuffer(QtCore.QObject):
             self.cleanup(None)
 
     @reg_inject
-    def cleanup(self, result, main=Inject('gearbox/main')):
+    def cleanup(self, result, main=Inject('gearbox/main/inst')):
         self.completed.emit(result)
         main.change_domain(self.previous_domain)
         self.input_box.setText('')

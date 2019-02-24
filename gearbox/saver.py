@@ -41,7 +41,7 @@ gtkwave_load_func_template = """
 def load_after_vcd_loaded(
         buff,
         graph_model=Inject('gearbox/graph_model'),
-        gtkwave=Inject('gearbox/gtkwave')):
+        gtkwave=Inject('gearbox/gtkwave/inst')):
 
 {% for buff in buffers %}
     if buff.name == "{{buff.name}}":

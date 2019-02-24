@@ -13,7 +13,7 @@ class GtkWaveBuffer(Buffer):
         self.window = None
 
     @reg_inject
-    def load(self, main=Inject('gearbox/main'), layout=Inject('gearbox/layout')):
+    def load(self, main=Inject('gearbox/main/inst'), layout=Inject('gearbox/layout')):
         main.add_buffer(self)
         # window = layout.active_window()
         # new_window = window.split_vertically()
