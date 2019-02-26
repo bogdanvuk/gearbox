@@ -14,8 +14,9 @@ def step_simulator(sim_bridge=Inject('gearbox/sim_bridge')):
 
 
 @reg_inject
-def cont_simulator(sim_bridge=Inject('gearbox/sim_bridge')):
-    sim_bridge.cont()
+def cont_simulator(
+        timekeep=Inject('gearbox/timekeep')):
+    timekeep.timestep = 0xffffffff
 
 
 @reg_inject
