@@ -6,7 +6,7 @@ import queue
 import time
 import sys
 from PySide2 import QtCore, QtWidgets
-from pygears.conf import Inject, reg_inject, safe_bind, bind, PluginBase, registry
+from pygears.conf import Inject, reg_inject, safe_bind, bind, PluginBase, registry, config
 from pygears.sim.extens.sim_extend import SimExtend
 from .node_model import find_cosim_modules
 from pygears.sim.modules import SimVerilated
@@ -182,6 +182,10 @@ class PyGearsClient(QtCore.QObject):
         bind('gearbox', gearbox_registry)
         bind('sim/artifact_dir',
              os.path.join(os.path.dirname(script_fn), 'build'))
+
+        sys.path.append(os.path.dirname(script_fn))
+        config['trace/ignore'].append(os.path.dirname(__file__))
+        config['trace/ignore'].append(runpy.__file__)
         runpy.run_path(script_fn)
         bind('gearbox/model_script_name', script_fn)
         self.model_loaded.emit()
