@@ -113,7 +113,7 @@ def message(message, minibuffer=Inject('gearbox/minibuffer')):
 class MainWindow(QtWidgets.QMainWindow):
 
     key_cancel = QtCore.Signal()
-    domain_changed = QtCore.Signal(str)
+    domain_changed = QtCore.Signal(object)
     shortcut_triggered = QtCore.Signal(object)
     resized = QtCore.Signal()
 
@@ -280,6 +280,7 @@ class MainWindow(QtWidgets.QMainWindow):
         print("Ambiguous shortcut!")
 
     def change_domain(self, domain):
+
         current_menu = self.menuBar()
         prev_domain = registry('gearbox/domain')
 

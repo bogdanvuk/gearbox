@@ -1,3 +1,4 @@
+import logging
 import os
 import runpy
 import functools
@@ -10,6 +11,7 @@ from pygears.conf import Inject, reg_inject, safe_bind, bind, PluginBase, regist
 from pygears.sim.extens.sim_extend import SimExtend
 from .node_model import find_cosim_modules
 from pygears.sim.modules import SimVerilated
+from pygears.conf.trace import pygears_excepthook
 from pygears.sim import sim, SimFinish
 from pygears import clear
 from pygears.sim.extens.vcd import VCD
@@ -113,6 +115,7 @@ class PyGearsProc(QtCore.QObject):
 class PyGearsClient(QtCore.QObject):
     model_closed = QtCore.Signal()
     model_loaded = QtCore.Signal()
+    model_loading_started = QtCore.Signal()
     sim_started = QtCore.Signal()
     after_run = QtCore.Signal()
     after_timestep = QtCore.Signal()
@@ -184,11 +187,37 @@ class PyGearsClient(QtCore.QObject):
              os.path.join(os.path.dirname(script_fn), 'build'))
 
         sys.path.append(os.path.dirname(script_fn))
-        config['trace/ignore'].append(os.path.dirname(__file__))
+        # config['trace/ignore'].append(os.path.dirname(__file__))
         config['trace/ignore'].append(runpy.__file__)
-        runpy.run_path(script_fn)
+        compilation_log_fn = os.path.join(
+            registry('sim/artifact_dir'), 'compilation.log')
+        bind('gearbox/compilation_log_fn', compilation_log_fn)
+
+        os.system(f'rm -rf {compilation_log_fn}')
+
+        old_handlers = {}
+        for name in registry('logger'):
+            if name in logging.root.manager.loggerDict:
+                logger = logging.getLogger(name)
+                old_handlers[name] = logger.handlers.copy()
+                logger.handlers.clear()
+                logger.addHandler(logging.FileHandler(compilation_log_fn))
+
+        self.model_loading_started.emit()
+
+        err = None
+        try:
+            runpy.run_path(script_fn)
+        except Exception as e:
+            err = e
+
         bind('gearbox/model_script_name', script_fn)
+        if err is not None:
+            pygears_excepthook(type(err), err, err.__traceback__)
+            return
+
         self.model_loaded.emit()
+        self.invoke_method('run_sim')
 
     def cont(self):
         QtCore.QMetaObject.invokeMethod(self.loop, 'quit',
@@ -285,3 +314,4 @@ class MainWindowPlugin(PluginBase):
     @classmethod
     def bind(cls):
         safe_bind('gearbox/model_script_name', None)
+        safe_bind('gearbox/compilation_log_fn', None)

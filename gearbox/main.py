@@ -16,6 +16,7 @@ from pygears.conf.custom_settings import RCSettings
 from .pygears_proxy import sim_bridge
 from .saver import get_save_file_path
 from .timekeep import timekeep
+from .compilation import compilation
 # import gearbox.graph
 from .saver import load
 from . import actions
@@ -92,7 +93,6 @@ def main_loop(script_fn, layers=Inject('gearbox/layers')):
 
     if script_fn:
         sim_bridge_inst.invoke_method('run_model', script_fn=script_fn)
-        sim_bridge_inst.invoke_method('run_sim')
 
     main_window.show()
     app.exec_()
@@ -117,6 +117,6 @@ class SimPlugin(SimVCDPlugin):
         safe_bind(
             'gearbox/layers',
             # [which_key, graph, main, sniper, description, reloader])
-            [timekeep, which_key, graph, gtkwave, sniper])
+            [timekeep, which_key, graph, gtkwave, sniper, compilation])
         safe_bind('sim/extens/vcd/shmidcat', True)
         safe_bind('sim/extens/vcd/vcd_fifo', True)
