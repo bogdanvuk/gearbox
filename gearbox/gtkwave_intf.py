@@ -14,7 +14,9 @@ class GtkEventProc(QtCore.QObject):
     @reg_inject
     def SetMarker(self, data, timekeep=Inject('gearbox/timekeep')):
         print(f'SetMarker: {data}')
-        timekeep.timestep = (int(data) // 10)
+
+        if int(data) != 0xffffffffffffffff:
+            timekeep.timestep = (int(data) // 10)
 
     def detect_key(self, data):
         native_modifiers, native_key = map(int, data.split(','))
@@ -52,8 +54,9 @@ class GtkEventProc(QtCore.QObject):
 
         # app.processEvents(QtCore.QEventLoop.AllEvents)
 
-        app.postEvent(app.focusWidget(),
-                      QtGui.QKeyEvent(QtGui.QKeyEvent.KeyPress, *key))
+        if app.focusWidget():
+            app.postEvent(app.focusWidget(),
+                          QtGui.QKeyEvent(QtGui.QKeyEvent.KeyPress, *key))
 
     def KeyRelease(self, data):
 
@@ -61,8 +64,9 @@ class GtkEventProc(QtCore.QObject):
 
         key = self.detect_key(data)
 
-        app.postEvent(app.focusWidget(),
-                      QtGui.QKeyEvent(QtGui.QKeyEvent.KeyRelease, *key))
+        if app.focusWidget():
+            app.postEvent(app.focusWidget(),
+                          QtGui.QKeyEvent(QtGui.QKeyEvent.KeyRelease, *key))
 
 
 class GtkWaveProc(QtCore.QObject):

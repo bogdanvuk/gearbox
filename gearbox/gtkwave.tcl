@@ -181,6 +181,6 @@ proc get_values {timestep signals} {
 proc set_marker_if_needed {timestep} {
     if {[gtkwave::getMarker] != $timestep} {
         gtkwave::setMarker $timestep
-        gtkwave::setWindowStartTime [expr $timestep - 10]
+        # gtkwave::setWindowStartTime [expr $timestep - 10]
     }
 }
