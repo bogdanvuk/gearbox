@@ -3,6 +3,7 @@ from .modeline import Modeline
 from pygears.conf import Inject, reg_inject, safe_bind, PluginBase, registry
 from PySide2 import QtCore, QtWidgets, QtGui
 from .stylesheet import STYLE_MINIBUFFER
+from .theme import themify
 
 
 @reg_inject
@@ -120,7 +121,7 @@ class Window(QtWidgets.QVBoxLayout):
         self.placeholder.setFocusPolicy(QtCore.Qt.FocusPolicy.ClickFocus)
         self.placeholder.setSizePolicy(QtWidgets.QSizePolicy.Ignored,
                                        QtWidgets.QSizePolicy.Ignored)
-        self.placeholder.setStyleSheet(STYLE_MINIBUFFER)
+        self.placeholder.setStyleSheet(themify(STYLE_MINIBUFFER))
         self.placeholder.setAlignment(QtCore.Qt.AlignHCenter
                                       | QtCore.Qt.AlignVCenter)
 

@@ -5,6 +5,8 @@ from pygears.conf import Inject, reg_inject, bind, MayInject, registry, safe_bin
 from .layout import Buffer, LayoutPlugin
 from .html_utils import fontify
 from .description import describe_file
+from .stylesheet import STYLE_TEXTBROWSER
+from .theme import themify
 
 
 class TailProc(QtCore.QObject):
@@ -41,12 +43,7 @@ class Compilation(QtWidgets.QTextBrowser):
         self.tail_proc.file_text_append.connect(self.append)
         self.setLineWrapMode(QtWidgets.QTextBrowser.NoWrap)
 
-        self.setStyleSheet("""
-        color: rgba(255, 255, 255, 150);
-        background-color: rgba(35, 35, 35, 255);
-        selection-background-color: rgba(150, 150, 150, 70);
-        inset grey;
-        """)
+        self.setStyleSheet(themify(STYLE_TEXTBROWSER))
 
         self.compilation_log_fn = compilation_log_fn
         # self.setOpenLinks(False)
