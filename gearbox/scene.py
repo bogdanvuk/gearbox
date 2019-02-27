@@ -1,13 +1,17 @@
-from PySide2 import QtGui, QtCore, QtWidgets
+from PySide2 import QtCore, QtGui, QtWidgets
 
-from .constants import (VIEWER_BG_COLOR, VIEWER_GRID_OVERLAY,
-                        VIEWER_GRID_COLOR)
+from pygears.conf import Inject, reg_inject
+
+from .constants import VIEWER_BG_COLOR, VIEWER_GRID_COLOR, VIEWER_GRID_OVERLAY
 
 
 class NodeScene(QtWidgets.QGraphicsScene):
-    def __init__(self, parent=None):
+    @reg_inject
+    def __init__(self,
+                 parent=None,
+                 background_color=Inject('gearbox/theme/background-color')):
         super(NodeScene, self).__init__(parent)
-        self.background_color = VIEWER_BG_COLOR
+        self.background_color = QtGui.QColor(background_color)
         self.grid = VIEWER_GRID_OVERLAY
         self.grid_color = VIEWER_GRID_COLOR
 
@@ -33,7 +37,8 @@ class NodeScene(QtWidgets.QGraphicsScene):
     def drawBackground(self, painter, rect):
         painter.save()
 
-        bg_color = QtGui.QColor(*self._bg_color)
+        # bg_color = QtGui.QColor(*self._bg_color)
+        bg_color = self.background_color
         painter.setRenderHint(QtGui.QPainter.Antialiasing, False)
         painter.setBrush(bg_color)
         painter.drawRect(rect)

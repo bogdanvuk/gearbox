@@ -1,6 +1,5 @@
 import os
 from PySide2 import QtWidgets, QtCore
-from .stylesheet import STYLE_MINIBUFFER, STYLE_TABSEARCH_LIST, STYLE_MINIBUFFER_MESSAGE
 from .layout import active_buffer
 from pygears.conf import Inject, reg_inject
 
@@ -53,23 +52,23 @@ class Minibuffer(QtCore.QObject):
     def __init__(self, main=Inject('gearbox/main/inst')):
         super().__init__()
         self.view = QtWidgets.QHBoxLayout()
+
         self.msgLabel = QtWidgets.QLabel()
+        self.msgLabel.setAccessibleName("minibuffer-message")
+        self.msgLabel.setVisible(False)
+
         self.input_box = InputBox()
+        self.input_box.tab_key_event.connect(self.tab_key_event)
+        self.input_box.cancel.connect(self.cancel)
+        self.input_box.textEdited.connect(self._singled_out)
+        self.input_box.returnPressed.connect(self._on_search_submitted)
+
         self.view.addWidget(self.msgLabel)
         self.view.addWidget(self.input_box)
         self.view.setSpacing(0)
         self.view.setContentsMargins(0, 0, 0, 0)
 
-        self.msgLabel.setStyleSheet(STYLE_MINIBUFFER_MESSAGE)
-        # self.msgLabel.setStyleSheet(STYLE_MINIBUFFER)
-        self.msgLabel.setMargin(0)
-        self.msgLabel.setVisible(False)
-
-        self.input_box.tab_key_event.connect(self.tab_key_event)
-        self.input_box.cancel.connect(self.cancel)
         main.key_cancel.connect(self.cancel)
-        self.input_box.textEdited.connect(self._singled_out)
-        self.input_box.returnPressed.connect(self._on_search_submitted)
 
         self.timer = QtCore.QTimer()
         self.timer.setInterval(3000)
@@ -111,7 +110,7 @@ class Minibuffer(QtCore.QObject):
             self.input_box.setCompleter(self._completer)
             # self._completer.setCompletionPrefix(text)
             popup = self._completer.popup()
-            popup.setStyleSheet(STYLE_TABSEARCH_LIST)
+            # popup.setStyleSheet(themify(STYLE_TABSEARCH_LIST))
             self.prev_text_len = len(self.input_box.text())
             try:
                 self.filled.connect(completer.filled)
@@ -212,7 +211,7 @@ class InputBox(QtWidgets.QLineEdit):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setAttribute(QtCore.Qt.WA_MacShowFocusRect, 0)
-        self.setStyleSheet(STYLE_MINIBUFFER)
+        # self.setStyleSheet(themify(STYLE_MINIBUFFER))
         self.setDisabled(True)
         # self.setFocusPolicy(QtCore.Qt.ClickFocus)
         # self.hide()

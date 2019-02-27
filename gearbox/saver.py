@@ -89,7 +89,6 @@ def buffer_initializer(buff, layout=Inject('gearbox/layout')):
 @inject_async
 def layout_load(layout=Inject('gearbox/layout')):
     layout.clear_layout()
-    layout.buffers.clear()
     win = layout.current_layout
     win.setDirection({{top_direction}})
     win.child(0).remove()

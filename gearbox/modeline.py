@@ -1,18 +1,20 @@
 from PySide2 import QtWidgets
 from .stylesheet import STYLE_MODELINE
-from pygears.conf import registry, Inject, reg_inject, MayInject, inject_async
+from pygears.conf import reg_inject
 from .html_utils import tabulate, fontify
+from .theme import themify
 
 
 class Modeline(QtWidgets.QLabel):
     @reg_inject
     def __init__(self, window):
         super().__init__()
+        self.setAccessibleName('modeline')
         self.window = window
         self.window.buffer_changed.connect(self.update)
         self.window.activated.connect(self.update)
         self.window.deactivated.connect(self.update)
-        self.setStyleSheet(STYLE_MODELINE)
+        # self.setStyleSheet(themify(STYLE_MODELINE))
         self.reset()
 
     def reset(self):

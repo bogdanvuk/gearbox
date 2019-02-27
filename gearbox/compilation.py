@@ -2,7 +2,7 @@ import time
 import re
 from PySide2 import QtWidgets, QtGui, QtCore
 from pygears.conf import Inject, reg_inject, bind, MayInject, registry, safe_bind
-from .layout import Buffer, LayoutPlugin
+from .layout import Buffer, LayoutPlugin, show_buffer
 from .html_utils import fontify
 from .description import describe_file
 from .stylesheet import STYLE_TEXTBROWSER
@@ -42,11 +42,7 @@ class Compilation(QtWidgets.QTextBrowser):
         self.tail_proc = TailProc(compilation_log_fn)
         self.tail_proc.file_text_append.connect(self.append)
         self.setLineWrapMode(QtWidgets.QTextBrowser.NoWrap)
-
-        self.setStyleSheet(themify(STYLE_TEXTBROWSER))
-
         self.compilation_log_fn = compilation_log_fn
-        # self.setOpenLinks(False)
         self.setOpenExternalLinks(False)
 
     def append(self, text):
@@ -88,4 +84,6 @@ def compilation_create(
         sim_bridge=Inject('gearbox/sim_bridge'),
         compilation_log_fn=Inject('gearbox/compilation_log_fn')):
 
-    return CompilationBuffer(Compilation(compilation_log_fn), 'compilation')
+    buff = CompilationBuffer(Compilation(compilation_log_fn), 'compilation')
+    show_buffer(buff)
+    return buff

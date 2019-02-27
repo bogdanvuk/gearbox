@@ -1,6 +1,8 @@
 import pygments
-from pygments.lexers import get_lexer_by_name
 from pygments.formatters import HtmlFormatter
+from pygments.lexers import get_lexer_by_name
+
+from .theme import themify
 
 
 def tabulate(table, style=""):
@@ -18,7 +20,8 @@ def tabulate(table, style=""):
 
 
 def fontify(s, bold=False, **style):
-    style = ';'.join([f'{k.replace("_", "-")}:{v}' for k, v in style.items()])
+    style = ';'.join(
+        [f'{k.replace("_", "-")}:{themify(v)}' for k, v in style.items()])
 
     if style:
         style_expr = f' style="{style}"'

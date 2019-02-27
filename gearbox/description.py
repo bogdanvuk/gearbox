@@ -4,6 +4,8 @@ from pygears.conf import Inject, reg_inject, bind, MayInject, registry
 import pygments
 from pygments.lexers import get_lexer_for_filename
 from pygments.formatters import HtmlFormatter
+from .stylesheet import STYLE_TEXTBROWSER
+from .theme import themify
 
 dark_theme = """
 /* Dracula Theme v1.2.5
@@ -124,13 +126,8 @@ class Description(QtWidgets.QTextEdit):
     def __init__(self):
         super().__init__()
         self.setReadOnly(True)
-        self.setStyleSheet("""
-        color: rgba(255, 255, 255, 150);
-        background-color: rgba(35, 35, 35, 255);
-        selection-background-color: rgba(150, 150, 150, 70);
-        inset grey;
-        """)
-        self.document().setDefaultStyleSheet(dark_theme)
+        # self.setStyleSheet(themify(STYLE_TEXTBROWSER))
+        self.document().setDefaultStyleSheet(QtWidgets.QApplication.instance().styleSheet())
         self.clean()
 
     def resizeEvent(self, event):

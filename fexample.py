@@ -5,5 +5,7 @@ from pygears.common import shred, filt
 
 drv(t=Tuple[Uint[32], Uint[32], Uint[2]], seq=[(2, 1 << 14, 2)]) \
     | rng \
-    | filt \
     | shred
+
+    # | rng \
+    # | shred

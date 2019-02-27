@@ -1,31 +1,29 @@
 #!/usr/bin/python
-import sys
 import argparse
+import os
+import sys
 
-from PySide2 import QtGui, QtWidgets, QtCore
+from PySide2 import QtCore, QtGui, QtWidgets
 
-from gearbox.main_window import MainWindow
-from gearbox.graph import graph
-from gearbox.which_key import which_key
-from gearbox.gtkwave import gtkwave
-from gearbox.sniper import sniper
 from gearbox.description import description
-from pygears.sim.extens.vcd import SimVCDPlugin
-from pygears.conf import Inject, reg_inject, safe_bind, PluginBase, registry, bind, MayInject
+from gearbox.graph import graph
+from gearbox.gtkwave import gtkwave
+from gearbox.main_window import MainWindow
+from gearbox.sniper import sniper
+from gearbox.which_key import which_key
+from pygears.conf import (Inject, MayInject, PluginBase, bind, reg_inject,
+                          registry, safe_bind)
 from pygears.conf.custom_settings import RCSettings
-from .pygears_proxy import sim_bridge
-from .saver import get_save_file_path
-from .timekeep import timekeep
+from pygears.sim.extens.vcd import SimVCDPlugin
+
+from . import (actions, buffer_actions, description_actions, file_actions,
+               graph_actions, gtkwave_actions, toggle_actions, window_actions)
 from .compilation import compilation
+from .pygears_proxy import sim_bridge
 # import gearbox.graph
-from .saver import load
-from . import actions
-from . import window_actions
-from . import file_actions
-from . import graph_actions
-from . import buffer_actions
-from . import gtkwave_actions
-from . import description_actions
+from .theme import themify
+from .saver import get_save_file_path, load
+from .timekeep import timekeep
 
 # @reg_inject
 # def main(layers=Inject('gearbox/layers')):
@@ -77,6 +75,10 @@ def main_loop(script_fn, layers=Inject('gearbox/layers')):
     settings = RCSettings(rc_fn='.gearbox')
 
     app = QtWidgets.QApplication(sys.argv)
+    with open(os.path.join(os.path.dirname(__file__), 'default.css')) as f:
+        stylesheet = f.read()
+
+    app.setStyleSheet(themify(stylesheet))
 
     app.setWindowIcon(QtGui.QIcon('gearbox.png'))
     app.setFont(QtGui.QFont("DejaVu Sans Mono", 11))
