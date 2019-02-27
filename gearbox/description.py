@@ -43,6 +43,11 @@ class Description(QtWidgets.QTextEdit):
 
         self.setPalette(palette)
 
+    def paintEvent(self, event):
+        super().paintEvent(event)
+        p = QtGui.QPainter(self.viewport())
+        p.fillRect(self.cursorRect(), QtGui.QBrush(QtCore.Qt.white))
+
     def resizeEvent(self, event):
         super().resizeEvent(event)
         self.resized.emit()
@@ -75,32 +80,38 @@ class Description(QtWidgets.QTextEdit):
         self.lineno = lineno
 
         if isinstance(lineno, slice):
-            hl_lines = list(range(lineno.start, lineno.stop))
             start = lineno.start
         else:
-            hl_lines = []
             start = lineno
+            lineno = slice(lineno, lineno + 1)
 
         lexer = get_lexer_for_filename(fn)
         if isinstance(lexer, PythonLexer):
             lexer = Python3Lexer()
 
-        print(lexer)
-
-        html = pygments.highlight(contents, lexer,
-                                  HtmlFormatter(hl_lines=hl_lines))
+        html = pygments.highlight(contents, lexer, HtmlFormatter())
         # print(html)
         self.setHtml(html)
         self.update()
 
+        # import pdb; pdb.set_trace()
+        start_text_block = self.document().findBlockByLineNumber(lineno.start -
+                                                                 1)
+        end_text_block = self.document().findBlockByLineNumber(lineno.stop - 1)
+
+        c = self.textCursor()
+        c.setPosition(start_text_block.position())
+        c.setPosition(end_text_block.position(), QtGui.QTextCursor.KeepAnchor)
         self.moveCursor(QtGui.QTextCursor.End)
-        cursor = QtGui.QTextCursor(
-            self.document().findBlockByLineNumber(start - 1))
+        self.setTextCursor(c)
 
-        # cursor.movePosition(QtGui.QTextCursor.Down, QtGui.QTextCursor.KeepAnchor,
-        #                     10)
+        # cursor = QtGui.QTextCursor(
+        #     self.document().findBlockByLineNumber(start - 1))
 
-        self.setTextCursor(cursor)
+        # # cursor.movePosition(QtGui.QTextCursor.Down, QtGui.QTextCursor.KeepAnchor,
+        # #                     10)
+
+        # self.setTextCursor(cursor)
 
 
 @reg_inject
