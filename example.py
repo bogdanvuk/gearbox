@@ -92,7 +92,7 @@ from pygears.typing_common.pprint import pprint
 #               width=10)
 
 bind('svgen/debug_intfs', ['*'])
-seq = [(2, 1 << 8, 2)]
+seq = [(2, 1 << 14, 2)]
 verif(
     drv(t=Tuple[Uint[32], Uint[32], Uint[2]], seq=seq),
     f=rng(sim_cls=SimVerilated),

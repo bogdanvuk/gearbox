@@ -17,11 +17,14 @@ class TaskDelegate(CompleterItemDelegate):
 
             if isinstance(child, NodeModel):
                 if child.hierarchical:
-                    label.setStyleSheet("color: darkorchid")
+                    label.setStyleSheet(
+                        "color: darkorchid; background-color: transparent;")
                 else:
-                    label.setStyleSheet("color: lightblue")
+                    label.setStyleSheet(
+                        "color: lightblue; background-color: transparent;")
             else:
-                label.setStyleSheet("color: gold")
+                label.setStyleSheet(
+                    "color: gold; background-color: transparent;")
 
         except KeyError:
             label.setStyleSheet("color: rgba(255, 255, 255, 150)")

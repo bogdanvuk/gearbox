@@ -108,9 +108,7 @@ class Minibuffer(QtCore.QObject):
         self._completer = completer
         if completer:
             self.input_box.setCompleter(self._completer)
-            # self._completer.setCompletionPrefix(text)
-            popup = self._completer.popup()
-            # popup.setStyleSheet(themify(STYLE_TABSEARCH_LIST))
+            self._completer.popup()
             self.prev_text_len = len(self.input_box.text())
             try:
                 self.filled.connect(completer.filled)

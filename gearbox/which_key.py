@@ -2,11 +2,9 @@ import math
 from . import html_utils
 
 from PySide2.QtWidgets import QLabel
-from .stylesheet import STYLE_WHICH_KEY
 from pygears.conf import Inject, bind, reg_inject
 from PySide2.QtGui import QKeySequence
 from PySide2 import QtCore
-from .theme import themify
 
 
 @reg_inject
@@ -20,7 +18,6 @@ class WhichKey(QLabel):
     @reg_inject
     def __init__(self, parent=None, main=Inject('gearbox/main/inst')):
         super().__init__(parent)
-        # self.setStyleSheet(themify(STYLE_WHICH_KEY))
         self.setMargin(2)
         self.hide()
         # parent.installEventFilter(self)

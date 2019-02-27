@@ -1,19 +1,20 @@
 from PySide2 import QtCore, QtGui, QtWidgets
 
-from pygears.conf import Inject, reg_inject
+from pygears.conf import Inject, reg_inject, config
 
-from .constants import VIEWER_BG_COLOR, VIEWER_GRID_COLOR, VIEWER_GRID_OVERLAY
+from .theme import ThemePlugin
 
 
 class NodeScene(QtWidgets.QGraphicsScene):
     @reg_inject
     def __init__(self,
                  parent=None,
-                 background_color=Inject('gearbox/theme/background-color')):
+                 background_color=Inject('gearbox/theme/background-color'),
+                 grid_color=Inject('gearbox/theme/graph-grid-color')):
         super(NodeScene, self).__init__(parent)
         self.background_color = QtGui.QColor(background_color)
-        self.grid = VIEWER_GRID_OVERLAY
-        self.grid_color = VIEWER_GRID_COLOR
+        self.grid_color = grid_color
+        self.grid = True
 
     def __repr__(self):
         return '{}.{}(\'{}\')'.format(self.__module__, self.__class__.__name__,
@@ -43,17 +44,17 @@ class NodeScene(QtWidgets.QGraphicsScene):
         painter.setBrush(bg_color)
         painter.drawRect(rect)
 
-        if not self._grid:
+        if not self.grid:
             return
 
         zoom = self.viewer().get_zoom()
         grid_size = 20
 
         if zoom > -0.5:
-            pen = QtGui.QPen(QtGui.QColor(*self.grid_color), 0.65)
+            pen = QtGui.QPen(QtGui.QColor(self.grid_color), 0.65)
             self._draw_grid(painter, rect, pen, grid_size)
 
-        color = bg_color.darker(150)
+        color = bg_color.darker(300)
         if zoom < -0.0:
             color = color.darker(100 - int(zoom * 110))
         pen = QtGui.QPen(color, 0.65)
@@ -70,53 +71,11 @@ class NodeScene(QtWidgets.QGraphicsScene):
 
         painter.restore()
 
-    # def mousePressEvent(self, event):
-    #     selected_nodes = self.viewer().selected_nodes()
-    #     if self.viewer():
-    #         self.viewer().sceneMousePressEvent(event)
-    #     super().mousePressEvent(event)
-    #     keep_selection = any([
-    #         event.button() == QtCore.Qt.MiddleButton,
-    #         event.button() == QtCore.Qt.RightButton,
-    #         event.modifiers() == QtCore.Qt.AltModifier
-    #     ])
-    #     if keep_selection:
-    #         for node in selected_nodes:
-    #             node.setSelected(True)
-
-    # def mouseMoveEvent(self, event):
-    #     if self.viewer():
-    #         self.viewer().sceneMouseMoveEvent(event)
-    #     super(NodeScene, self).mouseMoveEvent(event)
-
-    # def mouseReleaseEvent(self, event):
-    #     if self.viewer():
-    #         self.viewer().sceneMouseReleaseEvent(event)
-    #     super(NodeScene, self).mouseReleaseEvent(event)
-
     def viewer(self):
         return self.views()[0] if self.views() else None
 
-    @property
-    def grid(self):
-        return self._grid
 
-    @grid.setter
-    def grid(self, mode=True):
-        self._grid = mode
-
-    @property
-    def grid_color(self):
-        return self._grid_color
-
-    @grid_color.setter
-    def grid_color(self, color=(0, 0, 0)):
-        self._grid_color = color
-
-    @property
-    def background_color(self):
-        return self._bg_color
-
-    @background_color.setter
-    def background_color(self, color=(0, 0, 0)):
-        self._bg_color = color
+class ScenePlugin(ThemePlugin):
+    @classmethod
+    def bind(cls):
+        config.define('gearbox/theme/graph-grid-color', default='#404040')

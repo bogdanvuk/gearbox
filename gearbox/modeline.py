@@ -1,8 +1,6 @@
 from PySide2 import QtWidgets
-from .stylesheet import STYLE_MODELINE
 from pygears.conf import reg_inject
 from .html_utils import tabulate, fontify
-from .theme import themify
 
 
 class Modeline(QtWidgets.QLabel):
@@ -14,7 +12,6 @@ class Modeline(QtWidgets.QLabel):
         self.window.buffer_changed.connect(self.update)
         self.window.activated.connect(self.update)
         self.window.deactivated.connect(self.update)
-        # self.setStyleSheet(themify(STYLE_MODELINE))
         self.reset()
 
     def reset(self):

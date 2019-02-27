@@ -16,21 +16,25 @@ class ThemePlugin(PluginBase):
     @classmethod
     def bind(cls):
         config.define(
-            'gearbox/theme/text-color', default='rgba(150, 150, 150, 255)')
+            'gearbox/theme/text-color', default='#b0b0b0')
 
         config.define(
             'gearbox/theme/text-color-comment', default='#2a937c')
 
         config.define(
-            'gearbox/theme/text-color-keyword', default='#ff79c6')
+            'gearbox/theme/text-color-keyword', default='#4d97d5')
+
+        config.define(
+            'gearbox/theme/text-color-constant', default='#d060ff')
 
         config.define(
             'gearbox/theme/text-color-object-name', default='#ba6ec3')
 
         config.define(
+            'gearbox/theme/text-color-class-name', default='#ba6ec3')
+
+        config.define(
             'gearbox/theme/text-color-string', default='#2d8b6e')
 
-        # config.define(
-        #     'gearbox/theme/background-color', default='rgba(41, 43, 46, 255)')
         config.define(
-            'gearbox/theme/background-color', default='#ff292b2e')
+            'gearbox/theme/background-color', default='#292b2e')

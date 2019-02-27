@@ -5,8 +5,6 @@ from pygears.conf import Inject, reg_inject, bind, MayInject, registry, safe_bin
 from .layout import Buffer, LayoutPlugin, show_buffer
 from .html_utils import fontify
 from .description import describe_file
-from .stylesheet import STYLE_TEXTBROWSER
-from .theme import themify
 
 
 class TailProc(QtCore.QObject):

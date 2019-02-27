@@ -5,7 +5,7 @@
 .highlight .k { color: #4d97d5; font-weight: bold } /* Keyword */
 .highlight .l { color: @text-color } /* Literal */
 .highlight .n { color: @text-color } /* Name */
-.highlight .o { color: @text-color-keyword } /* Operator */
+.highlight .o { color: @text-color } /* Operator */
 .highlight .x { color: @text-color } /* Other */
 .highlight .p { color: @text-color } /* Punctuation */
 .highlight .ch { color: @text-color-comment } /* Comment.Hashbang */
@@ -31,13 +31,13 @@
 .highlight .kr { color: @text-color-keyword } /* Keyword.Reserved */
 .highlight .kt { color: #8be9fd } /* Keyword.Type */
 .highlight .ld { color: @text-color } /* Literal.Date */
-.highlight .m { color: #bd93f9 } /* Literal.Number */
+.highlight .m { color: @text-color-constant } /* Literal.Number */
 .highlight .s { color: @text-color-string } /* Literal.String */
 .highlight .na { color: @text-color-object-name; font-weight: bold  } /* Name.Attribute */
 .highlight .nb { color: #8be9fd; font-style: italic } /* Name.Builtin */
-.highlight .nc { color: @text-color-object-name; font-weight: bold } /* Name.Class */
+.highlight .nc { color: @text-color-class-name; font-weight: bold } /* Name.Class */
 .highlight .no { color: @text-color } /* Name.Constant */
-.highlight .nd { color: @text-color } /* Name.Decorator */
+.highlight .nd { color: @text-color-class-name; font-weight: bold } /* Name.Decorator */
 .highlight .ni { color: @text-color } /* Name.Entity */
 .highlight .ne { color: @text-color } /* Name.Exception */
 .highlight .nf { color: @text-color-object-name; font-weight: bold } /* Name.Function */
@@ -49,11 +49,11 @@
 .highlight .nv { color: #8be9fd; font-style: italic } /* Name.Variable */
 .highlight .ow { color: @text-color-keyword } /* Operator.Word */
 .highlight .w { color: @text-color } /* Text.Whitespace */
-.highlight .mb { color: #bd93f9 } /* Literal.Number.Bin */
-.highlight .mf { color: #bd93f9 } /* Literal.Number.Float */
-.highlight .mh { color: #bd93f9 } /* Literal.Number.Hex */
-.highlight .mi { color: #bd93f9 } /* Literal.Number.Integer */
-.highlight .mo { color: #bd93f9 } /* Literal.Number.Oct */
+.highlight .mb { color: @text-color-constant } /* Literal.Number.Bin */
+.highlight .mf { color: @text-color-constant } /* Literal.Number.Float */
+.highlight .mh { color: @text-color-constant } /* Literal.Number.Hex */
+.highlight .mi { color: @text-color-constant } /* Literal.Number.Integer */
+.highlight .mo { color: @text-color-constant } /* Literal.Number.Oct */
 .highlight .sa { color: @text-color-string } /* Literal.String.Affix */
 .highlight .sb { color: @text-color-string } /* Literal.String.Backtick */
 .highlight .sc { color: @text-color-string } /* Literal.String.Char */
@@ -73,7 +73,7 @@
 .highlight .vg { color: #8be9fd; font-style: italic } /* Name.Variable.Global */
 .highlight .vi { color: #8be9fd; font-style: italic } /* Name.Variable.Instance */
 .highlight .vm { color: #8be9fd; font-style: italic } /* Name.Variable.Magic */
-.highlight .il { color: #bd93f9 } /* Literal.Number.Integer.Long */
+.highlight .il { color: @text-color-constant } /* Literal.Number.Integer.Long */
 
 QWidget {
     background: @background-color;
@@ -81,9 +81,14 @@ QWidget {
 }
 
 QTextBrowser {
-    selection-background-color: rgba(150, 150, 150, 70);
+    selection-background-color: #444155;
     inset grey;
 }
+
+/* QTextEdit { */
+/*     selection-background-color: #30ffffff; */
+/*     inset grey; */
+/* } */
 
 QLabel {
     border-radius: 0px;
@@ -109,3 +114,28 @@ QLabel[accessibleName="minibuffer-message"] {
     padding-left: 10px;
 }
 
+QListView {
+    border: 1px solid rgba(20, 20, 20, 255);
+    show-decoration-selected: 1;
+    padding-top: 4px;
+    selection-background-color: rgba(70, 70, 70, 255);
+}
+
+
+QMenu {
+    border: 1px solid rgba(255, 255, 255, 30);
+}
+
+QMenu::item {
+    padding: 5px 18px 2px;
+    background-color: transparent;
+}
+QMenu::item:selected {
+    color: rgba(98, 68, 10, 255);
+    background-color: rgba(219, 158, 0, 255);
+}
+QMenu::separator {
+    height: 1px;
+    background: rgba(255, 255, 255, 50);
+    margin: 4px 8px;
+}
