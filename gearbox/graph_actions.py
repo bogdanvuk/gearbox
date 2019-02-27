@@ -3,7 +3,7 @@ import inspect
 from .layout import show_buffer
 from .graph import GraphBufferPlugin
 from .pipe import Pipe
-from .popup_desc import PopupDesc
+from .popup_desc import popup_desc, popup_cancel
 from functools import wraps
 from PySide2.QtCore import Qt
 from pygears.conf import Inject, reg_inject, registry
@@ -320,16 +320,16 @@ def node_search(
 
 class GraphDescription:
     def __init__(self, buff):
-        self.popup_desc = PopupDesc(buff)
-        buff.view.selection_changed.connect(self.selection_changed)
+        self.buff = buff
+        self.buff.view.selection_changed.connect(self.selection_changed)
 
     def selection_changed(self, selected):
         if selected:
             if hasattr(selected[0].model, 'description'):
-                self.popup_desc.popup(selected[0].model.description)
+                popup_desc(selected[0].model.description, self.buff)
 
     def delete(self):
-        self.popup_desc.delete()
+        popup_cancel()
 
 
 class GtkwaveActionsPlugin(GraphBufferPlugin):
@@ -337,5 +337,5 @@ class GtkwaveActionsPlugin(GraphBufferPlugin):
     def bind(cls):
         registry(
             'gearbox/plugins/graph')['TimestepModeline'] = TimestepModeline
-        # registry(
-        #     'gearbox/plugins/graph')['GraphDescription'] = GraphDescription
+        registry(
+            'gearbox/plugins/graph')['GraphDescription'] = GraphDescription

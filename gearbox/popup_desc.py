@@ -8,16 +8,13 @@ from .layout import active_buffer
 class PopupDesc(QtWidgets.QTextEdit):
     @reg_inject
     def __init__(self,
-                 buff,
                  max_width=500,
                  max_height=500,
                  main=Inject('gearbox/main/inst')):
         super().__init__()
         self.setParent(main)
         self.max_width = max_width
-
-        self.buff = buff
-        self.buff.view.resized.connect(self.reposition)
+        self.buff = None
 
         # self.max_height = max_height
         self.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
@@ -32,20 +29,23 @@ class PopupDesc(QtWidgets.QTextEdit):
         self.delay_timer.timeout.connect(self.show)
         self.delay_timer.setSingleShot(True)
         self.document().setDefaultStyleSheet(
-            HtmlFormatter().get_style_defs('.highlight') +
+            QtWidgets.QApplication.instance().styleSheet() +
             '\n.highlight  { background: rgba(255, 255, 255, 0);}')
         self.setReadOnly(True)
 
         self.setStyleSheet("""
         border: 2px solid rgba(170, 140, 0, 255);
-        background-color: rgba(255, 255, 255, 150);
+        background-color: rgba(100, 100, 100, 100);
         inset grey;
         """)
 
     @reg_inject
     def reposition(self):
         win = self.buff.view
-        self.move(win.x() + win.width() - self.width(), win.y())
+        upper_left = QtCore.QPoint(win.x() + win.width() - self.width(),
+                                   win.y())
+        global_pos = win.parentWidget().mapToGlobal(upper_left)
+        self.move(self.parent().mapFromGlobal(global_pos))
 
     def show(self):
         super().show()
@@ -66,15 +66,18 @@ class PopupDesc(QtWidgets.QTextEdit):
         self.reposition()
         self.delay_timer.stop()
 
-    def popup(self, text, delay=1000, timeout=None):
+    def popup(self, text, buff, delay=1000, timeout=None):
         if self.buff is not None:
             try:
                 self.buff.view.resized.disconnect(self.reposition)
-            except AttributeError:
+                self.buff.hidden.disconnect(self.cancel)
+            except RuntimeError:
                 pass
 
+        self.buff = buff
         try:
             self.buff.view.resized.connect(self.reposition)
+            self.buff.hidden.connect(self.cancel)
         except AttributeError:
             pass
 
@@ -106,9 +109,15 @@ class PopupDesc(QtWidgets.QTextEdit):
 
 
 @reg_inject
-def popup_desc(text, w=MayInject('gearbox/popup_desc')):
+def popup_desc(text, buff, w=MayInject('gearbox/popup_desc')):
     if w is None:
         w = PopupDesc()
         bind('gearbox/popup_desc', w)
 
-    w.popup(text)
+    w.popup(text, buff)
+
+
+@reg_inject
+def popup_cancel(w=MayInject('gearbox/popup_desc')):
+    if w is not None:
+        w.cancel()

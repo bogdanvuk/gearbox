@@ -131,7 +131,7 @@ def hier_layout(self):
         # print(
         #     f'  bb: {node.name}: {pos[0], pos[1], float(gvn.attr["width"])*72, float(gvn.attr["height"])*72} -> {node_bounding_box}'
         # )
-        node.set_pos(node_bounding_box.x(), node_bounding_box.y())
+        node.setPos(node_bounding_box.x(), node_bounding_box.y())
         if bounding_box is None:
             bounding_box = node_bounding_box
         else:
@@ -516,9 +516,6 @@ class NodeItem(AbstractNodeItem):
             for p in self.pipes:
                 yield p
 
-    def set_pos(self, x=0.0, y=0.0):
-        self.setPos(x, y)
-
     def _hide_single_port_labels(self):
         for port, text in self._input_items.items():
             if len(self._input_items) == 1:
@@ -816,11 +813,11 @@ class NodeItem(AbstractNodeItem):
         node1 = pipe.output_port.parentItem()
         node2 = pipe.input_port.parentItem()
 
-        tailport = None
+        tailport = ''
         if node1._layout != minimized_layout:
             tailport = f'o{pipe.output_port.model.index}'
 
-        headport = None
+        headport = ''
         if node2._layout != minimized_layout:
             headport = f'i{pipe.input_port.model.index}'
 
