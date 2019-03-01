@@ -3,9 +3,10 @@ import argparse
 import os
 import sys
 
+from PySide2 import QtCore
+from gearbox.description import description
 from PySide2 import QtCore, QtGui, QtWidgets
 
-from gearbox.description import description
 from gearbox.graph import graph
 from gearbox.gtkwave import gtkwave
 from gearbox.main_window import MainWindow
@@ -81,7 +82,7 @@ def main_loop(script_fn, layers=Inject('gearbox/layers')):
     app.setStyleSheet(themify(stylesheet))
 
     app.setWindowIcon(QtGui.QIcon('gearbox.png'))
-    app.setFont(QtGui.QFont("DejaVu Sans Mono", 11))
+    app.setFont(QtGui.QFont("DejaVu Sans Mono", 10))
 
     main_window = MainWindow()
     main_window.setWindowTitle(f'Gearbox')

@@ -1,5 +1,5 @@
-from PySide2 import QtWidgets
 from pygears.conf import reg_inject
+from PySide2 import QtWidgets
 from .html_utils import tabulate, fontify
 
 
@@ -49,13 +49,13 @@ class Modeline(QtWidgets.QLabel):
             win_num = fontify(
                 f'{win_id}:',
                 background_color='#d4a649',
-                color='darkorchid',
+                color='@text-color-class-name',
                 bold=True)
         else:
             win_num = f'{win_id}:'
 
         self.field_text['win_num'] = win_num
-        self.field_text['name'] = fontify(name, color='darkorchid', bold=True)
+        self.field_text['name'] = fontify(name, color='@text-color-class-name', bold=True)
 
         tbl = tabulate([[(style, self.field_text.get(name, ''))
                          for name, style in self.field_styles.items()]])

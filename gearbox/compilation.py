@@ -38,6 +38,8 @@ class Compilation(QtWidgets.QTextBrowser):
 
     def __init__(self, compilation_log_fn):
         super().__init__()
+        self.document().setDefaultStyleSheet(
+            QtWidgets.QApplication.instance().styleSheet())
         self.tail_proc = TailProc(compilation_log_fn)
         self.tail_proc.file_text_append.connect(self.append)
         self.setLineWrapMode(QtWidgets.QTextBrowser.NoWrap)
@@ -49,13 +51,11 @@ class Compilation(QtWidgets.QTextBrowser):
         if res:
             indent = res.group(1)
             fn = res.group(2)
-            line = res.group(3)
-            fn = themify(f'<a href="{fn}#{line}" style="color:@text-color-error">{fn}</a>')
-            func = fontify(
-                res.group(4).replace('<', '&lt;').replace('>', '&gt;'),
-                color='darkorchid')
-            # margin-left: {len(indent)*10}px
-            text = f'<p style="margin: 0;margin-left: {len(indent)}em">File "{fn}", line {line}, in {func}</p>'
+            line = int(res.group(3))
+            fn = themify(f'<a href="{fn}#{line}" class="err">{fn}</a>')
+            func_name = res.group(4).replace('<', '&lt;').replace('>', '&gt;')
+            func = f'<span class="nf">{func_name}</span>'
+            text = f'<pre style="margin: 0">{indent}<span>File "{fn}", line {line}, in {func}</span></pre>'
 
             print(text)
             super().append(text)
