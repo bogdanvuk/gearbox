@@ -15,6 +15,7 @@ from pygears.conf.trace import pygears_excepthook
 from pygears.sim import sim, SimFinish
 from pygears import clear
 from pygears.sim.extens.vcd import VCD
+from pygears import MultiAlternativeError
 
 
 class Gearbox(SimExtend):
@@ -112,10 +113,43 @@ class PyGearsProc(QtCore.QObject):
         self.thrd.quit()
 
 
+def _err_reconnect_dfs(err, issue_id, path):
+    if isinstance(err, MultiAlternativeError):
+        if hasattr(err, 'gear'):
+            path.append(err.gear)
+
+        for e in err.errors:
+            ret, issue_id = _err_reconnect_dfs(e[2], issue_id, path)
+            if ret:
+                return True, issue_id
+        else:
+            if hasattr(err, 'gear'):
+                path.pop()
+            return False, issue_id
+
+    elif issue_id == 0:
+        path.append(err.gear)
+        for gear in path:
+            gear.parent.add_child(gear)
+            for port in gear.in_ports:
+                port.producer.connect(port)
+
+        return True, -1
+    else:
+        return False, issue_id - 1
+
+
+def err_reconnect_dfs(err, issue_id):
+    path = []
+    _err_reconnect_dfs(err, issue_id, path)
+    return path
+
+
 class PyGearsClient(QtCore.QObject):
+    script_loading_started = QtCore.Signal()
+    script_loaded = QtCore.Signal()
     model_closed = QtCore.Signal()
     model_loaded = QtCore.Signal()
-    model_loading_started = QtCore.Signal()
     sim_started = QtCore.Signal()
     after_run = QtCore.Signal()
     after_timestep = QtCore.Signal()
@@ -136,6 +170,8 @@ class PyGearsClient(QtCore.QObject):
         self.invoke_queue = queue.Queue()
         self.queue = None
         self.closing = False
+        self.err = None
+        self.cur_err_path = []
 
         QtWidgets.QApplication.instance().aboutToQuit.connect(self.quit)
         self.start_thread()
@@ -179,6 +215,10 @@ class PyGearsClient(QtCore.QObject):
                 # self.queue = None
             # self.loop.quit()
 
+    def set_err_model(self, issue_id):
+        err_reconnect_dfs(self.err, issue_id)
+        self.model_loaded.emit()
+
     def run_model(self, script_fn):
         gearbox_registry = registry('gearbox')
         clear()
@@ -203,21 +243,25 @@ class PyGearsClient(QtCore.QObject):
                 logger.handlers.clear()
                 logger.addHandler(logging.FileHandler(compilation_log_fn))
 
-        self.model_loading_started.emit()
+        self.script_loading_started.emit()
 
-        err = None
+        self.err = None
+        self.cur_err_path = []
         try:
             runpy.run_path(script_fn)
         except Exception as e:
-            err = e
+            self.err = e
 
         bind('gearbox/model_script_name', script_fn)
-        if err is not None:
-            pygears_excepthook(type(err), err, err.__traceback__)
-            return
+        self.script_loaded.emit()
 
-        self.model_loaded.emit()
-        self.invoke_method('run_sim')
+        if self.err is not None:
+            pygears_excepthook(
+                type(self.err), self.err, self.err.__traceback__)
+
+        if self.err is None:
+            self.model_loaded.emit()
+            self.invoke_method('run_sim')
 
     def cont(self):
         QtCore.QMetaObject.invokeMethod(self.loop, 'quit',

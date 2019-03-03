@@ -34,7 +34,8 @@ class TailProc(QtCore.QObject):
 
 class Compilation(QtWidgets.QTextBrowser):
     resized = QtCore.Signal()
-    re_err_line = re.compile(r'(\s+)File "([^"]+)", line (\d+), in (\S+)')
+    re_err_file_line = re.compile(r'(\s+)File "([^"]+)", line (\d+), in (\S+)')
+    re_err_issue_line = re.compile(r'(\s+)(\S+): \[(\d+)\], (.*)')
 
     def __init__(self, compilation_log_fn):
         super().__init__()
@@ -47,29 +48,44 @@ class Compilation(QtWidgets.QTextBrowser):
         self.setOpenExternalLinks(False)
 
     def append(self, text):
-        res = self.re_err_line.fullmatch(text)
+        res = self.re_err_file_line.fullmatch(text)
         if res:
             indent = res.group(1)
             fn = res.group(2)
             line = int(res.group(3))
-            fn = themify(f'<a href="{fn}#{line}" class="err">{fn}</a>')
+            fn = themify(f'<a href="file:{fn}#{line}" class="err">{fn}</a>')
             func_name = res.group(4).replace('<', '&lt;').replace('>', '&gt;')
             func = f'<span class="nf">{func_name}</span>'
             text = f'<pre style="margin: 0">{indent}<span>File "{fn}", line {line}, in {func}</span></pre>'
-
-            print(text)
-            super().append(text)
         else:
-            super().append(text)
+            # import pdb; pdb.set_trace()
+            res = self.re_err_issue_line.fullmatch(text)
+            if res:
+                indent = res.group(1)
+                err_name = res.group(2)
+                issue_id = int(res.group(3))
+                err_text = res.group(4)
+                err_ref = themify(
+                    f'<a href="err:{err_name}#{issue_id}" class="nl err">{err_name}: [{issue_id}]</a>'
+                )
 
-    def setSource(self, url):
-        lineno = int(url.fragment())
-        describe_file(url.path(), lineno=slice(lineno, lineno + 1))
+                text = f'<pre style="margin: 0">{indent}<span>{err_ref}, {err_text}</span></pre>'
+
+        super().append(text)
+
+    @reg_inject
+    def setSource(self, url, sim_bridge=Inject('gearbox/sim_bridge')):
+        if url.scheme() == 'file':
+            lineno = int(url.fragment())
+            describe_file(url.path(), lineno=slice(lineno, lineno + 1))
+        elif url.scheme() == 'err':
+            issue_id = int(url.fragment())
+            sim_bridge.invoke_method('set_err_model', issue_id=issue_id)
 
 
 @reg_inject
 def compilation(sim_bridge=Inject('gearbox/sim_bridge')):
-    sim_bridge.model_loading_started.connect(compilation_create)
+    sim_bridge.script_loading_started.connect(compilation_create)
 
 
 class CompilationBuffer(Buffer):
