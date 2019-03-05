@@ -2,7 +2,7 @@ import os
 from functools import partial
 from PySide2.QtCore import Qt
 from PySide2 import QtWidgets
-from pygears.conf import Inject, reg_inject, registry
+from pygears.conf import Inject, reg_inject, registry, bind
 from .utils import single_shot_connect
 from .main_window import register_prefix
 from .actions import shortcut
@@ -11,13 +11,6 @@ from .saver import save
 register_prefix(None, (Qt.Key_Space, Qt.Key_F), 'file')
 
 
-def open_file(script_fn, sim_bridge=Inject('gearbox/sim_bridge')):
-    print("Invoke run_model")
-    registry('gearbox/sim_bridge').invoke_method(
-        'run_model', script_fn=script_fn)
-
-    registry('gearbox/sim_bridge').invoke_method('run_sim')
-
 @reg_inject
 def close_file(
         sim_bridge=Inject('gearbox/sim_bridge'),
@@ -25,8 +18,8 @@ def close_file(
         layout=Inject('gearbox/layout')):
 
     if script_fn is not None:
-        sim_bridge.invoke_method('close_model')
-        layout.clear()
+        sim_bridge.invoke_method('close_script')
+        # layout.clear()
 
 
 @shortcut(None, (Qt.Key_Space, Qt.Key_F, Qt.Key_F), 'open')
@@ -34,7 +27,7 @@ def close_file(
 def open_file_interact(
         sim_bridge=Inject('gearbox/sim_bridge'),
         prev_script_fn=Inject('gearbox/model_script_name'),
-        ):
+):
     ret = QtWidgets.QFileDialog.getOpenFileName(
         caption='Open file',
         dir=os.getcwd(),
@@ -44,11 +37,11 @@ def open_file_interact(
 
     if script_fn:
         if prev_script_fn:
-            single_shot_connect(sim_bridge.model_closed,
-                                partial(open_file, script_fn))
+            bind('gearbox/main/new_model_script_fn', script_fn)
             close_file()
         else:
-            open_file(script_fn)
+            registry('gearbox/sim_bridge').invoke_method(
+                'run_model', script_fn=script_fn)
 
 
 @shortcut(None, (Qt.Key_Space, Qt.Key_F, Qt.Key_C), 'close')
@@ -75,9 +68,9 @@ def reload_file(
         layout=Inject('gearbox/layout')):
 
     if script_fn:
-        single_shot_connect(sim_bridge.model_closed,
-                            partial(open_file, script_fn))
+        bind('gearbox/main/new_model_script_fn', script_fn)
         close_file()
+
 
 @shortcut(None, (Qt.Key_Space, Qt.Key_F, Qt.SHIFT + Qt.Key_R),
           'reload & save layout')
@@ -89,6 +82,5 @@ def reload_file_save_layout(
 
     if script_fn:
         save()
-        single_shot_connect(sim_bridge.model_closed,
-                            partial(open_file, script_fn))
+        bind('gearbox/main/new_model_script_fn', script_fn)
         close_file()

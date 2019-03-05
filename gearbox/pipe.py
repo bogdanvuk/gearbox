@@ -9,6 +9,7 @@ from .constants import (
     PIPE_STYLE_DASHED, PIPE_STYLE_DEFAULT, PIPE_STYLE_DOTTED, PIPE_WIDTH,
     IN_PORT, OUT_PORT, Z_VAL_PIPE, PIPE_WAITED_COLOR, PIPE_HANDSHAKED_COLOR)
 from .port import PortItem
+from .theme import themify
 
 PIPE_STYLES = {
     PIPE_STYLE_DEFAULT: QtCore.Qt.PenStyle.SolidLine,
@@ -17,10 +18,11 @@ PIPE_STYLES = {
 }
 
 PIPE_SIM_STATUS_COLOR = {
-    'empty': PIPE_DEFAULT_COLOR,
-    'active': PIPE_ACTIVE_COLOR,
-    'waited': PIPE_WAITED_COLOR,
-    'handshaked': PIPE_HANDSHAKED_COLOR
+    'empty': '#7f9597',
+    'active': '#b4325a',
+    'waited': '#325aa0',
+    'handshaked': '#3c6414',
+    'error': '@text-color-error'
 }
 
 
@@ -37,7 +39,7 @@ class Pipe(QtWidgets.QGraphicsPathItem):
         self.setAcceptHoverEvents(True)
         self.setFlags(self.ItemIsSelectable)
         self.width = PIPE_WIDTH
-        self._color = PIPE_DEFAULT_COLOR
+        self._color = None
         self._style = PIPE_STYLE_DEFAULT
         self._active = False
         self._highlight = False
@@ -45,7 +47,7 @@ class Pipe(QtWidgets.QGraphicsPathItem):
         self._output_port = output_port
         self.model = model
         self.layout_path = []
-        self.status = "empty"
+        self.set_status("empty")
         # self.set_tooltip()
 
     def show_tooltip(self):
@@ -63,7 +65,7 @@ class Pipe(QtWidgets.QGraphicsPathItem):
 
     def set_status(self, status):
         self.status = status
-        new_color = PIPE_SIM_STATUS_COLOR[status]
+        new_color = themify(PIPE_SIM_STATUS_COLOR[status])
         if new_color != self.color:
             self.color = new_color
             self.update()
@@ -82,7 +84,7 @@ class Pipe(QtWidgets.QGraphicsPathItem):
             self.highlight()
 
     def paint(self, painter, option, widget):
-        color = QtGui.QColor(*self._color)
+        color = QtGui.QColor(self._color)
         pen_style = PIPE_STYLES.get(self.style)
 
         if self.status == 'empty':
@@ -154,7 +156,7 @@ class Pipe(QtWidgets.QGraphicsPathItem):
     def reset(self):
         self._active = False
         self._highlight = False
-        pen = QtGui.QPen(QtGui.QColor(*self.color), 2)
+        pen = QtGui.QPen(QtGui.QColor(self.color), 2)
         pen.setStyle(PIPE_STYLES.get(self.style))
         self.setPen(pen)
 

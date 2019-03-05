@@ -9,12 +9,15 @@ from .constants import NODE_SEL_BORDER_COLOR, NODE_SEL_COLOR, Z_VAL_NODE
 from .node_abstract import AbstractNodeItem
 from .pipe import Pipe
 from .port import PortItem
+from .theme import themify
 
 NODE_SIM_STATUS_COLOR = {
-    'empty_hier': (48, 58, 69, 255),
-    'empty': (0, 0, 0, 50),
-    'stuck': (170, 50, 90, 200),
-    'stuck_hier': (170, 50, 90, 200),
+    'empty_hier': '#303a45',
+    'empty': '#32000000',
+    'stuck': '#c8aa325a',
+    'stuck_hier': '#c8aa325a',
+    'error': '@text-color-error',
+    'error_hier': '@text-color-error'
 }
 
 
@@ -88,9 +91,18 @@ def hier_layout(self):
             gvn.attr['height'] = 1 / 72
 
     if not self.layout_graph.subgraphs():
-        self.layout_graph.add_subgraph([self.layout_graph.get_node(f'i{i}') for i in range(len(self.inputs))], 'sources', rank='same')
-        self.layout_graph.add_subgraph([self.layout_graph.get_node(f'o{i}') for i in range(len(self.outputs))], 'sink', rank='same')
-
+        self.layout_graph.add_subgraph([
+            self.layout_graph.get_node(f'i{i}')
+            for i in range(len(self.inputs))
+        ],
+                                       'sources',
+                                       rank='same')
+        self.layout_graph.add_subgraph([
+            self.layout_graph.get_node(f'o{i}')
+            for i in range(len(self.outputs))
+        ],
+                                       'sink',
+                                       rank='same')
 
     # for i in range(len(self.inputs)):
     #     gvn = self.layout_graph.get_node(f'i{i}')
@@ -310,7 +322,7 @@ def hier_painter(self, painter, option, widget):
 
     top_rect = QtCore.QRectF(0.0, 0.0, rect.width(), 20.0)
     if self.collapsed:
-        painter.setBrush(QtGui.QColor(*self.status_color))
+        painter.setBrush(QtGui.QColor(themify(self.status_color)))
     else:
         painter.setBrush(QtGui.QColor(*self.border_color))
 
@@ -365,7 +377,7 @@ def node_painter(self, painter, option, widget):
     path = QtGui.QPainterPath()
     path.addRoundedRect(label_rect, radius_x / 1.5, radius_y / 1.5)
     # painter.setBrush(QtGui.QColor(0, 0, 0, 50))
-    painter.setBrush(QtGui.QColor(*self.status_color))
+    painter.setBrush(QtGui.QColor(themify(self.status_color)))
     painter.fillPath(path, painter.brush())
 
     border_width = 0.8

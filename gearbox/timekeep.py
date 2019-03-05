@@ -39,9 +39,9 @@ class TimeKeep(QtCore.QObject):
         self._time_target = None
         self._cont_refresh_step = cont_refresh_step
         bind('gearbox/timestep', self.max_timestep)
-        sim_bridge.sim_refresh.connect(self.sim_break)
+        sim_bridge.after_timestep.connect(self.sim_break)
         sim_bridge.model_closed.connect(self.model_closed)
-        sim_bridge.model_loaded.connect(self.model_loaded)
+        sim_bridge.script_loaded.connect(self.model_loaded)
 
     def model_loaded(self):
         self._timestep = None
@@ -76,7 +76,7 @@ class TimeKeep(QtCore.QObject):
     def timestep(self, val, sim_bridge=Inject('gearbox/sim_bridge')):
         if (self.max_timestep is None) or (val > self.max_timestep):
             self._time_target = val
-            sim_bridge.breakpoints.add(self.break_on_timestep)
+            sim_bridge.breakpoint(self.break_on_timestep)
             if not sim_bridge.running:
                 sim_bridge.cont()
         else:

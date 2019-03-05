@@ -11,25 +11,40 @@ from .theme import themify
 class TailProc(QtCore.QObject):
     file_text_append = QtCore.Signal(str)
 
-    def __init__(self, compilation_log_fn):
+    @reg_inject
+    def __init__(self,
+                 compilation_log_fn,
+                 sim_bridge=Inject('gearbox/sim_bridge')):
         super().__init__()
 
         self.compilation_log_fn = compilation_log_fn
         self.thrd = QtCore.QThread()
         self.moveToThread(self.thrd)
-        self.thrd.started.connect(self.run)
+
+        self.timer = QtCore.QTimer()
+        self.timer.moveToThread(self.thrd)
+        self.timer.setInterval(100)
+        self.timer.timeout.connect(self.read)
+        self.timer.setSingleShot(True)
+
+        self.f = open(self.compilation_log_fn)
+        self.thrd.started.connect(self.timer.start)
+        sim_bridge.script_closed.connect(self.quit)
+
         self.thrd.start()
 
-    def run(self):
-        with open(self.compilation_log_fn) as f:
-            while True:
-                line = f.readline()
-                if not line:
-                    time.sleep(0.1)  # Sleep briefly
-                    continue
-                self.file_text_append.emit(line[:-1])
-
+    def quit(self):
+        self.timer.stop()
+        self.f.close()
         self.thrd.quit()
+
+    def read(self):
+        line = self.f.readline()
+        while line:
+            self.file_text_append.emit(line[:-1])
+            line = self.f.readline()
+
+        self.timer.start()
 
 
 class Compilation(QtWidgets.QTextBrowser):

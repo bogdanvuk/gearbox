@@ -49,6 +49,59 @@ def find_cosim_modules(top=Inject('gear/hier_root')):
     return v.cosim_modules
 
 
+from .node_abstract import AbstractNodeItem
+
+from .port import PortItem
+from pygears.rtl.port import OutPort
+from PySide2 import QtWidgets
+
+
+class DummyInNode(AbstractNodeItem):
+    def __init__(self, parent, index):
+        super().__init__()
+        self.color = (255, 0, 0)
+        self._layout = minimized_layout
+        self._input_items = {}
+        self._output_items = {}
+        self.painter = minimized_painter
+        self.outputs = [PortItem(InPort(parent.rtl, index, 'dummy'), self)]
+        port_text = QtWidgets.QGraphicsTextItem('dummy', self)
+        self._output_items[self.outputs[0]] = port_text
+
+        self.inputs = []
+        self._text_item = QtWidgets.QGraphicsTextItem('', self)
+        self.layout()
+
+    def paint(self, painter, option, widget):
+        self.painter(self, painter, option, widget)
+
+    def layout(self):
+        self._layout(self)
+
+
+class DummyOutNode(AbstractNodeItem):
+    def __init__(self, parent, index):
+        super().__init__()
+        self.color = (255, 0, 0)
+        self._layout = minimized_layout
+        self._input_items = {}
+        self._output_items = {}
+        self.painter = minimized_painter
+        self.inputs = [PortItem(OutPort(parent.rtl, index, 'dummy'), self)]
+        port_text = QtWidgets.QGraphicsTextItem('dummy', self)
+        self._input_items[self.inputs[0]] = port_text
+
+        self.outputs = []
+        self._text_item = QtWidgets.QGraphicsTextItem('', self)
+        self.layout()
+
+    def paint(self, painter, option, widget):
+        self.painter(self, painter, option, widget)
+
+    def layout(self):
+        self._layout(self)
+
+
 class PipeModel(NamedHierNode):
     def __init__(self, intf, consumer_id, parent=None):
         super().__init__(parent=parent)
@@ -59,7 +112,13 @@ class PipeModel(NamedHierNode):
         input_port_model = intf.consumers[consumer_id]
 
         if output_port_model.node is parent.rtl:
-            output_port = parent.view.inputs[output_port_model.index]
+            try:
+                output_port = parent.view.inputs[output_port_model.index]
+            except IndexError:
+                node = DummyInNode(parent, output_port_model.index)
+                parent.view.add_node(node)
+                output_port = node.outputs[0]
+
             # parent.input_int_pipes[output_port_model.index] = self
             parent.input_int_pipes.append(self)
         else:
@@ -73,17 +132,21 @@ class PipeModel(NamedHierNode):
 
         try:
             if input_port_model.node is parent.rtl:
-                input_port = parent.view.outputs[input_port_model.index]
-                # parent.output_int_pipes[input_port_model.index] = self
-                parent.output_int_pipes.append(self)
+                try:
+                    input_port = parent.view.outputs[input_port_model.index]
+                except IndexError:
+                    node = DummyOutNode(parent, input_port_model.index)
+                    parent.view.add_node(node)
+                    input_port = node.inputs[0]
+
+                self.consumer = parent
+                self.consumer.output_int_pipes.append(self)
             else:
                 input_port = parent[input_port_model.node.
                                     basename].view.inputs[input_port_model.
                                                           index]
-                # parent.rtl_map[input_port_model.node].input_ext_pipes[
-                #     input_port_model.index] = self
-                parent.rtl_map[input_port_model.node].input_ext_pipes.append(
-                    self)
+                self.consumer = parent.rtl_map[input_port_model.node]
+                self.consumer.input_ext_pipes.append(self)
 
         except KeyError:
             import pdb
@@ -91,7 +154,11 @@ class PipeModel(NamedHierNode):
 
         self.view = Pipe(output_port, input_port, parent.view, self)
         self.parent.view.add_pipe(self.view)
-        self.set_status('empty')
+
+        if self.consumer.related_issues:
+            self.set_status('error')
+        else:
+            self.set_status('empty')
 
     @reg_inject
     def set_status(self, status, timestep=Inject('gearbox/timekeep')):
@@ -184,7 +251,32 @@ class NodeModel(NamedHierNode):
                     if parent is not None:
                         self.rtl_map[child].view.hide()
 
-        self.set_status('empty')
+        # import pdb; pdb.set_trace()
+        if self.on_error_path:
+            self.set_status('error')
+        else:
+            self.set_status('empty')
+
+    @property
+    @reg_inject
+    def related_issues(self, issues=Inject('trace/issues')):
+        rel_issues = []
+        for issue in issues:
+            if (self.parent is not None and hasattr(issue, 'gear')
+                    and issue.gear is self.rtl.gear):
+                rel_issues.append(issue)
+
+        return rel_issues
+
+    @property
+    @reg_inject
+    def on_error_path(self, sim_bridge=Inject('gearbox/sim_bridge')):
+        issue_path = sim_bridge.cur_model_issue_path
+        if (self.parent is not None and issue_path
+                and self.rtl.gear.is_descendent(issue_path[-1])):
+            return True
+
+        return False
 
     @reg_inject
     def set_status(self, status, timestep=Inject('gearbox/timekeep')):

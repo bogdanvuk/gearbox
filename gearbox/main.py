@@ -51,7 +51,7 @@ from .timekeep import timekeep
 
 @reg_inject
 def reloader(
-        outdir=MayInject('sim/artifact_dir'), plugin=Inject('sim/gearbox')):
+        outdir=MayInject('sim/artifacts_dir'), plugin=Inject('sim/gearbox')):
     if plugin.reload:
         try:
             runpy.run_path(get_save_file_path())
@@ -71,11 +71,27 @@ def set_main_win_title(
     main.setWindowTitle(f'Gearbox - {script_fn}')
 
 
+class Application(QtWidgets.QApplication):
+    def quit(self):
+        # import faulthandler
+        # faulthandler.dump_traceback_later(1, file=open('err.log', 'w'))
+        print('Quit called')
+        super().quit()
+
+
 @reg_inject
 def main_loop(script_fn, layers=Inject('gearbox/layers')):
+    import faulthandler
+    faulthandler.enable(file=open('err.log', 'w'))
+
+    bind('gearbox/main/new_model_script_fn', None)
+    sys_args = sys.argv.copy()
+    # bind('gearbox/main/argv', sys_args)
+
     settings = RCSettings(rc_fn='.gearbox')
 
-    app = QtWidgets.QApplication(sys.argv)
+    # app = QtWidgets.QApplication(sys.argv)
+    app = Application(sys_args)
     with open(os.path.join(os.path.dirname(__file__), 'default.css')) as f:
         stylesheet = f.read()
 
@@ -88,8 +104,8 @@ def main_loop(script_fn, layers=Inject('gearbox/layers')):
     main_window.setWindowTitle(f'Gearbox')
 
     sim_bridge_inst = sim_bridge()
-    sim_bridge_inst.model_loaded.connect(set_main_win_title)
-    sim_bridge_inst.model_loaded.connect(load)
+    sim_bridge_inst.script_loading_started.connect(set_main_win_title)
+    sim_bridge_inst.script_loading_started.connect(load)
 
     for l in layers:
         l()
@@ -98,11 +114,19 @@ def main_loop(script_fn, layers=Inject('gearbox/layers')):
         sim_bridge_inst.invoke_method('run_model', script_fn=script_fn)
 
     main_window.show()
-    app.exec_()
+    ret = app.exec_()
+    script_fn = registry('gearbox/main/new_model_script_fn')
+    if script_fn:
+        print('Quitting: ', sys_args)
+        print(('gearbox', sys_args[0], script_fn))
+        os.execl(sys_args[0], 'gearbox', script_fn)
+    else:
+        sys.exit(ret)
 
 
 @reg_inject
 def main(argv=sys.argv, layers=Inject('gearbox/layers')):
+    print(f"Started: {sys.argv}")
     parser = argparse.ArgumentParser(
         prog="Gearbox - GUI for the PyGears framework")
 

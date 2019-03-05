@@ -14,6 +14,7 @@ from .node import NodeItem
 from .node_model import NodeModel
 from .layout import Buffer, LayoutPlugin
 from .html_utils import tabulate, fontify
+from .utils import single_shot_connect
 
 from pygears.rtl import rtlgen
 from pygears.conf import Inject, reg_inject, bind, MayInject, registry, safe_bind
@@ -68,17 +69,20 @@ def graph_create(
         return
 
     view = Graph()
-    sim_bridge.model_closed.connect(graph_delete)
+    single_shot_connect(sim_bridge.model_closed, graph_delete)
 
     bind('gearbox/graph', view)
-    root = rtlgen(root)
+    root = rtlgen(root, force=True)
     top_model = NodeModel(root)
     bind('gearbox/graph_model', top_model)
     view.top = top_model.view
     top_model.view.layout()
     view.fit_all()
 
-    return GraphBuffer(view, 'graph')
+    buff = GraphBuffer(view, 'graph')
+    single_shot_connect(sim_bridge.model_closed, buff.delete)
+
+    return buff
 
 
 class Graph(QtWidgets.QGraphicsView):

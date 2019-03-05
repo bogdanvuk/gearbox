@@ -9,6 +9,7 @@ from pygears.conf import Inject, MayInject, bind, reg_inject, registry, safe_bin
 from typing import NamedTuple
 from .gtkwave_intf import GtkWaveWindow
 from .layout import active_buffer, Buffer, LayoutPlugin
+from .utils import single_shot_connect
 import fnmatch
 import os
 import re
@@ -170,20 +171,24 @@ class VerilatorVCDMap:
 
 @reg_inject
 def gtkwave(sim_bridge=Inject('gearbox/sim_bridge')):
-    sim_bridge.sim_started.connect(gtkwave_create)
-    sim_bridge.model_closed.connect(gktwave_delete)
+    sim_bridge.before_run.connect(gtkwave_create)
 
 
 @reg_inject
 def gtkwave_create(sim_bridge=Inject('gearbox/sim_bridge')):
     gtkwave = GtkWave()
     bind('gearbox/gtkwave/inst', gtkwave)
+    single_shot_connect(sim_bridge.model_closed, gktwave_delete)
 
 
 @reg_inject
 def gktwave_delete(timekeep=Inject('gearbox/timekeep')):
     print('Gtkwave deleted')
-    timekeep.timestep_changed.disconnect(registry('gearbox/gtkwave/inst').update)
+    gtkwave = registry('gearbox/gtkwave/inst')
+    timekeep.timestep_changed.disconnect(gtkwave.update)
+    for b in gtkwave.buffers:
+        b.delete()
+
     bind('gearbox/gtkwave/inst', None)
 
 

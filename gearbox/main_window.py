@@ -166,6 +166,14 @@ class MainWindow(QtWidgets.QMainWindow):
             self.menuBar().hide()
 
     @reg_inject
+    def closeEvent(self, event, script_fn=Inject('gearbox/model_script_name'), sim_bridge=Inject('gearbox/sim_bridge')):
+        if script_fn:
+            event.ignore()
+            sim_bridge.invoke_method('close_script')
+        else:
+            super().closeEvent(event)
+
+    @reg_inject
     def create_menus(self,
                      prefixes=Inject('gearbox/prefixes'),
                      shortcuts=Inject('gearbox/shortcuts')):

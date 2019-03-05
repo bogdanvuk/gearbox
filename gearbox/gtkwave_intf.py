@@ -85,7 +85,6 @@ class GtkWaveProc(QtCore.QObject):
         self.cmd_id = None
         self.shmidcat = (os.path.splitext(self.trace_fn)[-1] != '.vcd')
         self.gtkwave_thread.started.connect(self.run)
-        self.gtkwave_thread.finished.connect(self.quit)
         self.gtkwave_thread.start()
 
     def run(self):
@@ -137,6 +136,7 @@ class GtkWaveProc(QtCore.QObject):
                     data += self.p.read_nonblocking(size=4096, timeout=0.01)
             except pexpect.TIMEOUT:
                 if self.exiting:
+                    self.gtkwave_thread.quit()
                     return
 
             for d in data.strip().split('\n'):
@@ -169,12 +169,9 @@ class GtkWaveProc(QtCore.QObject):
         self.response.emit(resp, cmd_id)
         self.cmd_id = None
 
-    def quit(self):
-        self.p.close()
-
     def close(self):
+        print("aboutToQuit gtkwave")
         self.exiting = True
-        self.gtkwave_thread.quit()
         # self.gtkwave_thread.wait()
 
 
@@ -239,7 +236,7 @@ class GtkWaveWindow(QtCore.QObject):
         self.response = self.proc.response
 
         self.deleted.connect(self.proc.close)
-        QtWidgets.QApplication.instance().aboutToQuit.connect(self.proc.quit)
+        # QtWidgets.QApplication.instance().aboutToQuit.connect(self.proc.close)
 
     @property
     def shmidcat(self):

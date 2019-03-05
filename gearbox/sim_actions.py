@@ -8,7 +8,7 @@ register_prefix(None, (Qt.Key_Space, Qt.Key_S), 'simulator')
 
 @reg_inject
 def step_simulator(sim_bridge=Inject('gearbox/sim_bridge')):
-    sim_bridge.breakpoints.add(lambda: (True, False))
+    sim_bridge.breakpoint(lambda: (True, False))
     if not sim_bridge.running:
         sim_bridge.cont()
 

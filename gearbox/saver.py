@@ -85,9 +85,16 @@ def buffer_initializer(buff, layout=Inject('gearbox/layout')):
         if not buffer_init_commands:
             layout.new_buffer.disconnect(buffer_initializer)
 
+@reg_inject
+def cleanup(layout=Inject('gearbox/layout')):
+    try:
+        layout.new_buffer.disconnect(buffer_initializer)
+    except RuntimeError:
+        pass
+
 
 @inject_async
-def layout_load(layout=Inject('gearbox/layout')):
+def layout_load(sim_bridge=Inject('gearbox/sim_bridge'), layout=Inject('gearbox/layout')):
     layout.clear_layout()
     win = layout.current_layout
     win.setDirection({{top_direction}})
@@ -98,6 +105,7 @@ def layout_load(layout=Inject('gearbox/layout')):
     layout.windows[0].activate()
 
     layout.new_buffer.connect(buffer_initializer)
+    sim_bridge.script_closed.connect(cleanup)
 
     descriptions_load()
 
@@ -266,7 +274,7 @@ def save(layout=Inject('gearbox/layout')):
 
 @reg_inject
 def get_save_file_path(
-        outdir=MayInject('sim/artifact_dir'),
+        outdir=MayInject('sim/artifacts_dir'),
         script_fn=Inject('gearbox/model_script_name')):
 
     if script_fn is None:
