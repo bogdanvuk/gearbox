@@ -121,8 +121,8 @@ class Window(QtWidgets.QVBoxLayout):
         self.tab_bar = QtWidgets.QTabBar()
         self.tab_bar.addTab('**')
         self.tab_bar.currentChanged.connect(self.tab_changed)
-        for buff in layout.buffers:
-            self.new_buffer(buff)
+        for b in layout.buffers:
+            self.new_buffer(b)
 
         layout.new_buffer.connect(self.new_buffer)
         layout.buffer_removed.connect(self.buffer_removed)
@@ -168,10 +168,8 @@ class Window(QtWidgets.QVBoxLayout):
     @reg_inject
     def tab_changed(self, index, layout=Inject('gearbox/layout')):
         if self.tab_change_lock:
-            print("Tab change lock")
             return
 
-        print("Tab changed")
         name = self.tab_bar.tabText(index)
         if name == '**':
             self.remove_buffer()
@@ -207,10 +205,13 @@ class Window(QtWidgets.QVBoxLayout):
     def remove(self):
         self.remove_buffer()
         self.parent.remove_child(self)
-        self.removeItem(self.itemAt(self.buf_layout_pos))
-        self.removeItem(self.itemAt(self.buf_layout_pos))
+        for _ in range(self.layout_full_size-1):
+            self.removeItem(self.itemAt(0))
+
         self.placeholder.setParent(None)
         self.placeholder.deleteLater()
+        self.tab_bar.setParent(None)
+        self.tab_bar.deleteLater()
         self.modeline.remove()
         self.setParent(None)
         self.deleteLater()
@@ -240,15 +241,16 @@ class Window(QtWidgets.QVBoxLayout):
             self.buffer_changed.emit()
 
     def place_buffer(self, buff, position=None):
+        print(f'Placing buffer {buff} to window: {self.position}. Prev buffer {self.buff}')
         self.remove_buffer()
-
-        i = self.tab_index_by_name(buff.name)
-        self.switch_tab(i)
 
         self.placeholder.hide()
 
         if buff.window:
             buff.window.remove_buffer()
+
+        i = self.tab_index_by_name(buff.name)
+        self.switch_tab(i)
 
         self.insertWidget(self.buf_layout_pos, buff.view, stretch=1)
         self.buff = buff
