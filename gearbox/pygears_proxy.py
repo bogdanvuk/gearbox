@@ -323,6 +323,7 @@ class PyGearsClient(QtCore.QObject):
             bind('sim/artifacts_dir', artifacts_dir)
             print(f"Artifacts dir: {artifacts_dir}")
 
+        os.makedirs(artifacts_dir, exist_ok=True)
         sys.path.append(os.path.dirname(script_fn))
         # config['trace/ignore'].append(os.path.dirname(__file__))
         config['trace/ignore'].append(runpy.__file__)
