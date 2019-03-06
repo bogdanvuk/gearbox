@@ -180,10 +180,13 @@ class Window(QtWidgets.QVBoxLayout):
                     return
 
     def switch_tab(self, index):
-        if index == self.tab_bar.currentIndex():
-            return
+        # if index == self.tab_bar.currentIndex():
+        #     print("Skip moving")
+        #     return
 
         self.tab_change_lock = True
+        # self.tab_bar.moveTab(index, 0)
+        # self.tab_bar.setCurrentIndex(0)
         self.tab_bar.setCurrentIndex(index)
         self.tab_change_lock = False
 
@@ -225,10 +228,12 @@ class Window(QtWidgets.QVBoxLayout):
         self.activated.emit()
 
     @reg_inject
-    def remove_buffer(self, main=Inject('gearbox/main/inst')):
+    def remove_buffer(self, switch=True, main=Inject('gearbox/main/inst')):
         if self.buff:
             # print(f'Removing buffer {self.buff} from window: {self.position}')
-            self.switch_tab(0)
+            if switch:
+                self.switch_tab(0)
+
             # If widget has not been automatically removed by some other action
             if self.count() == self.layout_full_size:
                 self.removeItem(self.itemAt(self.buf_layout_pos))
@@ -242,7 +247,7 @@ class Window(QtWidgets.QVBoxLayout):
 
     def place_buffer(self, buff, position=None):
         # print(f'Placing buffer {buff} to window: {self.position}. Prev buffer {self.buff}')
-        self.remove_buffer()
+        self.remove_buffer(switch=False)
 
         self.placeholder.hide()
 

@@ -18,11 +18,8 @@ class TimestepModeline(QtCore.QObject):
         if self.buff.window is None:
             return
 
-        print("Here1")
         self.buff.window.modeline.add_field('timestep', '')
-        print("Here2")
         timekeep.timestep_changed.connect(self.update)
-        print("Here3")
         self.update()
 
     @reg_inject

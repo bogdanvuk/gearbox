@@ -42,6 +42,7 @@ class Gearbox(QtCore.QObject, SimExtend):
         self.done = False
         self.reload = reload
         self.standalone = standalone
+        self.running = False
 
     def __call__(self, top):
         SimExtend.__init__(self, top)
@@ -68,15 +69,18 @@ class Gearbox(QtCore.QObject, SimExtend):
                                         QtCore.Qt.AutoConnection)
 
     def handle_event(self, name):
-        if (name == 'before_run'
+        print(f'Event: {name}')
+        if (name in ['after_run', 'before_run']
                 or (name == 'after_timestep' and self._should_break())):
 
+            self.running = False
             self.sim_event.emit(name)
 
             QtCore.QThread.currentThread().eventDispatcher().processEvents(
                 QtCore.QEventLoop.AllEvents)
 
             self.loop.exec_()
+            self.running = True
         else:
             # print("Here?")
             QtCore.QThread.yieldCurrentThread()
@@ -85,7 +89,7 @@ class Gearbox(QtCore.QObject, SimExtend):
             # Let GUI thread do some work
             # time.sleep(0.0001)
 
-        if self.done:
+        if self.done and not name == 'after_run':
             self.done = False
             raise SimFinish
             # sys.exit(0)
@@ -100,8 +104,8 @@ class Gearbox(QtCore.QObject, SimExtend):
         self.handle_event('after_timestep')
         return True
 
-    # def after_run(self, sim):
-    #     self.handle_event('after_run')
+    def after_run(self, sim):
+        self.handle_event('after_run')
 
     def before_setup(self, sim):
         if self.live:
@@ -203,7 +207,7 @@ class PyGearsClient(QtCore.QObject):
         super().__init__(parent)
 
         # self.loop = QtCore.QEventLoop(self)
-        self.running = False
+        self.simulating = False
         self.invoke_queue = queue.Queue()
         self.queue = None
         self.closing = False
@@ -214,6 +218,13 @@ class PyGearsClient(QtCore.QObject):
         QtWidgets.QApplication.instance().aboutToQuit.connect(self.quit)
         self.script_closed.connect(QtWidgets.QApplication.instance().quit)
         self.start_thread()
+
+    @property
+    def running(self):
+        if self.pygears_proc:
+            return self.pygears_proc.plugin.running
+        else:
+            return False
 
     def breakpoint(self, func):
         self.pygears_proc.plugin.breakpoints.add(func)
@@ -243,11 +254,15 @@ class PyGearsClient(QtCore.QObject):
         print("Running sim")
         self.pygears_proc = PyGearsProc()
         self.pygears_proc.plugin.sim_event.connect(self.handle_event)
+        self.simulating = True
 
         # self.queue = self.pygears_proc.queue
         print("Sim run")
 
     def handle_event(self, name):
+        if name == 'after_run':
+            self.simulating = False
+
         getattr(self, name).emit()
 
     def close_model(self):
@@ -273,7 +288,7 @@ class PyGearsClient(QtCore.QObject):
             print("Closing script!")
             if self.pygears_proc:
                 self.pygears_proc.plugin.done = True
-                self.cont()
+                self.pygears_proc.plugin.cont()
                 # self.pygears_proc.wait()
 
             self.model_closed.emit()
@@ -362,7 +377,9 @@ class PyGearsClient(QtCore.QObject):
             self.invoke_method('run_sim')
 
     def cont(self):
-        self.pygears_proc.plugin.cont()
+        if self.simulating:
+            self.pygears_proc.plugin.cont()
+
         # QtCore.QMetaObject.invokeMethod(self.loop, 'quit',
         #                                 QtCore.Qt.AutoConnection)
 
