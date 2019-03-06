@@ -24,6 +24,10 @@ class Modeline(QtWidgets.QLabel):
 
         self.field_text = {}
 
+    def mouseReleaseEvent(self, ev):
+        self.window.activate()
+        super().mouseReleaseEvent(ev)
+
     def set_field_text(self, name, text):
         self.field_text[name] = text
         self.update()

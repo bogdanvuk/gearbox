@@ -227,7 +227,7 @@ class Window(QtWidgets.QVBoxLayout):
     @reg_inject
     def remove_buffer(self, main=Inject('gearbox/main/inst')):
         if self.buff:
-            print(f'Removing buffer {self.buff} from window: {self.position}')
+            # print(f'Removing buffer {self.buff} from window: {self.position}')
             self.switch_tab(0)
             # If widget has not been automatically removed by some other action
             if self.count() == self.layout_full_size:
@@ -241,7 +241,7 @@ class Window(QtWidgets.QVBoxLayout):
             self.buffer_changed.emit()
 
     def place_buffer(self, buff, position=None):
-        print(f'Placing buffer {buff} to window: {self.position}. Prev buffer {self.buff}')
+        # print(f'Placing buffer {buff} to window: {self.position}. Prev buffer {self.buff}')
         self.remove_buffer()
 
         self.placeholder.hide()
@@ -450,6 +450,8 @@ class BufferStack(QtWidgets.QStackedLayout):
         self.current_layout = None
         self.current_layout_widget = None
 
+        QtWidgets.QApplication.instance().focusChanged.connect(self.focus_changed)
+
         self.main = main
         self.setMargin(0)
         self.setContentsMargins(0, 0, 0, 0)
@@ -530,7 +532,7 @@ class BufferStack(QtWidgets.QStackedLayout):
             return None
 
     def remove(self, buf):
-        print(f"Removing {buf} from layout")
+        # print(f"Removing {buf} from layout")
         self.buffers.remove(buf)
         self.buffer_removed.emit(buf)
 
@@ -561,7 +563,7 @@ class BufferStack(QtWidgets.QStackedLayout):
         win.activate()
 
     def add(self, buf):
-        print(f"Adding {buf.name} to layout")
+        # print(f"Adding {buf.name} to layout")
         self.buffers.append(buf)
         self.new_buffer.emit(buf)
 
@@ -581,6 +583,11 @@ class BufferStack(QtWidgets.QStackedLayout):
             return self.current.buff.name
         else:
             return None
+
+    def focus_changed(self, old, now):
+        for win in self.windows:
+            if win.indexOf(now) >= 0 and not win.active:
+                win.activate()
 
 
 class LayoutPlugin(PluginBase):
