@@ -1,8 +1,10 @@
+from PySide2 import QtCore
 from pygears.conf import Inject, reg_inject
 
 
-class TimestepModeline:
+class TimestepModeline(QtCore.QObject):
     def __init__(self, buff):
+        super().__init__()
         self.buff = buff
         self.buff.shown.connect(self.configure)
         self.buff.hidden.connect(self.reset)
@@ -12,8 +14,15 @@ class TimestepModeline:
 
     @reg_inject
     def configure(self, timekeep=Inject('gearbox/timekeep')):
+        # TODO: Investiget why this is needed here
+        if self.buff.window is None:
+            return
+
+        print("Here1")
         self.buff.window.modeline.add_field('timestep', '')
+        print("Here2")
         timekeep.timestep_changed.connect(self.update)
+        print("Here3")
         self.update()
 
     @reg_inject

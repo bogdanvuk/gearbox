@@ -1,6 +1,6 @@
 import os
 from .modeline import Modeline
-from pygears.conf import Inject, reg_inject, safe_bind, PluginBase, registry
+from pygears.conf import Inject, reg_inject, safe_bind, PluginBase, registry, config, MayInject
 from PySide2 import QtCore, QtWidgets, QtGui
 
 
@@ -30,8 +30,9 @@ class Buffer(QtCore.QObject):
 
         view.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         menu = main.get_submenu(main.menuBar(), self.domain.title())
-        view.customContextMenuRequested.connect(
-            lambda pos: menu.popup(view.mapToGlobal(pos)))
+        if menu:
+            view.customContextMenuRequested.connect(
+                lambda pos: menu.popup(view.mapToGlobal(pos)))
 
         self.view = view
         self.name = name
@@ -100,7 +101,8 @@ class Window(QtWidgets.QVBoxLayout):
     deactivated = QtCore.Signal()
 
     @reg_inject
-    def __init__(self, parent=None, buff=None):
+    def __init__(self, parent=None, buff=None,
+                 layout=Inject('gearbox/layout')):
         super().__init__()
         self.parent = parent
         self.buff = None
@@ -114,6 +116,17 @@ class Window(QtWidgets.QVBoxLayout):
         local_dir = os.path.abspath(os.path.dirname(__file__))
 
         pixmap = QtGui.QPixmap(os.path.join(local_dir, 'logo.png'))
+
+        self.tab_change_lock = False
+        self.tab_bar = QtWidgets.QTabBar()
+        self.tab_bar.addTab('**')
+        self.tab_bar.currentChanged.connect(self.tab_changed)
+        for buff in layout.buffers:
+            self.new_buffer(buff)
+
+        layout.new_buffer.connect(self.new_buffer)
+        layout.buffer_removed.connect(self.buffer_removed)
+
         self.placeholder = QtWidgets.QLabel()
         self.placeholder.setPixmap(pixmap)
         self.placeholder.setFocusPolicy(QtCore.Qt.FocusPolicy.ClickFocus)
@@ -123,14 +136,58 @@ class Window(QtWidgets.QVBoxLayout):
         self.placeholder.setAlignment(QtCore.Qt.AlignHCenter
                                       | QtCore.Qt.AlignVCenter)
 
+        self.buf_layout_pos = 1
+        self.layout_full_size = 4
+        self.addWidget(self.tab_bar)
         self.addWidget(self.placeholder, 1)
         self.addWidget(self.modeline)
 
+        if not registry('gearbox/main/tabbar'):
+            self.tab_bar.hide()
+
         if buff is not None:
             self.placeholder.hide()
-            self.insertWidget(0, buff.view, stretch=1)
+            self.insertWidget(self.buf_layout_pos, buff.view, stretch=1)
             self.buff = buff
             self.buff.show()
+
+    def tab_index_by_name(self, name):
+        for i in range(self.tab_bar.count()):
+            if self.tab_bar.tabText(i) == name:
+                return i
+
+        return None
+
+    def new_buffer(self, buff):
+        self.tab_bar.addTab(buff.name)
+
+    def buffer_removed(self, buff):
+        i = self.tab_index_by_name(buff.name)
+        self.tab_bar.removeTab(i)
+
+    @reg_inject
+    def tab_changed(self, index, layout=Inject('gearbox/layout')):
+        if self.tab_change_lock:
+            print("Tab change lock")
+            return
+
+        print("Tab changed")
+        name = self.tab_bar.tabText(index)
+        if name == '**':
+            self.remove_buffer()
+        else:
+            for buff in layout.buffers:
+                if buff.name == name:
+                    self.place_buffer(buff)
+                    return
+
+    def switch_tab(self, index):
+        if index == self.tab_bar.currentIndex():
+            return
+
+        self.tab_change_lock = True
+        self.tab_bar.setCurrentIndex(index)
+        self.tab_change_lock = False
 
     def split_horizontally(self):
         return self.parent.split_horizontally(self)
@@ -150,8 +207,8 @@ class Window(QtWidgets.QVBoxLayout):
     def remove(self):
         self.remove_buffer()
         self.parent.remove_child(self)
-        self.removeItem(self.itemAt(0))
-        self.removeItem(self.itemAt(0))
+        self.removeItem(self.itemAt(self.buf_layout_pos))
+        self.removeItem(self.itemAt(self.buf_layout_pos))
         self.placeholder.setParent(None)
         self.placeholder.deleteLater()
         self.modeline.remove()
@@ -170,9 +227,10 @@ class Window(QtWidgets.QVBoxLayout):
     def remove_buffer(self, main=Inject('gearbox/main/inst')):
         if self.buff:
             print(f'Removing buffer {self.buff} from window: {self.position}')
+            self.switch_tab(0)
             # If widget has not been automatically removed by some other action
-            if self.count() == 3:
-                self.removeItem(self.itemAt(0))
+            if self.count() == self.layout_full_size:
+                self.removeItem(self.itemAt(self.buf_layout_pos))
                 self.buff.view.setParent(main)
 
             self.modeline.reset()
@@ -183,16 +241,21 @@ class Window(QtWidgets.QVBoxLayout):
 
     def place_buffer(self, buff, position=None):
         self.remove_buffer()
+
+        i = self.tab_index_by_name(buff.name)
+        self.switch_tab(i)
+
         self.placeholder.hide()
 
         if buff.window:
             buff.window.remove_buffer()
 
-        self.insertWidget(0, buff.view, stretch=1)
+        self.insertWidget(self.buf_layout_pos, buff.view, stretch=1)
         self.buff = buff
         self.buff.show()
         self.activate()
         self.buffer_changed.emit()
+        print("Buffer placed!")
 
     @property
     @reg_inject
@@ -377,6 +440,7 @@ class WindowLayout(QtWidgets.QBoxLayout):
 
 class BufferStack(QtWidgets.QStackedLayout):
     new_buffer = QtCore.Signal(object)
+    buffer_removed = QtCore.Signal(object)
 
     def __init__(self, main, parent=None):
         super().__init__(parent)
@@ -384,14 +448,15 @@ class BufferStack(QtWidgets.QStackedLayout):
         self.current_layout = None
         self.current_layout_widget = None
 
-        safe_bind('gearbox/layout', self)
-
-        self.clear_layout()
-
         self.main = main
         self.setMargin(0)
         self.setContentsMargins(0, 0, 0, 0)
         self.buffers = []
+
+        safe_bind('gearbox/layout', self)
+
+        self.clear_layout()
+
         # self.currentChanged.connect(self.current_changed)
 
     def clear(self):
@@ -465,6 +530,7 @@ class BufferStack(QtWidgets.QStackedLayout):
     def remove(self, buf):
         print(f"Removing {buf} from layout")
         self.buffers.remove(buf)
+        self.buffer_removed.emit(buf)
 
     def show_buffer(self, buf):
         def find_empty_position(layout):
@@ -519,3 +585,14 @@ class LayoutPlugin(PluginBase):
     @classmethod
     def bind(cls):
         safe_bind('gearbox/plugins', {})
+
+        @reg_inject
+        def tab_bar_visibility(var,
+                               visible,
+                               layout=MayInject('gearbox/layout')):
+            if layout:
+                for w in layout.windows:
+                    w.tab_bar.setVisible(visible)
+
+        config.define(
+            'gearbox/main/tabbar', default=True, setter=tab_bar_visibility)

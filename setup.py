@@ -1,8 +1,8 @@
 from setuptools import setup, find_packages
 
 setup(
-    name='gearbox',
-    version='0.0.1',
+    name='pygears-gearbox',
+    version='0.0.1rc5',
     description='PyGears visualization GUI',
 
     # The project's main homepage.
@@ -16,10 +16,10 @@ setup(
     license='MIT',
     python_requires='>=3.6.0',
     install_requires=[
-        'pygears', 'pexpect', 'PySide2', 'pygraphviz', 'pygments'
+        'pygears', 'pexpect', 'PySide2!=5.12.1', 'pygraphviz', 'pygments'
     ],
-    packages=find_packages(exclude=['examples*', 'docs']),
-    package_data={'': ['*.json', '.spacemacs']},
+    packages=find_packages(exclude=['docs']),
+    package_data={'': ['*.css', '*.png', '*.tcl', 'gtkwaverc']},
     include_package_data=True,
     entry_points={
         'console_scripts': [

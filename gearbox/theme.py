@@ -33,3 +33,6 @@ class ThemePlugin(PluginBase):
             'gearbox/theme/text-color-error', default='#e02020')
         config.define(
             'gearbox/theme/background-color', default='#292b2e')
+        config.define(
+            'gearbox/theme/border-color', default='#a0a0a0')
+

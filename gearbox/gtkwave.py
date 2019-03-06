@@ -1,5 +1,6 @@
 from PySide2 import QtCore
 import collections
+import sys
 
 from .timekeep import timestep, timestep_event_register, max_timestep
 from pygears.sim.modules import SimVerilated
@@ -408,7 +409,8 @@ class GtkWaveGraphIntf(QtCore.QObject):
         commands.append(f'select_trace_by_name {{{status_sig}}}')
         commands.append('gtkwave::/Edit/Toggle_Group_Open|Close')
         commands.append(
-            f'gtkwave::setCurrentTranslateTransProc "{dti_translate_path}"')
+            f'gtkwave::setCurrentTranslateTransProc "{sys.executable} {dti_translate_path}"'
+        )
         commands.append(f'gtkwave::installTransFilter 1')
 
         for s in self.vcd_map.get_signals_for_item(pipe):

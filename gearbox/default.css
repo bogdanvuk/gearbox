@@ -95,10 +95,23 @@ QLabel {
     margin: 0px;
 }
 
+QTabBar::tab {
+    border-right: 1px solid @border-color;
+}
+
+QTabBar::tab:selected {
+    border-top: 1px solid @border-color;
+}
+
+QTabBar::tab:!selected {
+    border-bottom: 2px solid @border-color;
+}
+
 QLabel[accessibleName="modeline"] {
     padding: 2px;
     margin-bottom: 1px;
-    border: 1px solid rgba(235, 235, 235, 150);
+    border-bottom: 1px solid @border-color;
+    border-top: 1px solid @border-color;
     selection-background-color: rgba(219, 158, 0, 255);
 }
 

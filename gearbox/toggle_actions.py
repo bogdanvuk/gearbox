@@ -9,3 +9,8 @@ register_prefix(None, (Qt.Key_Space, Qt.Key_T), 'toggle')
 @shortcut(None, (Qt.Key_Space, Qt.Key_T, Qt.Key_M))
 def toggle_menu():
     config['gearbox/main/menus'] = not config['gearbox/main/menus']
+
+
+@shortcut(None, (Qt.Key_Space, Qt.Key_T, Qt.Key_T))
+def toggle_tabbar():
+    config['gearbox/main/tabbar'] = not config['gearbox/main/tabbar']
