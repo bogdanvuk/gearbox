@@ -49,7 +49,7 @@ class TailProc(QtCore.QObject):
 
 class Compilation(QtWidgets.QTextBrowser):
     resized = QtCore.Signal()
-    re_err_file_line = re.compile(r'(\s+)File "([^"]+)", line (\d+), in (\S+)')
+    re_err_file_line = re.compile(r'(\s+)File "([^"]+)", line (\d+)(, in (\S+))?(.*)')
     re_err_issue_line = re.compile(r'(\s+)(\S+): \[(\d+)\], (.*)')
 
     def __init__(self, compilation_log_fn):
@@ -69,9 +69,13 @@ class Compilation(QtWidgets.QTextBrowser):
             fn = res.group(2)
             line = int(res.group(3))
             fn = themify(f'<a href="file:{fn}#{line}" class="err">{fn}</a>')
-            func_name = res.group(4).replace('<', '&lt;').replace('>', '&gt;')
-            func = f'<span class="nf">{func_name}</span>'
-            text = f'<pre style="margin: 0">{indent}<span>File "{fn}", line {line}, in {func}</span></pre>'
+            if res.group(4):
+                func_name = res.group(5).replace('<', '&lt;').replace('>', '&gt;')
+                epilog = f', in <span class="nf">{func_name}</span>{res.group(6)}'
+            else:
+                epilog = res.group(6)
+
+            text = f'<pre style="margin: 0">{indent}<span>File "{fn}", line {line}{epilog}</span></pre>'
         else:
             # import pdb; pdb.set_trace()
             res = self.re_err_issue_line.fullmatch(text)

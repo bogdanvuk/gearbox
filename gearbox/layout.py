@@ -221,10 +221,11 @@ class Window(QtWidgets.QVBoxLayout):
 
     @reg_inject
     def activate(self, layout=Inject('gearbox/layout')):
+        layout.window_activated(self)
+
         if self.buff:
             self.buff.activate()
 
-        layout.window_activated(self)
         self.activated.emit()
 
     @reg_inject
@@ -590,9 +591,21 @@ class BufferStack(QtWidgets.QStackedLayout):
             return None
 
     def focus_changed(self, old, now):
-        for win in self.windows:
-            if win.indexOf(now) >= 0 and not win.active:
-                win.activate()
+        def get_widget_window(w):
+            for win in self.windows:
+                if win.indexOf(w) >= 0:
+                    return win
+            else:
+                return None
+
+        old_focus_win = get_widget_window(old)
+        if not old_focus_win:
+            return
+
+        new_focus_win = get_widget_window(now)
+        if new_focus_win and not new_focus_win.active:
+            print(f'Focus changed: {old_focus_win.position} -> {new_focus_win.position}')
+            new_focus_win.activate()
 
 
 class LayoutPlugin(PluginBase):

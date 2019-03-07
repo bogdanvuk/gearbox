@@ -1,21 +1,24 @@
+import functools
 import logging
 import os
-import runpy
-import functools
-import threading
 import queue
-import time
+import runpy
 import sys
+import threading
+import time
+
 from PySide2 import QtCore, QtWidgets
-from pygears.conf import Inject, reg_inject, safe_bind, bind, PluginBase, registry, config
-from pygears.sim.extens.sim_extend import SimExtend
-from .node_model import find_cosim_modules
-from pygears.sim.modules import SimVerilated
+
+from pygears import MultiAlternativeError, clear
+from pygears.conf import (Inject, PluginBase, bind, config, reg_inject,
+                          registry, safe_bind)
 from pygears.conf.trace import pygears_excepthook
-from pygears.sim import sim, SimFinish
-from pygears import clear
+from pygears.sim import SimFinish, sim
+from pygears.sim.extens.sim_extend import SimExtend
 from pygears.sim.extens.vcd import VCD
-from pygears import MultiAlternativeError
+from pygears.sim.modules import SimVerilated
+
+from .node_model import find_cosim_modules
 
 
 class Gearbox(QtCore.QObject, SimExtend):
@@ -69,7 +72,10 @@ class Gearbox(QtCore.QObject, SimExtend):
                                         QtCore.Qt.AutoConnection)
 
     def handle_event(self, name):
-        print(f'Event: {name}')
+        if self.done:
+            return
+
+        print(f'Event: {name}, done: {self.done}')
         if (name in ['after_run', 'before_run']
                 or (name == 'after_timestep' and self._should_break())):
 
@@ -90,7 +96,6 @@ class Gearbox(QtCore.QObject, SimExtend):
             # time.sleep(0.0001)
 
         if self.done and not name == 'after_run':
-            self.done = False
             raise SimFinish
             # sys.exit(0)
 
@@ -348,13 +353,16 @@ class PyGearsClient(QtCore.QObject):
 
         os.system(f'rm -rf {compilation_log_fn}')
 
+        # import pdb; pdb.set_trace()
         old_handlers = {}
         for name in registry('logger'):
             if name in logging.root.manager.loggerDict:
                 logger = logging.getLogger(name)
                 old_handlers[name] = logger.handlers.copy()
                 logger.handlers.clear()
-                logger.addHandler(logging.FileHandler(compilation_log_fn))
+                logger.addHandler(
+                    logger.get_logger_handler(
+                        logging.FileHandler(compilation_log_fn)))
 
         bind('gearbox/model_script_name', script_fn)
         self.script_loading_started.emit()

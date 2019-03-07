@@ -2,7 +2,7 @@ from PySide2 import QtWidgets, QtGui, QtCore
 from .layout import Buffer
 from pygears.conf import Inject, reg_inject, bind, MayInject, registry
 import pygments
-from pygments.lexers import get_lexer_for_filename, PythonLexer, Python3Lexer
+from pygments.lexers import get_lexer_for_filename, PythonLexer, Python3Lexer, ClassNotFound
 from pygments.formatters import HtmlFormatter
 
 #         self.setHtml("""
@@ -85,11 +85,15 @@ class Description(QtWidgets.QTextEdit):
             start = lineno
             lineno = slice(lineno, lineno + 1)
 
-        lexer = get_lexer_for_filename(fn)
-        if isinstance(lexer, PythonLexer):
-            lexer = Python3Lexer()
+        try:
+            lexer = get_lexer_for_filename(fn)
+            if isinstance(lexer, PythonLexer):
+                lexer = Python3Lexer()
 
-        html = pygments.highlight(contents, lexer, HtmlFormatter())
+            html = pygments.highlight(contents, lexer, HtmlFormatter())
+        except ClassNotFound:
+            html = contents
+
         # print(html)
         self.setHtml(html)
         self.update()
