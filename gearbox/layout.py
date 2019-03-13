@@ -120,7 +120,7 @@ class Window(QtWidgets.QVBoxLayout):
         self.tab_change_lock = False
         self.tab_bar = QtWidgets.QTabBar()
         self.tab_bar.addTab('**')
-        self.tab_bar.currentChanged.connect(self.tab_changed)
+        self.tab_bar.currentChanged.connect(self.switch_tab)
         for b in layout.buffers:
             self.new_buffer(b)
 
@@ -166,7 +166,7 @@ class Window(QtWidgets.QVBoxLayout):
         self.tab_bar.removeTab(i)
 
     @reg_inject
-    def tab_changed(self, index, layout=Inject('gearbox/layout')):
+    def switch_tab(self, index, layout=Inject('gearbox/layout')):
         if self.tab_change_lock:
             return
 
@@ -179,7 +179,7 @@ class Window(QtWidgets.QVBoxLayout):
                     self.place_buffer(buff)
                     return
 
-    def switch_tab(self, index):
+    def _switch_tab(self, index):
         # if index == self.tab_bar.currentIndex():
         #     print("Skip moving")
         #     return
@@ -233,7 +233,7 @@ class Window(QtWidgets.QVBoxLayout):
         if self.buff:
             # print(f'Removing buffer {self.buff} from window: {self.position}')
             if switch:
-                self.switch_tab(0)
+                self._switch_tab(0)
 
             # If widget has not been automatically removed by some other action
             if self.count() == self.layout_full_size:
@@ -256,7 +256,7 @@ class Window(QtWidgets.QVBoxLayout):
             buff.window.remove_buffer()
 
         i = self.tab_index_by_name(buff.name)
-        self.switch_tab(i)
+        self._switch_tab(i)
 
         self.insertWidget(self.buf_layout_pos, buff.view, stretch=1)
         self.buff = buff

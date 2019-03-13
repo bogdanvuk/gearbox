@@ -188,3 +188,15 @@ def save_layout():
 @shortcut(None, (Qt.Key_Space, Qt.Key_Q, Qt.Key_Q), 'quit')
 def quit():
     QtWidgets.QApplication.instance().quit()
+
+
+def tab_shortcut_reg(tab_id):
+    @shortcut(None, (Qt.ALT + Qt.Key_1 + tab_id), f'tab {tab_id}')
+    @reg_inject
+    def select_tab(layout=Inject('gearbox/layout')):
+        win = layout.current_window
+        win.switch_tab(tab_id)
+
+
+for i in range(10):
+    tab_shortcut_reg(i)

@@ -35,6 +35,7 @@ class Action(QtWidgets.QAction):
         self.triggered.connect(self.activated_slot)
 
     def activated_slot(self):
+        print("Activate")
         self.activated.emit()
 
     @property
@@ -250,7 +251,11 @@ class MainWindow(QtWidgets.QMainWindow):
     #     #     print(f'Set focus')
 
     #     print(f'Event: {event.type()}')
+
     #     return super().event(event)
+    # def keyPressEvent(self, event):
+    #     print(f"Press event: {event.key()} + {event.modifiers()} => {event.text()}")
+    #     return super().keyPressEvent(event)
 
     def add_shortcut(self, shortcut):
         self.shortcuts.append(shortcut)
