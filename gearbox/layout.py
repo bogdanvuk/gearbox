@@ -263,7 +263,7 @@ class Window(QtWidgets.QVBoxLayout):
         self.buff.show()
         self.activate()
         self.buffer_changed.emit()
-        print("Buffer placed!")
+        # print("Buffer placed!")
 
     @property
     @reg_inject
@@ -543,6 +543,9 @@ class BufferStack(QtWidgets.QStackedLayout):
         self.buffer_removed.emit(buf)
 
     def show_buffer(self, buf):
+        if buf.visible:
+            return
+
         def find_empty_position(layout):
             if isinstance(layout, Window):
                 if layout.buff is None:

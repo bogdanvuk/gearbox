@@ -9,7 +9,7 @@ from .layout import Window
 save_file_prolog = """
 from pygears.conf import Inject, config, inject_async, reg_inject
 from gearbox.utils import single_shot_connect
-from gearbox.layout import Window
+from gearbox.layout import Window, WindowLayout
 from gearbox.description import describe_file
 from PySide2 import QtWidgets
 from functools import partial
@@ -105,9 +105,12 @@ def layout_load(sim_bridge=Inject('gearbox/sim_bridge'), layout=Inject('gearbox/
     layout.windows[0].activate()
 
     layout.new_buffer.connect(buffer_initializer)
-    sim_bridge.script_closed.connect(cleanup)
 
     descriptions_load()
+
+@inject_async
+def layout_unload_connect(sim_bridge=Inject('gearbox/sim_bridge')):
+    sim_bridge.script_closed.connect(cleanup)
 
 """
 
@@ -184,19 +187,25 @@ def save_description(buffer_init_commands, layout=Inject('gearbox/layout')):
             res += f'describe_file("{b.view.fn}", lineno={b.view.lineno})\n'
 
     return load_str_template(description_load_template).render({
-        'commands':
-        res
+        'commands': res
     })
 
 
-def save_win_layout(name, layout):
+def save_win_layout(name, layout, parent_name=None):
     res = ''
     for i, child in enumerate(layout):
         if isinstance(child, Window):
             res += (f"{name}.addLayout(Window(" f"parent=None))\n")
         else:
-            res += save_layout(child, name + str(i))
-            res += f"{name}.addLayout({name + str(i)})\n"
+            child_name = name + str(i)
+            direction = str(child.direction()).partition(".")[-1]
+            res += (
+                f'{child_name} = WindowLayout(\n'
+                f'    {parent_name}, size=0, '
+                f'direction={direction})\n')
+
+            res += f"{name}.addLayout({child_name})\n"
+            res += save_win_layout(child_name, child, parent_name=name)
 
     streches = [layout.stretch(i) for i in range(layout.count())]
 
