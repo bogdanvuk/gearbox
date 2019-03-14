@@ -150,7 +150,7 @@ class PyGearsProc(QtCore.QObject):
 
     def run(self):
         try:
-            sim(extens=[VCD, self.plugin])
+            sim(extens=[VCD, self.plugin], check_activity=False)
         except Exception:
             import traceback
             traceback.print_exc()
@@ -276,7 +276,10 @@ class PyGearsClient(QtCore.QObject):
             for gear in path:
                 gear.parent.child.remove(gear)
                 for port in gear.in_ports:
-                    port.producer.consumers.remove(port)
+                    if port.basename not in gear.const_args:
+                        port.producer.consumers.remove(port)
+                    else:
+                        gear.parent.child.remove(port.producer.producer.gear)
 
         self.cur_model_issue_id = None
         self.model_closed.emit()
@@ -332,7 +335,10 @@ class PyGearsClient(QtCore.QObject):
         for gear in path:
             gear.parent.add_child(gear)
             for port in gear.in_ports:
-                port.producer.connect(port)
+                if port.basename not in self.const_args:
+                    port.producer.connect(port)
+                else:
+                    gear.parent.add_child(port.producer.producer.gear)
 
         self.model_loaded.emit()
 
