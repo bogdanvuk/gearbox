@@ -41,7 +41,7 @@ class GtkEventProc(QtCore.QObject):
         if native_modifiers & 0x8:
             modifiers += QtCore.Qt.ALT
 
-        return (key, modifiers, text)
+        return (key, QtCore.Qt.KeyboardModifiers(modifiers), text)
 
     def KeyPress(self, data):
 

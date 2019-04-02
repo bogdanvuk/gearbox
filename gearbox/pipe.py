@@ -127,8 +127,8 @@ class Pipe(QtWidgets.QGraphicsPathItem):
     def draw_path(self):
         path = QtGui.QPainterPath()
 
-        qp_start = self.input_port.plug_pos(self.parentItem(), OUT_PORT)
-        qp_end = self.output_port.plug_pos(self.parentItem(), IN_PORT)
+        qp_start = self.input_port.plug_pos(self.parentItem(), IN_PORT)
+        qp_end = self.output_port.plug_pos(self.parentItem(), OUT_PORT)
 
         path.moveTo(qp_end)
         for i in range(2, len(self.layout_path), 3):

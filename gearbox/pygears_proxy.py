@@ -21,6 +21,11 @@ from pygears.sim.modules import SimVerilated
 from .node_model import find_cosim_modules
 
 
+from jinja2.debug import fake_exc_info
+
+class EmptyHierarchy(Exception):
+    pass
+
 class Gearbox(QtCore.QObject, SimExtend):
     sim_event = QtCore.Signal(str)
 
@@ -381,6 +386,13 @@ class PyGearsClient(QtCore.QObject):
             self.err = e
 
         self.script_loaded.emit()
+
+        if not self.err:
+            root = registry('gear/hier_root')
+            if not root.child:
+                self.err = EmptyHierarchy('No PyGears model created')
+                exc_info = fake_exc_info((EmptyHierarchy, self.err, None), script_fn, 0)
+                self.err = self.err.with_traceback(exc_info[2])
 
         if self.err is not None:
             pygears_excepthook(

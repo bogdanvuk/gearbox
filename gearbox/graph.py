@@ -65,8 +65,6 @@ def graph_delete():
 def graph_create(
         root=Inject('gear/hier_root'),
         sim_bridge=Inject('gearbox/sim_bridge')):
-    if not root.child:
-        return
 
     view = Graph()
     single_shot_connect(sim_bridge.model_closed, graph_delete)
