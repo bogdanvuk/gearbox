@@ -15,7 +15,7 @@ from .html_utils import highlight, tabulate, highlight_style
 from pygears import registry
 from pygears.core.partial import Partial
 from pygears.core.port import InPort
-from pygears.typing_common.pprint import pprint
+from pygears.typing.pprint import pprint
 from pygears.typing import is_type
 from pygears.common import sieve, cast
 

@@ -81,7 +81,7 @@ class Gearbox(QtCore.QObject, SimExtend):
             return
 
         print(f'Event: {name}, done: {self.done}')
-        if (name in ['after_run', 'before_run']
+        if (name in ['after_cleanup', 'before_run']
                 or (name == 'after_timestep' and self._should_break())):
 
             self.running = False
@@ -100,7 +100,7 @@ class Gearbox(QtCore.QObject, SimExtend):
             # Let GUI thread do some work
             # time.sleep(0.0001)
 
-        if self.done and not name == 'after_run':
+        if self.done and not name == 'after_cleanup':
             raise SimFinish
             # sys.exit(0)
 
@@ -114,8 +114,8 @@ class Gearbox(QtCore.QObject, SimExtend):
         self.handle_event('after_timestep')
         return True
 
-    def after_run(self, sim):
-        self.handle_event('after_run')
+    def after_cleanup(self, sim):
+        self.handle_event('after_cleanup')
 
     def before_setup(self, sim):
         if self.live:
@@ -204,7 +204,7 @@ class PyGearsClient(QtCore.QObject):
     message = QtCore.Signal(str)
 
     before_run = QtCore.Signal()
-    after_run = QtCore.Signal()
+    after_cleanup = QtCore.Signal()
     after_timestep = QtCore.Signal()
     at_exit = QtCore.Signal()
 
@@ -270,7 +270,7 @@ class PyGearsClient(QtCore.QObject):
         print("Sim run")
 
     def handle_event(self, name):
-        if name == 'after_run':
+        if name == 'after_cleanup':
             self.simulating = False
 
         getattr(self, name).emit()
@@ -449,10 +449,10 @@ class PyGearsClient(QtCore.QObject):
     #                 self.running = False
     #                 self.sim_refresh.emit()
     #                 self.loop.exec_()
-    #         elif msg == "after_run":
+    #         elif msg == "after_cleanup":
     #             if not self.closing:
     #                 self.sim_refresh.emit()
-    #                 self.after_run.emit()
+    #                 self.after_cleanup.emit()
 
     #             # self.queue.task_done()
     #             # self.queue = None

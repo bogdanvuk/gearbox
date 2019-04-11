@@ -40,7 +40,7 @@ class TimeKeep(QtCore.QObject):
         self._cont_refresh_step = cont_refresh_step
         bind('gearbox/timestep', self.max_timestep)
         sim_bridge.after_timestep.connect(self.sim_break)
-        sim_bridge.after_run.connect(self.sim_break)
+        sim_bridge.after_cleanup.connect(self.sim_break)
         sim_bridge.model_closed.connect(self.model_closed)
         sim_bridge.script_loaded.connect(self.model_loaded)
 

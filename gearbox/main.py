@@ -14,7 +14,7 @@ from gearbox.sniper import sniper
 from gearbox.which_key import which_key
 from pygears.conf import (Inject, MayInject, PluginBase, bind, reg_inject,
                           registry, safe_bind)
-from pygears.conf.custom_settings import RCSettings
+from pygears.conf.custom_settings import load_rc
 from pygears.sim.extens.vcd import SimVCDPlugin
 
 from . import (actions, buffer_actions, description_actions, file_actions,
@@ -88,7 +88,7 @@ def main_loop(script_fn, layers=Inject('gearbox/layers')):
     sys_args = sys.argv.copy()
     # bind('gearbox/main/argv', sys_args)
 
-    settings = RCSettings(rc_fn='.gearbox')
+    load_rc('.gearbox', os.getcwd())
 
     # app = QtWidgets.QApplication(sys.argv)
     app = Application(sys_args)
@@ -111,6 +111,7 @@ def main_loop(script_fn, layers=Inject('gearbox/layers')):
         l()
 
     if script_fn:
+        load_rc('.pygears', os.path.dirname(script_fn))
         sim_bridge_inst.invoke_method('run_model', script_fn=script_fn)
 
     main_window.show()
