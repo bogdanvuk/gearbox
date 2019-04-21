@@ -1,10 +1,9 @@
 from PySide2 import QtCore
 from PySide2 import QtWidgets
-from pygears.conf import Inject, reg_inject
+from pygears.conf import Inject, reg_inject, registry
 from .layout import active_buffer
 from .main_window import register_prefix
 from .actions import shortcut, Interactive
-from .graph import graph_create
 
 register_prefix(None, (QtCore.Qt.Key_Space, QtCore.Qt.Key_B), 'buffers')
 
@@ -55,6 +54,6 @@ def graph(layout=Inject('gearbox/layout')):
         if b.name == 'graph':
             buff = b
     else:
-        buff = graph_create()
+        buff = registry('gearbox/graph_model_ctrl').graph_create()
 
     layout.show_buffer(buff)

@@ -51,36 +51,78 @@ class GraphBuffer(Buffer):
 def graph(
         sim_bridge=Inject('gearbox/sim_bridge'),
         root=Inject('gear/hier_root')):
-    sim_bridge.model_loaded.connect(graph_create)
-    if root.child:
-        graph_create()
+
+    bind('gearbox/graph_model_ctrl', GraphModelCtrl())
 
 
-def graph_delete():
-    bind('gearbox/graph', None)
-    bind('gearbox/graph_model', None)
+# def graph_delete():
+#     bind('gearbox/graph', None)
+#     bind('gearbox/graph_model', None)
 
 
-@reg_inject
-def graph_create(
-        root=Inject('gear/hier_root'),
-        sim_bridge=Inject('gearbox/sim_bridge')):
+# @reg_inject
+# def graph_create(
+#         root=Inject('gear/hier_root'),
+#         sim_bridge=Inject('gearbox/sim_bridge')):
 
-    view = Graph()
-    single_shot_connect(sim_bridge.model_closed, graph_delete)
+#     view = Graph()
+#     single_shot_connect(sim_bridge.model_closed, graph_delete)
 
-    bind('gearbox/graph', view)
-    root = rtlgen(root, force=True)
-    top_model = NodeModel(root)
-    bind('gearbox/graph_model', top_model)
-    view.top = top_model.view
-    top_model.view.layout()
-    view.fit_all()
+#     bind('gearbox/graph', view)
+#     root = rtlgen(root, force=True)
+#     top_model = NodeModel(root)
+#     bind('gearbox/graph_model', top_model)
+#     view.top = top_model.view
+#     top_model.view.layout()
+#     view.fit_all()
 
-    buff = GraphBuffer(view, 'graph')
-    single_shot_connect(sim_bridge.model_closed, buff.delete)
+#     buff = GraphBuffer(view, 'graph')
+#     single_shot_connect(sim_bridge.model_closed, buff.delete)
 
-    return buff
+#     return buff
+
+class GraphModelCtrl(QtCore.QObject):
+    model_loaded = QtCore.Signal()
+    working_model_loaded = QtCore.Signal()
+
+    @reg_inject
+    def __init__(self, sim_bridge=Inject('gearbox/sim_bridge')):
+        super().__init__()
+        self.sim_bridge = sim_bridge
+        self.sim_bridge.model_loaded.connect(self.graph_create)
+        self.sim_bridge.before_run.connect(self.graph_create)
+        self.sim_bridge.model_closed.connect(self.graph_delete)
+
+    @reg_inject
+    def graph_create(self, root=Inject('gear/hier_root')):
+        view = Graph()
+
+        bind('gearbox/graph', view)
+        rtl_root = rtlgen(root, force=True)
+        top_model = NodeModel(rtl_root)
+        bind('gearbox/graph_model', top_model)
+        view.top = top_model.view
+        top_model.view.layout()
+        view.fit_all()
+
+        self.buff = GraphBuffer(view, 'graph')
+
+        self.model_loaded.emit()
+
+        if not self.err:
+            self.working_model_loaded.emit()
+
+        return self.buff
+
+    @property
+    def err(self):
+        return self.sim_bridge.err
+
+    def graph_delete(self):
+        self.buff.delete()
+        del self.buff
+        bind('gearbox/graph', None)
+        bind('gearbox/graph_model', None)
 
 
 class Graph(QtWidgets.QGraphicsView):

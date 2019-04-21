@@ -176,6 +176,7 @@ class PipeModel(NamedHierNode):
         return tooltip
 
     @property
+    @functools.lru_cache(maxsize=None)
     def name(self):
         if self.rtl.is_broadcast:
             return f'{self.rtl.name}_bc_{self.consumer_id}'
@@ -183,11 +184,16 @@ class PipeModel(NamedHierNode):
             return self.rtl.name
 
     @property
+    @functools.lru_cache(maxsize=None)
     def basename(self):
         if self.rtl.is_broadcast:
             return f'{self.rtl.basename}_bc_{self.consumer_id}'
         else:
             return self.rtl.basename
+
+    @property
+    def hierarchical(self):
+        return False
 
 
 class NodeModel(NamedHierNode):

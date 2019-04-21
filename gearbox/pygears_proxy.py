@@ -52,6 +52,11 @@ class Gearbox(QtCore.QObject, SimExtend):
         self.standalone = standalone
         self.running = False
 
+        self.thrd = QtCore.QThread()
+        self.moveToThread(self.thrd)
+        self.thrd.started.connect(self.run)
+        self.thrd.start()
+
     def __call__(self, top):
         SimExtend.__init__(self, top)
         return self
@@ -80,7 +85,7 @@ class Gearbox(QtCore.QObject, SimExtend):
         if self.done:
             return
 
-        print(f'Event: {name}, done: {self.done}')
+        # print(f'Event: {name}, done: {self.done}')
         if (name in ['after_cleanup', 'before_run']
                 or (name == 'after_timestep' and self._should_break())):
 
@@ -99,6 +104,8 @@ class Gearbox(QtCore.QObject, SimExtend):
             # QtCore.QThread.currentThreadId().msleep(10)
             # Let GUI thread do some work
             # time.sleep(0.0001)
+
+        # print('Back to the simulator')
 
         if self.done and not name == 'after_cleanup':
             raise SimFinish
@@ -123,6 +130,22 @@ class Gearbox(QtCore.QObject, SimExtend):
                 if isinstance(m, SimVerilated):
                     m.vcd_fifo = True
                     m.shmidcat = True
+
+    def run(self):
+        # self.plugin = Gearbox()
+        try:
+            sim(extens=[VCD, self], check_activity=False)
+        except Exception:
+            # import traceback
+            # traceback.print_exc()
+
+            import traceback
+            import pdb
+            extype, value, tb = sys.exc_info()
+            traceback.print_exc()
+            pdb.post_mortem(tb)
+
+        self.thrd.quit()
 
     # def after_cleanup(self, sim):
     #     if not self.live:
@@ -154,11 +177,18 @@ class PyGearsProc(QtCore.QObject):
         self.thrd.start()
 
     def run(self):
+        # self.plugin = Gearbox()
         try:
             sim(extens=[VCD, self.plugin], check_activity=False)
         except Exception:
+            # import traceback
+            # traceback.print_exc()
+
             import traceback
+            import pdb
+            extype, value, tb = sys.exc_info()
             traceback.print_exc()
+            pdb.post_mortem(tb)
 
         self.thrd.quit()
 
@@ -232,12 +262,12 @@ class PyGearsClient(QtCore.QObject):
     @property
     def running(self):
         if self.pygears_proc:
-            return self.pygears_proc.plugin.running
+            return self.pygears_proc.running
         else:
             return False
 
     def breakpoint(self, func):
-        self.pygears_proc.plugin.breakpoints.add(func)
+        self.pygears_proc.breakpoints.add(func)
 
     def start_thread(self):
         self.thrd = QtCore.QThread()
@@ -262,8 +292,23 @@ class PyGearsClient(QtCore.QObject):
 
     def run_sim(self):
         print("Running sim")
-        self.pygears_proc = PyGearsProc()
-        self.pygears_proc.plugin.sim_event.connect(self.handle_event)
+
+        # self.plugin = Gearbox()
+        # try:
+        #     sim(extens=[VCD, self.plugin], check_activity=False)
+        # except Exception:
+        #     # import traceback
+        #     # traceback.print_exc()
+
+        #     import traceback
+        #     import pdb
+        #     extype, value, tb = sys.exc_info()
+        #     traceback.print_exc()
+        #     pdb.post_mortem(tb)
+
+        # self.pygears_proc = PyGearsProc()
+        self.pygears_proc = Gearbox()
+        self.pygears_proc.sim_event.connect(self.handle_event)
         self.simulating = True
 
         # self.queue = self.pygears_proc.queue
@@ -300,8 +345,8 @@ class PyGearsClient(QtCore.QObject):
 
             print("Closing script!")
             if self.pygears_proc:
-                self.pygears_proc.plugin.done = True
-                self.pygears_proc.plugin.cont()
+                self.pygears_proc.done = True
+                self.pygears_proc.cont()
                 # self.pygears_proc.wait()
 
             self.model_closed.emit()
@@ -399,12 +444,13 @@ class PyGearsClient(QtCore.QObject):
                 type(self.err), self.err, self.err.__traceback__)
 
         if self.err is None:
-            self.model_loaded.emit()
             self.invoke_method('run_sim')
+            # QtCore.QTimer.singleShot(10, self.model_loaded.emit)
+            # self.model_loaded.emit()
 
     def cont(self):
         if self.simulating:
-            self.pygears_proc.plugin.cont()
+            self.pygears_proc.cont()
 
         # QtCore.QMetaObject.invokeMethod(self.loop, 'quit',
         #                                 QtCore.Qt.AutoConnection)

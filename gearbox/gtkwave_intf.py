@@ -139,8 +139,10 @@ class GtkWaveProc(QtCore.QObject):
                     self.gtkwave_thread.quit()
                     return
 
+            # if data.strip():
+            #     print(f'Unsollicited: {data}')
+
             for d in data.strip().split('\n'):
-                # print(f'Unsollicited: {data}')
                 res = re.search(r"^\$\$(\w+):(.*)$", d)
 
                 if res:
@@ -228,6 +230,7 @@ class GtkWaveWindow(QtCore.QObject):
         super().__init__(parent)
         self.event_proc = GtkEventProc()
         self.proc = GtkWaveProc(trace_fn)
+        self.window_id = None
         # self.proc = GtkWaveProc(trace_fn, None)
 
         self.proc.gtk_event.connect(self.event_proc.gtk_event)
