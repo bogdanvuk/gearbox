@@ -13,7 +13,7 @@ from pygears import MultiAlternativeError, clear
 from pygears.conf import (Inject, PluginBase, bind, config, reg_inject,
                           registry, safe_bind)
 from pygears.conf.trace import pygears_excepthook
-from pygears.sim import SimFinish, sim
+from pygears.sim import SimFinish, sim, timestep
 from pygears.sim.extens.sim_extend import SimExtend
 from pygears.sim.extens.vcd import VCD
 from pygears.sim.modules import SimVerilated
@@ -85,7 +85,7 @@ class Gearbox(QtCore.QObject, SimExtend):
         if self.done:
             return
 
-        # print(f'Event: {name}, done: {self.done}')
+        # print(f'{timestep()} : {name}, done: {self.done}')
         if (name in ['after_cleanup', 'before_run']
                 or (name == 'after_timestep' and self._should_break())):
 

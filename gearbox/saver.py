@@ -52,11 +52,7 @@ def load_after_vcd_loaded(
 
 
 def gtkwave_load(buff):
-    if buff.intf.loaded:
-        load_after_vcd_loaded(buff)
-    else:
-        single_shot_connect(buff.intf.vcd_loaded,
-                            partial(load_after_vcd_loaded, buff))
+    load_after_vcd_loaded(buff)
 
 """
 

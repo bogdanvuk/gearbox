@@ -6,6 +6,23 @@ def dbg_connect(signal, f):
     signal.connect(debuggable(f))
 
 
+class Debug():
+    def __init__(self):
+        pass
+
+    def __enter__(self):
+        pass
+
+    def __exit__(self, exc_type, exc_value, tb):
+        if exc_type:
+            import traceback
+            import pdb
+            import sys
+            extype, value, tb = sys.exc_info()
+            traceback.print_exc()
+            pdb.post_mortem(tb)
+
+
 def debuggable(f):
     @wraps(f)
     def wrap(*args, **kwds):

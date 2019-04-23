@@ -6,6 +6,7 @@ from pygears.conf import PluginBase, registry, safe_bind, reg_inject, Inject, bi
 from functools import partial
 from .minibuffer import Minibuffer
 from .layout import BufferStack
+from .dbg import dbg_connect
 
 
 class Action(QtWidgets.QAction):
@@ -31,7 +32,7 @@ class Action(QtWidgets.QAction):
         self.name = name
         main.domain_changed.connect(self.domain_changed)
         main.add_shortcut(self)
-        self.triggered.connect(callback)
+        dbg_connect(self.triggered, callback)
         self.triggered.connect(self.activated_slot)
 
     def activated_slot(self):
@@ -65,7 +66,7 @@ class Shortcut(QtCore.QObject):
 
         self._qshortcut = QtWidgets.QShortcut(QtGui.QKeySequence(*key), main)
         # self._qshortcut.activated.connect(callback)
-        self._qshortcut.activated.connect(self.activated_slot)
+        dbg_connect(self._qshortcut.activated, self.activated_slot)
         self._qshortcut.activatedAmbiguously.connect(main.shortcut_prefix)
         self.activated = self._qshortcut.activated
         # self._qshortcut.setContext(QtCore.Qt.ApplicationShortcut)
@@ -122,8 +123,8 @@ class MainWindow(QtWidgets.QMainWindow):
         super().__init__(parent)
 
         self.setWindowIcon(
-            QtGui.QIcon(
-                os.path.join(os.path.dirname(__file__), 'gearbox.png')))
+            QtGui.QIcon(os.path.join(os.path.dirname(__file__),
+                                     'gearbox.png')))
 
         desktop = QtWidgets.QDesktopWidget()
         desktop_frame = desktop.availableGeometry(self)
@@ -167,7 +168,10 @@ class MainWindow(QtWidgets.QMainWindow):
             self.menuBar().hide()
 
     @reg_inject
-    def closeEvent(self, event, script_fn=Inject('gearbox/model_script_name'), sim_bridge=Inject('gearbox/sim_bridge')):
+    def closeEvent(self,
+                   event,
+                   script_fn=Inject('gearbox/model_script_name'),
+                   sim_bridge=Inject('gearbox/sim_bridge')):
         if script_fn:
             event.ignore()
             sim_bridge.invoke_method('close_script')
@@ -324,5 +328,6 @@ class MainWindowPlugin(PluginBase):
             if main:
                 main.menuBar().setVisible(visible)
 
-        config.define(
-            'gearbox/main/menus', default=True, setter=menu_visibility)
+        config.define('gearbox/main/menus',
+                      default=True,
+                      setter=menu_visibility)
