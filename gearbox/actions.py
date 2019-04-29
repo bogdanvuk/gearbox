@@ -2,7 +2,7 @@
 import inspect
 from PySide2.QtCore import Qt
 from PySide2 import QtCore
-from pygears.conf import Inject, reg_inject, registry, inject_async, bind
+from pygears.conf import Inject, inject, registry, inject_async, bind
 from functools import wraps
 from .main_window import Shortcut, register_prefix
 
@@ -14,7 +14,7 @@ class Interactive:
 
 
 class MinibufferWaiter(QtCore.QEventLoop):
-    @reg_inject
+    @inject
     def wait(self,
              message=None,
              completer=None,
@@ -68,7 +68,7 @@ def shortcut(domain, shortcut, name=None):
 
 
 @shortcut(None, Qt.CTRL + Qt.Key_H)
-@reg_inject
+@inject
 def toggle_help(which_key=Inject('gearbox/which_key')):
     if which_key.isVisible():
         which_key.hide()

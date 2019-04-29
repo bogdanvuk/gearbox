@@ -3,7 +3,7 @@ import pexpect
 import re
 import os
 from PySide2 import QtWidgets, QtGui, QtCore
-from pygears.conf import Inject, MayInject, bind, reg_inject
+from pygears.conf import Inject, MayInject, bind, inject
 
 native_key_map = {
     0xff08: QtCore.Qt.Key_Backspace,
@@ -202,7 +202,7 @@ class ForeignWindow(QtCore.QObject):
         self.proc.window_up.connect(self.window_up)
         QtWidgets.QApplication.instance().aboutToQuit.connect(self.proc.quit)
 
-    @reg_inject
+    @inject
     def key_press(self, key, modifiers, text, main=Inject('gearbox/main/inst')):
         app = QtWidgets.QApplication.instance()
         # app.postEvent(
@@ -238,7 +238,7 @@ class ForeignWindow(QtCore.QObject):
 
         return QtCore.QObject.eventFilter(self, obj, event)
 
-    @reg_inject
+    @inject
     def window_up(self, window_id, graph=Inject('gearbox/graph')):
         self.window_id = window_id
         print(f'Window id: {window_id}: {hex(self.window_id)}')

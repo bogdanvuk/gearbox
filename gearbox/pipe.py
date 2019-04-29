@@ -2,7 +2,7 @@
 import math
 
 from PySide2 import QtCore, QtGui, QtWidgets
-from pygears.conf import Inject, reg_inject, registry
+from pygears.conf import Inject, inject, registry
 
 from .constants import (
     PIPE_DEFAULT_COLOR, PIPE_ACTIVE_COLOR, PIPE_HIGHLIGHT_COLOR,
@@ -31,7 +31,7 @@ class Pipe(QtWidgets.QGraphicsPathItem):
     Base Pipe Item.
     """
 
-    @reg_inject
+    @inject
     def __init__(self, output_port, input_port, parent, model):
         super().__init__(parent)
         self.parent = parent

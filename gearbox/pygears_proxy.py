@@ -10,7 +10,7 @@ import time
 from PySide2 import QtCore, QtWidgets
 
 from pygears import MultiAlternativeError, clear
-from pygears.conf import (Inject, PluginBase, bind, config, reg_inject,
+from pygears.conf import (Inject, PluginBase, bind, config, inject,
                           registry, safe_bind)
 from pygears.conf.trace import pygears_excepthook
 from pygears.sim import SimFinish, sim, timestep
@@ -238,7 +238,7 @@ class PyGearsClient(QtCore.QObject):
     after_timestep = QtCore.Signal()
     at_exit = QtCore.Signal()
 
-    @reg_inject
+    @inject
     def __init__(
             self,
             parent=None,
@@ -356,7 +356,7 @@ class PyGearsClient(QtCore.QObject):
             # self.loop.quit()
 
     @property
-    @reg_inject
+    @inject
     def cur_model_issue(self, issues=Inject('trace/issues')):
         if self.cur_model_issue_id is not None:
             return issues[self.cur_model_issue_id]
@@ -364,7 +364,7 @@ class PyGearsClient(QtCore.QObject):
         return None
 
     @property
-    @reg_inject
+    @inject
     def cur_model_issue_path(self):
         if self.cur_model_issue_id is not None:
             issue_path = err_reconnect_dfs(self.err, self.cur_model_issue_id)

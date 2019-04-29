@@ -1,7 +1,7 @@
 from .foreign_win import ForeignWindow
 from PySide2 import QtCore
 
-from pygears.conf import Inject, reg_inject, MayInject, bind
+from pygears.conf import Inject, inject, MayInject, bind
 from .layout import Buffer
 
 
@@ -12,7 +12,7 @@ class GtkWaveBuffer(Buffer):
         self.instance.initialized.connect(self.load)
         self.window = None
 
-    @reg_inject
+    @inject
     def load(self, main=Inject('gearbox/main/inst'), layout=Inject('gearbox/layout')):
         main.add_buffer(self)
         # window = layout.active_window()

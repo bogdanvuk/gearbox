@@ -1,15 +1,15 @@
 import os
 from .modeline import Modeline
-from pygears.conf import Inject, reg_inject, safe_bind, PluginBase, registry, config, MayInject
+from pygears.conf import Inject, inject, safe_bind, PluginBase, registry, config, MayInject
 from PySide2 import QtCore, QtWidgets, QtGui
 
 
-@reg_inject
+@inject
 def active_buffer(layout=Inject('gearbox/layout')):
     return layout.current.buff
 
 
-@reg_inject
+@inject
 def show_buffer(buff, layout=Inject('gearbox/layout')):
     return layout.show_buffer(buff)
 
@@ -18,7 +18,7 @@ class Buffer(QtCore.QObject):
     shown = QtCore.Signal()
     hidden = QtCore.Signal()
 
-    @reg_inject
+    @inject
     def __init__(self,
                  view,
                  name,
@@ -52,7 +52,7 @@ class Buffer(QtCore.QObject):
         self.plugins[name] = plugin
 
     @property
-    @reg_inject
+    @inject
     def window(self, layout=Inject('gearbox/layout')):
         for w in layout.windows:
             if w.buff is self:
@@ -82,7 +82,7 @@ class Buffer(QtCore.QObject):
     def deactivate(self):
         pass
 
-    @reg_inject
+    @inject
     def delete(self, layout=Inject('gearbox/layout')):
         for name, plugin in self.plugins.items():
             plugin.delete()
@@ -100,7 +100,7 @@ class Window(QtWidgets.QVBoxLayout):
     activated = QtCore.Signal()
     deactivated = QtCore.Signal()
 
-    @reg_inject
+    @inject
     def __init__(self, parent=None, buff=None,
                  layout=Inject('gearbox/layout')):
         super().__init__()
@@ -165,7 +165,7 @@ class Window(QtWidgets.QVBoxLayout):
         i = self.tab_index_by_name(buff.name)
         self.tab_bar.removeTab(i)
 
-    @reg_inject
+    @inject
     def switch_tab(self, index, layout=Inject('gearbox/layout')):
         if self.tab_change_lock:
             return
@@ -219,7 +219,7 @@ class Window(QtWidgets.QVBoxLayout):
         self.setParent(None)
         self.deleteLater()
 
-    @reg_inject
+    @inject
     def activate(self, layout=Inject('gearbox/layout')):
         layout.window_activated(self)
 
@@ -228,7 +228,7 @@ class Window(QtWidgets.QVBoxLayout):
 
         self.activated.emit()
 
-    @reg_inject
+    @inject
     def remove_buffer(self, switch=True, main=Inject('gearbox/main/inst')):
         if self.buff:
             # print(f'Removing buffer {self.buff} from window: {self.position}')
@@ -266,7 +266,7 @@ class Window(QtWidgets.QVBoxLayout):
         # print("Buffer placed!")
 
     @property
-    @reg_inject
+    @inject
     def active(self, layout=Inject('gearbox/layout')):
         return layout.current_window is self
 
@@ -387,7 +387,7 @@ class WindowLayout(QtWidgets.QBoxLayout):
         child.modeline.update()
         return child
 
-    @reg_inject
+    @inject
     def remove_child(self, child, layout=Inject('gearbox/layout')):
         pos = self.child_index(child)
         self.removeItem(self.itemAt(pos))
@@ -616,7 +616,7 @@ class LayoutPlugin(PluginBase):
     def bind(cls):
         safe_bind('gearbox/plugins', {})
 
-        @reg_inject
+        @inject
         def tab_bar_visibility(var,
                                visible,
                                layout=MayInject('gearbox/layout')):

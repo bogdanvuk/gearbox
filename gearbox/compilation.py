@@ -1,7 +1,7 @@
 import time
 import re
 from PySide2 import QtWidgets, QtGui, QtCore
-from pygears.conf import Inject, reg_inject, bind, MayInject, registry, safe_bind
+from pygears.conf import Inject, inject, bind, MayInject, registry, safe_bind
 from .layout import Buffer, LayoutPlugin, show_buffer
 from .html_utils import fontify
 from .description import describe_file
@@ -11,7 +11,7 @@ from .theme import themify
 class TailProc(QtCore.QObject):
     file_text_append = QtCore.Signal(str)
 
-    @reg_inject
+    @inject
     def __init__(self,
                  compilation_log_fn,
                  sim_bridge=Inject('gearbox/sim_bridge')):
@@ -92,7 +92,7 @@ class Compilation(QtWidgets.QTextBrowser):
 
         super().append(text)
 
-    @reg_inject
+    @inject
     def setSource(self, url, sim_bridge=Inject('gearbox/sim_bridge')):
         if url.scheme() == 'file':
             lineno = int(url.fragment())
@@ -102,7 +102,7 @@ class Compilation(QtWidgets.QTextBrowser):
             sim_bridge.invoke_method('set_err_model', issue_id=issue_id)
 
 
-@reg_inject
+@inject
 def compilation(sim_bridge=Inject('gearbox/sim_bridge')):
     sim_bridge.script_loading_started.connect(compilation_create)
 
@@ -113,7 +113,7 @@ class CompilationBuffer(Buffer):
         return 'compilation'
 
 
-@reg_inject
+@inject
 def compilation_create(
         sim_bridge=Inject('gearbox/sim_bridge'),
         compilation_log_fn=Inject('gearbox/compilation_log_fn')):

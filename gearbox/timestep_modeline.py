@@ -1,5 +1,5 @@
 from PySide2 import QtCore
-from pygears.conf import Inject, reg_inject
+from pygears.conf import Inject, inject
 
 
 class TimestepModeline(QtCore.QObject):
@@ -12,7 +12,7 @@ class TimestepModeline(QtCore.QObject):
         if self.buff.visible:
             self.configure()
 
-    @reg_inject
+    @inject
     def configure(self, timekeep=Inject('gearbox/timekeep')):
         # TODO: Investiget why this is needed here
         if self.buff.window is None:
@@ -22,14 +22,14 @@ class TimestepModeline(QtCore.QObject):
         timekeep.timestep_changed.connect(self.update)
         self.update()
 
-    @reg_inject
+    @inject
     def reset(self, timekeep=Inject('gearbox/timekeep')):
         try:
             timekeep.timestep_changed.disconnect(self.update)
         except RuntimeError:
             pass
 
-    @reg_inject
+    @inject
     def update(self, timestep=Inject('gearbox/timestep')):
         if timestep is None:
             timestep = '-'

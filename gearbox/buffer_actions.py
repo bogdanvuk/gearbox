@@ -1,6 +1,6 @@
 from PySide2 import QtCore
 from PySide2 import QtWidgets
-from pygears.conf import Inject, reg_inject, registry
+from pygears.conf import Inject, inject, registry
 from .layout import active_buffer
 from .main_window import register_prefix
 from .actions import shortcut, Interactive
@@ -9,7 +9,7 @@ register_prefix(None, (QtCore.Qt.Key_Space, QtCore.Qt.Key_B), 'buffers')
 
 
 class BufferCompleter(QtWidgets.QCompleter):
-    @reg_inject
+    @inject
     def __init__(self, layout=Inject('gearbox/layout')):
         super().__init__()
 
@@ -28,7 +28,7 @@ class BufferCompleter(QtWidgets.QCompleter):
 
 @shortcut(None, (QtCore.Qt.Key_Space, QtCore.Qt.Key_B, QtCore.Qt.Key_B),
           'select')
-@reg_inject
+@inject
 def select_buffer(
         buff=Interactive('buffer: ', BufferCompleter),
         layout=Inject('gearbox/layout')):
@@ -39,7 +39,7 @@ def select_buffer(
 
 @shortcut(None, (QtCore.Qt.Key_Space, QtCore.Qt.Key_B, QtCore.Qt.Key_D),
           'delete')
-@reg_inject
+@inject
 def delete_buffer(layout=Inject('gearbox/layout')):
 
     active_buffer().delete()
@@ -47,7 +47,7 @@ def delete_buffer(layout=Inject('gearbox/layout')):
 
 @shortcut(None, (QtCore.Qt.Key_Space, QtCore.Qt.Key_B, QtCore.Qt.Key_G),
           'graph')
-@reg_inject
+@inject
 def graph(layout=Inject('gearbox/layout')):
 
     for b in layout.buffers:

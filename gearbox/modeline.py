@@ -1,10 +1,10 @@
-from pygears.conf import reg_inject
+from pygears.conf import inject
 from PySide2 import QtWidgets
 from .html_utils import tabulate, fontify
 
 
 class Modeline(QtWidgets.QLabel):
-    @reg_inject
+    @inject
     def __init__(self, window):
         super().__init__()
         self.setAccessibleName('modeline')

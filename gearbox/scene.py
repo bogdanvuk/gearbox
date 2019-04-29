@@ -1,12 +1,12 @@
 from PySide2 import QtCore, QtGui, QtWidgets
 
-from pygears.conf import Inject, reg_inject, config
+from pygears.conf import Inject, inject, config
 
 from .theme import ThemePlugin
 
 
 class NodeScene(QtWidgets.QGraphicsScene):
-    @reg_inject
+    @inject
     def __init__(self,
                  parent=None,
                  background_color=Inject('gearbox/theme/background-color'),

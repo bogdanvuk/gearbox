@@ -1,7 +1,7 @@
 import os
 from PySide2 import QtWidgets, QtCore
 from .layout import active_buffer
-from pygears.conf import Inject, reg_inject
+from pygears.conf import Inject, inject
 
 
 class CompleterItemDelegate(QtWidgets.QItemDelegate):
@@ -48,7 +48,7 @@ class Minibuffer(QtCore.QObject):
     filled = QtCore.Signal(str)
     start = QtCore.Signal()
 
-    @reg_inject
+    @inject
     def __init__(self, main=Inject('gearbox/main/inst')):
         super().__init__()
         self.view = QtWidgets.QHBoxLayout()
@@ -124,7 +124,7 @@ class Minibuffer(QtCore.QObject):
 
         self.start.emit()
 
-    @reg_inject
+    @inject
     def complete(self,
                  message=None,
                  completer=None,
@@ -156,7 +156,7 @@ class Minibuffer(QtCore.QObject):
         if self.input_box.isEnabled():
             self.cleanup(None)
 
-    @reg_inject
+    @inject
     def cleanup(self, result, main=Inject('gearbox/main/inst')):
         self.completed.emit(result)
         main.change_domain(self.previous_domain)

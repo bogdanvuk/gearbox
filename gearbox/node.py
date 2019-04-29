@@ -1,7 +1,7 @@
 import pygraphviz as pgv
 from PySide2 import QtCore, QtGui, QtWidgets
 
-from pygears.conf import Inject, reg_inject
+from pygears.conf import Inject, inject
 from pygears.rtl.port import InPort
 
 from . import gv_utils
@@ -399,7 +399,7 @@ def node_painter(self, painter, option, widget):
 
 
 class NodeItem(AbstractNodeItem):
-    @reg_inject
+    @inject
     def __init__(self,
                  name,
                  layout,

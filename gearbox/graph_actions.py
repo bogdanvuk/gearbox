@@ -6,7 +6,7 @@ from .pipe import Pipe
 from .popup_desc import popup_desc, popup_cancel
 from functools import wraps
 from PySide2.QtCore import Qt
-from pygears.conf import Inject, reg_inject, registry
+from pygears.conf import Inject, inject, registry
 from .main_window import register_prefix, message
 from .actions import shortcut, get_minibuffer_input, Interactive
 from .description import describe_text, describe_trace, describe_file
@@ -18,7 +18,7 @@ from .timestep_modeline import TimestepModeline
 
 def single_select_action(func):
     @wraps(func)
-    @reg_inject
+    @inject
     def wrapper(graph=Inject('gearbox/graph')):
         items = graph.selected_items()
         if len(items) == 1:
@@ -105,19 +105,19 @@ register_prefix('graph', Qt.Key_Z, 'zoom')
 
 
 @shortcut('graph', (Qt.Key_Z, Qt.Key_Z))
-@reg_inject
+@inject
 def zoom_selected(graph=Inject('gearbox/graph')):
     graph.zoom_to_nodes(graph.selected_nodes())
 
 
 @shortcut('graph', (Qt.Key_Z, Qt.Key_A))
-@reg_inject
+@inject
 def zoom_all(graph=Inject('gearbox/graph')):
     graph.fit_all()
 
 
 @shortcut('graph', Qt.Key_K)
-@reg_inject
+@inject
 def node_up(graph=Inject('gearbox/graph')):
     nodes = graph.selected_nodes()
     if len(nodes) > 1:
@@ -143,7 +143,7 @@ def node_up(graph=Inject('gearbox/graph')):
 
 
 @shortcut('graph', Qt.Key_J)
-@reg_inject
+@inject
 def node_down(graph=Inject('gearbox/graph')):
     nodes = graph.selected_nodes()
     if len(nodes) > 1:
@@ -198,14 +198,14 @@ def describe_inst(node, graph):
 
 
 @shortcut('graph', (Qt.Key_Z, Qt.Key_Plus))
-@reg_inject
+@inject
 def zoom_in(graph=Inject('gearbox/graph')):
     zoom = graph.get_zoom() + 0.1
     graph.set_zoom(zoom)
 
 
 @shortcut('graph', (Qt.Key_Z, Qt.Key_Minus))
-@reg_inject
+@inject
 def zoom_out(graph=Inject('gearbox/graph')):
     zoom = graph.get_zoom() - 0.2
     graph.set_zoom(zoom)
@@ -265,7 +265,7 @@ def toggle_expand(node, graph):
 
 
 @shortcut('graph', Qt.Key_P)
-@reg_inject
+@inject
 def send_to_wave(
         graph=Inject('gearbox/graph'), gtkwave=Inject('gearbox/gtkwave/inst')):
 
@@ -289,7 +289,7 @@ shortcut('graph', Qt.Key_Colon)(time_search)
 
 
 @shortcut('graph', Qt.Key_Slash)
-@reg_inject
+@inject
 def node_search(
         minibuffer=Inject('gearbox/minibuffer'),
         graph=Inject('gearbox/graph')):

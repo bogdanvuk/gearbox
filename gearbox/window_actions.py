@@ -1,6 +1,6 @@
 from PySide2.QtCore import Qt
 from PySide2 import QtWidgets
-from pygears.conf import Inject, reg_inject
+from pygears.conf import Inject, inject
 from .layout import Window, WindowLayout
 from .main_window import register_prefix
 from .actions import shortcut
@@ -10,7 +10,7 @@ register_prefix(None, (Qt.Key_Space, Qt.Key_W), 'window')
 
 
 @shortcut(None, (Qt.Key_Space, Qt.Key_W, Qt.Key_D), 'delete')
-@reg_inject
+@inject
 def window_delete(layout=Inject('gearbox/layout')):
     if layout.current_layout.win_num > 1:
         window = layout.active_window()
@@ -20,13 +20,13 @@ def window_delete(layout=Inject('gearbox/layout')):
 
 
 @shortcut(None, (Qt.Key_Space, Qt.Key_W, Qt.Key_C), 'clear')
-@reg_inject
+@inject
 def clear_layout(layout=Inject('gearbox/layout')):
     layout.clear_layout()
 
 
 @shortcut(None, (Qt.Key_Space, Qt.Key_W, Qt.Key_Slash), 'split horizontally')
-@reg_inject
+@inject
 def split_horizontally(layout=Inject('gearbox/layout')):
     window = layout.active_window()
     new_window = window.split_horizontally()
@@ -39,7 +39,7 @@ def split_horizontally(layout=Inject('gearbox/layout')):
 
 @shortcut(None, (Qt.Key_Space, Qt.Key_W, Qt.Key_Underscore),
           'split vertically')
-@reg_inject
+@inject
 def split_vertically(layout=Inject('gearbox/layout')):
     window = layout.active_window()
     new_window = window.split_vertically()
@@ -68,19 +68,19 @@ def change_perc_size(window, diff):
 
 
 @shortcut(None, (Qt.Key_Space, Qt.Key_W, Qt.Key_Plus), 'increase')
-@reg_inject
+@inject
 def increase_size(layout=Inject('gearbox/layout')):
     change_perc_size(layout.active_window(), +3)
 
 
 @shortcut(None, (Qt.Key_Space, Qt.Key_W, Qt.Key_Minus), 'decrease')
-@reg_inject
+@inject
 def decrease_size(layout=Inject('gearbox/layout')):
     change_perc_size(layout.active_window(), -3)
 
 
 @shortcut(None, (Qt.Key_Space, Qt.Key_W, Qt.Key_J), 'down')
-@reg_inject
+@inject
 def window_down(layout=Inject('gearbox/layout')):
     def go_topmost_down(window):
         if isinstance(window, Window):
@@ -104,7 +104,7 @@ def window_down(layout=Inject('gearbox/layout')):
 
 
 @shortcut(None, (Qt.Key_Space, Qt.Key_W, Qt.Key_K), 'up')
-@reg_inject
+@inject
 def window_up(layout=Inject('gearbox/layout')):
     def go_bottommost_down(window):
         if isinstance(window, Window):
@@ -129,7 +129,7 @@ def window_up(layout=Inject('gearbox/layout')):
 
 
 @shortcut(None, (Qt.Key_Space, Qt.Key_W, Qt.Key_L), 'right')
-@reg_inject
+@inject
 def window_right(layout=Inject('gearbox/layout')):
     def go_leftmost_down(window):
         if isinstance(window, Window):
@@ -153,7 +153,7 @@ def window_right(layout=Inject('gearbox/layout')):
 
 
 @shortcut(None, (Qt.Key_Space, Qt.Key_W, Qt.Key_H), 'left')
-@reg_inject
+@inject
 def window_left(layout=Inject('gearbox/layout')):
     def go_rightmost_down(window):
         if isinstance(window, Window):
@@ -192,7 +192,7 @@ def quit():
 
 def tab_shortcut_reg(tab_id):
     @shortcut(None, (Qt.ALT + Qt.Key_1 + tab_id), f'tab {tab_id}')
-    @reg_inject
+    @inject
     def select_tab(layout=Inject('gearbox/layout')):
         win = layout.current_window
         win.switch_tab(tab_id)

@@ -4,7 +4,7 @@ import functools
 from pygears.sim.modules import SimVerilated, SimSocket
 from pygears.core.hier_node import HierVisitorBase
 from pygears.core.hier_node import NamedHierNode
-from pygears.conf import reg_inject, Inject
+from pygears.conf import inject, Inject
 from pygears.rtl.node import RTLNode
 from pygears.rtl.intf import RTLIntf
 from .node import NodeItem, hier_expand, hier_painter, node_painter, minimized_painter
@@ -30,10 +30,10 @@ def pprint_Partial(printer, object, stream, indent, allowance, context, level):
 pprint.PrettyPrinter._dispatch[Partial.__repr__] = pprint_Partial
 
 
-@reg_inject
+@inject
 def find_cosim_modules(top=Inject('gear/hier_root')):
     class CosimVisitor(HierVisitorBase):
-        @reg_inject
+        @inject
         def __init__(self, sim_map=Inject('sim/map')):
             self.sim_map = sim_map
             self.cosim_modules = []
@@ -160,7 +160,7 @@ class PipeModel(NamedHierNode):
         else:
             self.set_status('empty')
 
-    @reg_inject
+    @inject
     def set_status(self, status, timestep=Inject('gearbox/timekeep')):
         self.status = (timestep, status)
         self.status = status
@@ -264,7 +264,7 @@ class NodeModel(NamedHierNode):
             self.set_status('empty')
 
     @property
-    @reg_inject
+    @inject
     def related_issues(self, issues=Inject('trace/issues')):
         rel_issues = []
         for issue in issues:
@@ -275,7 +275,7 @@ class NodeModel(NamedHierNode):
         return rel_issues
 
     @property
-    @reg_inject
+    @inject
     def on_error_path(self, sim_bridge=Inject('gearbox/sim_bridge')):
         issue_path = sim_bridge.cur_model_issue_path
         if (self.parent is not None and issue_path
@@ -284,13 +284,13 @@ class NodeModel(NamedHierNode):
 
         return False
 
-    @reg_inject
+    @inject
     def set_status(self, status, timestep=Inject('gearbox/timekeep')):
         self.status = (timestep, status)
         self.view.set_status(status)
 
     @property
-    @reg_inject
+    @inject
     def rtl_source(self, svgen_map=Inject('svgen/map')):
         if self.rtl not in svgen_map:
             return None

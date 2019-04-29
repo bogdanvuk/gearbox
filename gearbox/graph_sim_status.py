@@ -1,10 +1,10 @@
 from .graph import GraphVisitor
-from pygears.conf import Inject, reg_inject
+from pygears.conf import Inject, inject
 from pygears.rtl.gear import gear_from_rtl_port
 
 
 class GraphPipeCollector(GraphVisitor):
-    @reg_inject
+    @inject
     def __init__(self, sim_activity=Inject('sim/activity')):
         self.sim_activity = sim_activity
         self.py_intfs = set()
@@ -27,7 +27,7 @@ class GraphSimStatus:
         self.pipe_collect.visit(self.graph.top)
         self.py_intfs = self.pipe_collect.py_intfs
 
-    @reg_inject
+    @inject
     def update(self, sim_activity=Inject('sim/activity')):
         for py_intf in self.py_intfs:
             py_intf.set_status(sim_activity.get_port_status(py_intf.model))

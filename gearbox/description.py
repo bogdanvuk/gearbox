@@ -1,6 +1,6 @@
 from PySide2 import QtWidgets, QtGui, QtCore
 from .layout import Buffer
-from pygears.conf import Inject, reg_inject, bind, MayInject, registry
+from pygears.conf import Inject, inject, bind, MayInject, registry
 import pygments
 from pygments.lexers import get_lexer_for_filename, PythonLexer, Python3Lexer, ClassNotFound
 from pygments.formatters import HtmlFormatter
@@ -18,7 +18,7 @@ class DescriptionBuffer(Buffer):
         return 'description'
 
 
-@reg_inject
+@inject
 def description():
     viewer = Description()
     DescriptionBuffer(viewer, 'description')
@@ -118,12 +118,12 @@ class Description(QtWidgets.QTextEdit):
         # self.setTextCursor(cursor)
 
 
-@reg_inject
+@inject
 def describe_text(text, desc=Inject('gearbox/description')):
     desc.display_text(text)
 
 
-@reg_inject
+@inject
 def describe_file(fn, name=None, lineno=1, layout=Inject('gearbox/layout')):
     if name is None:
         name = fn
@@ -140,7 +140,7 @@ def describe_file(fn, name=None, lineno=1, layout=Inject('gearbox/layout')):
     return buff
 
 
-@reg_inject
+@inject
 def describe_trace(trace, name, layout=Inject('gearbox/layout')):
     for b in layout.buffers:
         if b.name == name:

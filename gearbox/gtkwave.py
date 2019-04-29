@@ -2,18 +2,19 @@ from PySide2 import QtCore
 import collections
 import sys
 
-from .timekeep import timestep, timestep_event_register, max_timestep
+from pygears.core.gear import Gear
+from .timekeep import timestep, timestep_event_register
+from pygears.core.graph import closest_rtl_from_gear_port
 from pygears.sim.modules import SimVerilated
 from .node_model import find_cosim_modules, PipeModel, NodeModel
 from pygears.core.hier_node import HierVisitorBase
-from pygears.conf import Inject, MayInject, bind, reg_inject, registry, safe_bind, config
+from pygears.conf import Inject, MayInject, bind, inject, registry, safe_bind, config
 from typing import NamedTuple
 from .gtkwave_intf import GtkWaveWindow
 from .layout import active_buffer, Buffer, LayoutPlugin
 from .utils import single_shot_connect
 from .dbg import dbg_connect
 from functools import partial
-import fnmatch
 import os
 import re
 
@@ -46,7 +47,7 @@ class PyGearsVCDMap:
         # self.pipe_to_port_map = {}
 
     @property
-    @reg_inject
+    @inject
     def subgraph(self, graph=Inject('gearbox/graph_model')):
         return graph
 
@@ -96,11 +97,13 @@ class PyGearsVCDMap:
 def get_pg_vcd_item_signals(subgraph, signal_name_map):
     item_signals = {}
     pipe_to_port_map = {}
-    item = subgraph
+    item = subgraph.rtl.gear
     item_path = []
 
     for name, s in signal_name_map.items():
-        item = subgraph
+        print(name)
+        # item = subgraph
+        item = subgraph.rtl.gear
         path = name.split('.')
 
         new_item_path = []
@@ -122,17 +125,44 @@ def get_pg_vcd_item_signals(subgraph, signal_name_map):
 
         item_path = new_item_path
 
+        def port_by_name(item, port_name):
+            def _port_by_name(ports, name):
+                for port in ports:
+                    if port.basename == name:
+                        return port
+                else:
+                    raise KeyError
+
+            try:
+                port = _port_by_name(item.in_ports, port_name)
+            except KeyError:
+                port = _port_by_name(item.out_ports, port_name)
+
+            return port
+
         if item not in item_signals:
             item_signals[item] = []
 
-            if isinstance(item, NodeModel):
-                port_name = path[len(new_item_path)]
+            if isinstance(item, Gear):
 
-                for pipe, port in zip(item.output_ext_pipes,
-                                      item.rtl.out_ports):
-                    if port.basename == port_name:
-                        item_signals[pipe] = item_signals[item]
-                        pipe_to_port_map[pipe] = port
+                port_name = path[len(new_item_path)]
+                port = port_by_name(item, port_name)
+
+                rtl_port = closest_rtl_from_gear_port(port)
+
+                try:
+                    pipe = subgraph[rtl_port.consumer.name]
+                    item_signals[pipe] = item_signals[item]
+                    pipe_to_port_map[pipe] = port
+                except (KeyError, AttributeError):
+                    pass
+
+                try:
+                    pipe = subgraph[rtl_port.producer.name]
+                    item_signals[pipe] = item_signals[item]
+                    pipe_to_port_map[pipe] = port
+                except (KeyError, AttributeError):
+                    pass
 
         item_signals[item].append(s)
 
@@ -179,7 +209,7 @@ def get_verilator_item_signals(subgraph, signal_name_map):
 
 
 class VerilatorVCDMap:
-    @reg_inject
+    @inject
     def __init__(self,
                  sim_module,
                  gtkwave_intf,
@@ -199,7 +229,7 @@ class VerilatorVCDMap:
         print("VCD Init done")
 
     @property
-    @reg_inject
+    @inject
     def subgraph(self, graph=Inject('gearbox/graph_model')):
         return graph[self.sim_module.gear.name[1:]]
 
@@ -258,19 +288,19 @@ class VerilatorVCDMap:
         return self.item_signals[item]
 
 
-@reg_inject
+@inject
 def gtkwave(graph_model_ctrl=Inject('gearbox/graph_model_ctrl')):
     dbg_connect(graph_model_ctrl.working_model_loaded, gtkwave_create)
 
 
-@reg_inject
+@inject
 def gtkwave_create(sim_bridge=Inject('gearbox/sim_bridge')):
     gtkwave = GtkWave()
     bind('gearbox/gtkwave/inst', gtkwave)
     single_shot_connect(sim_bridge.model_closed, gktwave_delete)
 
 
-@reg_inject
+@inject
 def gktwave_delete(timekeep=Inject('gearbox/timekeep')):
     print('Gtkwave deleted')
     gtkwave = registry('gearbox/gtkwave/inst')
@@ -366,7 +396,7 @@ class GtkWave:
 
         return item_intf.show_item(item)
 
-    @reg_inject
+    @inject
     def update(self, timestep=Inject('gearbox/timestep')):
         if timestep is None:
             timestep = 0
@@ -550,14 +580,10 @@ class GtkWaveGraphIntf(QtCore.QObject):
                 ts = 0
 
             status, _, gtk_timestep = ret.rpartition('\n')
-            if not gtk_timestep:
-                breakpoint()
-                print(ret)
+            if gtk_timestep:
+                self.timestep = (int(gtk_timestep) // 10) - 1
 
-            self.timestep = (int(gtk_timestep) // 10) - 1
-
-            print(f"{self.vcd_map.name}: Updated: {ts} <-> {self.timestep}")
-            if ts - self.timestep > 100:
+            if not gtk_timestep or ts - self.timestep > 100:
                 self.should_update = False
                 self.gtkwave_intf.command_nb(f'gtkwave::nop', self.cmd_id)
                 print("Again")
@@ -611,7 +637,7 @@ class GtkWaveGraphIntf(QtCore.QObject):
 
         NodeActivityVisitor().visit(registry('gearbox/graph_model'))
 
-    @reg_inject
+    @inject
     def update(self, timestep=Inject('gearbox/timestep')):
         if timestep is None:
             timestep = 0
@@ -641,7 +667,7 @@ class GtkWaveBufferPlugin(LayoutPlugin):
     def bind(cls):
         safe_bind('gearbox/plugins/gtkwave', {})
 
-        @reg_inject
+        @inject
         def menu_visibility(var,
                             visible,
                             gtkwave=MayInject('gearbox/gtkwave/inst')):

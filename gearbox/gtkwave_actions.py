@@ -4,12 +4,12 @@ from .actions import shortcut
 from .layout import active_buffer
 from .gtkwave import GtkWaveBufferPlugin
 from .graph import GraphBufferPlugin
-from pygears.conf import Inject, inject_async, reg_inject, bind, registry, MayInject, config
+from pygears.conf import Inject, inject_async, inject, bind, registry, MayInject, config
 from .sim_actions import time_search, step_simulator, cont_simulator
 from .timestep_modeline import TimestepModeline
 
 
-@reg_inject
+@inject
 def node_expand_toggle(status, node, gtkwave=Inject('gearbox/gtkwave/inst')):
     if status:
         gtkwave.update_pipe_statuses(node.pipes)
@@ -48,13 +48,13 @@ def trace_toggle():
 
 # TODO: broken when using gtkwave save file
 class GraphGtkwaveSelectSync(QtCore.QObject):
-    @reg_inject
+    @inject
     def __init__(self, buff):
         super().__init__()
         buff.view.selection_changed.connect(self.selection_changed)
         self.buff = buff
 
-    @reg_inject
+    @inject
     def selection_changed(self, selected,
                           gtkwave=MayInject('gearbox/gtkwave/inst')):
 

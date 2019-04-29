@@ -1,13 +1,13 @@
 import runpy
 import os
-from pygears.conf import Inject, reg_inject, MayInject, config
+from pygears.conf import Inject, inject, MayInject, config
 from .graph import GraphVisitor
 from jinja2 import Environment, BaseLoader
 from pygears.core.hier_node import HierYielderBase
 from .layout import Window
 
 save_file_prolog = """
-from pygears.conf import Inject, config, inject_async, reg_inject
+from pygears.conf import Inject, config, inject_async, inject
 from gearbox.utils import single_shot_connect
 from gearbox.layout import Window, WindowLayout
 from gearbox.description import describe_file
@@ -17,7 +17,7 @@ from functools import partial
 
 expand_func_template = """
 
-@reg_inject
+@inject
 def expand(buff, graph_model=Inject('gearbox/graph_model')):
   {% if expanded %}
     {% for name in expanded %}
@@ -37,7 +37,7 @@ def expand(buff, graph_model=Inject('gearbox/graph_model')):
 
 gtkwave_load_func_template = """
 
-@reg_inject
+@inject
 def load_after_vcd_loaded(
         buff,
         graph_model=Inject('gearbox/graph_model'),
@@ -58,7 +58,7 @@ def gtkwave_load(buff):
 
 layout_load_func_template = """
 
-@reg_inject
+@inject
 def place_buffer(buff, window, layout=Inject('gearbox/layout')):
     layout.windows[window].place_buffer(buff)
 
@@ -71,7 +71,7 @@ buffer_init_commands = {
 }
 
 
-@reg_inject
+@inject
 def buffer_initializer(buff, layout=Inject('gearbox/layout')):
     if buff.name in buffer_init_commands:
         for f in buffer_init_commands[buff.name]:
@@ -81,7 +81,7 @@ def buffer_initializer(buff, layout=Inject('gearbox/layout')):
         if not buffer_init_commands:
             layout.new_buffer.disconnect(buffer_initializer)
 
-@reg_inject
+@inject
 def cleanup(layout=Inject('gearbox/layout')):
     try:
         layout.new_buffer.disconnect(buffer_initializer)
@@ -123,7 +123,7 @@ class GraphStatusSaver(HierYielderBase):
             yield node.name[1:]
 
 
-@reg_inject
+@inject
 def save_expanded(buffer_init_commands,
                   root=Inject('gearbox/graph_model'),
                   graph=Inject('gearbox/graph')):
@@ -143,7 +143,7 @@ def save_expanded(buffer_init_commands,
     })
 
 
-@reg_inject
+@inject
 def save_gtkwave(buffer_init_commands, layout=Inject('gearbox/layout')):
     buffers = [
         buff for buff in layout.buffers
@@ -163,7 +163,7 @@ def save_gtkwave(buffer_init_commands, layout=Inject('gearbox/layout')):
 
 description_load_template = """
 
-@reg_inject
+@inject
 def descriptions_load(layout=Inject('gearbox/layout')):
 {% if commands %}
 {{commands|indent(4,True)}}
@@ -174,7 +174,7 @@ def descriptions_load(layout=Inject('gearbox/layout')):
 """
 
 
-@reg_inject
+@inject
 def save_description(buffer_init_commands, layout=Inject('gearbox/layout')):
     buffers = [buff for buff in layout.buffers if buff.domain == "description"]
     res = ''
@@ -232,7 +232,7 @@ def save_configuration():
     })
 
 
-@reg_inject
+@inject
 def save_layout(buffer_init_commands, layout=Inject('gearbox/layout')):
 
     for i, w in enumerate(layout.windows):
@@ -259,7 +259,7 @@ def load():
         print(f'Loading save file failed: {e}')
 
 
-@reg_inject
+@inject
 def save(layout=Inject('gearbox/layout')):
     with open(get_save_file_path(), 'w') as f:
         buffer_init_commands = {b.name: [] for b in layout.buffers}
@@ -277,7 +277,7 @@ def save(layout=Inject('gearbox/layout')):
         f.write(save_layout(buffer_init_commands))
 
 
-@reg_inject
+@inject
 def get_save_file_path(
         outdir=MayInject('sim/artifacts_dir'),
         script_fn=Inject('gearbox/model_script_name')):

@@ -12,7 +12,7 @@ from gearbox.gtkwave import gtkwave
 from gearbox.main_window import MainWindow
 from gearbox.sniper import sniper
 from gearbox.which_key import which_key
-from pygears.conf import (Inject, MayInject, PluginBase, bind, reg_inject,
+from pygears.conf import (Inject, MayInject, PluginBase, bind, inject,
                           registry, safe_bind)
 from pygears.conf.custom_settings import load_rc
 from pygears.sim.extens.vcd import SimVCDPlugin
@@ -26,7 +26,7 @@ from .theme import themify
 from .saver import get_save_file_path, load
 from .timekeep import timekeep
 
-# @reg_inject
+# @inject
 # def main(layers=Inject('gearbox/layers')):
 #     app = QtWidgets.QApplication(sys.argv)
 
@@ -49,7 +49,7 @@ from .timekeep import timekeep
 #     app.exec_()
 
 
-@reg_inject
+@inject
 def reloader(
         outdir=MayInject('sim/artifacts_dir'), plugin=Inject('sim/gearbox')):
     if plugin.reload:
@@ -63,7 +63,7 @@ def pygears_proc(script_fn):
     pass
 
 
-@reg_inject
+@inject
 def set_main_win_title(
         script_fn=Inject('gearbox/model_script_name'),
         main=Inject('gearbox/main/inst')):
@@ -79,7 +79,7 @@ class Application(QtWidgets.QApplication):
         super().quit()
 
 
-@reg_inject
+@inject
 def main_loop(script_fn, layers=Inject('gearbox/layers')):
     import faulthandler
     faulthandler.enable(file=open('err.log', 'w'))
@@ -125,7 +125,7 @@ def main_loop(script_fn, layers=Inject('gearbox/layers')):
         sys.exit(ret)
 
 
-@reg_inject
+@inject
 def main(argv=sys.argv, layers=Inject('gearbox/layers')):
     print(f"Started: {sys.argv}")
     parser = argparse.ArgumentParser(

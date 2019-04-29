@@ -1,5 +1,5 @@
 from PySide2 import QtWidgets, QtGui, QtCore
-from pygears.conf import Inject, reg_inject
+from pygears.conf import Inject, inject
 from .node import NodeItem
 from .pipe import Pipe
 from .main_window import Shortcut
@@ -32,7 +32,7 @@ class SnipeCodeItem(QtWidgets.QGraphicsTextItem):
 
 
 class Sniper:
-    @reg_inject
+    @inject
     def __init__(self,
                  main=Inject('gearbox/main/inst')):
 
@@ -44,7 +44,7 @@ class Sniper:
 
         self.main = main
 
-    @reg_inject
+    @inject
     def snipe_cancel(self, graph=Inject('gearbox/graph')):
         self.main.key_cancel.disconnect(self.snipe_cancel)
         for text, s in snipe_shortcuts:
@@ -54,12 +54,12 @@ class Sniper:
         self.main.change_domain('graph')
         snipe_shortcuts.clear()
 
-    @reg_inject
+    @inject
     def snipe_shot(self, pipe, graph=Inject('gearbox/graph')):
         graph.select(pipe)
         self.snipe_cancel()
 
-    @reg_inject
+    @inject
     def snipe_shot_prefix(self, prefix, graph=Inject('gearbox/graph')):
         import pdb
         pdb.set_trace()
@@ -90,7 +90,7 @@ class Sniper:
     def snipe_select_pipes(self):
         self.snipe_select(objtype=Pipe)
 
-    @reg_inject
+    @inject
     def snipe_select(self, objtype=None, graph=Inject('gearbox/graph')):
         self.main.key_cancel.connect(self.snipe_cancel)
 

@@ -17,7 +17,7 @@ from .html_utils import tabulate, fontify
 from .utils import single_shot_connect
 
 from pygears.rtl import rtlgen
-from pygears.conf import Inject, reg_inject, bind, MayInject, registry, safe_bind
+from pygears.conf import Inject, inject, bind, MayInject, registry, safe_bind
 
 ZOOM_MIN = -0.95
 ZOOM_MAX = 2.0
@@ -47,7 +47,7 @@ class GraphBuffer(Buffer):
         return 'graph'
 
 
-@reg_inject
+@inject
 def graph(
         sim_bridge=Inject('gearbox/sim_bridge'),
         root=Inject('gear/hier_root')):
@@ -60,7 +60,7 @@ def graph(
 #     bind('gearbox/graph_model', None)
 
 
-# @reg_inject
+# @inject
 # def graph_create(
 #         root=Inject('gear/hier_root'),
 #         sim_bridge=Inject('gearbox/sim_bridge')):
@@ -85,7 +85,7 @@ class GraphModelCtrl(QtCore.QObject):
     model_loaded = QtCore.Signal()
     working_model_loaded = QtCore.Signal()
 
-    @reg_inject
+    @inject
     def __init__(self, sim_bridge=Inject('gearbox/sim_bridge')):
         super().__init__()
         self.sim_bridge = sim_bridge
@@ -93,12 +93,13 @@ class GraphModelCtrl(QtCore.QObject):
         self.sim_bridge.before_run.connect(self.graph_create)
         self.sim_bridge.model_closed.connect(self.graph_delete)
 
-    @reg_inject
+    @inject
     def graph_create(self, root=Inject('gear/hier_root')):
         view = Graph()
 
         bind('gearbox/graph', view)
-        rtl_root = rtlgen(root, force=True)
+        # rtl_root = rtlgen(root, force=True)
+        rtl_root = rtlgen(root)
         top_model = NodeModel(rtl_root)
         bind('gearbox/graph_model', top_model)
         view.top = top_model.view
@@ -134,7 +135,7 @@ class Graph(QtWidgets.QGraphicsView):
     resized = QtCore.Signal()
     node_expand_toggled = QtCore.Signal(bool, object)
 
-    @reg_inject
+    @inject
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setScene(NodeScene(self))

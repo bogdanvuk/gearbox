@@ -1,25 +1,25 @@
 from PySide2.QtCore import Qt
-from pygears.conf import Inject, reg_inject
+from pygears.conf import Inject, inject
 from .actions import Interactive, shortcut
 from .main_window import register_prefix
 
 register_prefix(None, (Qt.Key_Space, Qt.Key_S), 'simulator')
 
 
-@reg_inject
+@inject
 def step_simulator(sim_bridge=Inject('gearbox/sim_bridge')):
     sim_bridge.breakpoint(lambda: (True, False))
     if not sim_bridge.running:
         sim_bridge.cont()
 
 
-@reg_inject
+@inject
 def cont_simulator(
         timekeep=Inject('gearbox/timekeep')):
     timekeep.timestep = 0xffffffff
 
 
-@reg_inject
+@inject
 def time_search(
         time=Interactive('Time: '), timekeep=Inject('gearbox/timekeep')):
 

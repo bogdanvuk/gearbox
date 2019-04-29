@@ -1,7 +1,7 @@
 import os
 from PySide2.QtCore import Qt
 from PySide2 import QtGui
-from pygears.conf import Inject, reg_inject
+from pygears.conf import Inject, inject
 from .actions import shortcut
 from .layout import active_buffer
 

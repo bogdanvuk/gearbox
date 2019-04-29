@@ -2,12 +2,12 @@ import math
 from . import html_utils
 
 from PySide2.QtWidgets import QLabel
-from pygears.conf import Inject, bind, reg_inject
+from pygears.conf import Inject, bind, inject
 from PySide2.QtGui import QKeySequence
 from PySide2 import QtCore
 
 
-@reg_inject
+@inject
 def which_key(main=Inject('gearbox/main/inst')):
     w = WhichKey(main)
     main.vbox.insertWidget(main.vbox.count() - 1, w)
@@ -15,7 +15,7 @@ def which_key(main=Inject('gearbox/main/inst')):
 
 
 class WhichKey(QLabel):
-    @reg_inject
+    @inject
     def __init__(self, parent=None, main=Inject('gearbox/main/inst')):
         super().__init__(parent)
         self.setMargin(2)
@@ -33,7 +33,7 @@ class WhichKey(QLabel):
         self.timer.timeout.connect(self.show)
         self.timer.setSingleShot(True)
 
-    @reg_inject
+    @inject
     def is_prefix(self, key, main=Inject('gearbox/main/inst')):
         prefix = self.current_prefix + [key]
         for s in main.shortcuts:
@@ -66,7 +66,7 @@ class WhichKey(QLabel):
 
         return super().eventFilter(obj, event)
 
-    # @reg_inject
+    # @inject
     # def domain_changed(self, domain, main=Inject('gearbox/main/inst')):
     #     self.prefixes.clear()
     #     for s in main.shortcuts:
@@ -74,7 +74,7 @@ class WhichKey(QLabel):
     #             if len(s.key) > 1:
     #                 self.prefixes[s.key[0]] = s
 
-    @reg_inject
+    @inject
     def show(self,
              main=Inject('gearbox/main/inst'),
              domain=Inject('gearbox/domain'),

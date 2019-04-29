@@ -2,7 +2,7 @@ import os
 from functools import partial
 from PySide2.QtCore import Qt
 from PySide2 import QtWidgets
-from pygears.conf import Inject, reg_inject, registry, bind
+from pygears.conf import Inject, inject, registry, bind
 from .utils import single_shot_connect
 from .main_window import register_prefix
 from .actions import shortcut
@@ -11,7 +11,7 @@ from .saver import save
 register_prefix(None, (Qt.Key_Space, Qt.Key_F), 'file')
 
 
-@reg_inject
+@inject
 def close_file(
         sim_bridge=Inject('gearbox/sim_bridge'),
         script_fn=Inject('gearbox/model_script_name'),
@@ -23,7 +23,7 @@ def close_file(
 
 
 @shortcut(None, (Qt.Key_Space, Qt.Key_F, Qt.Key_F), 'open')
-@reg_inject
+@inject
 def open_file_interact(
         sim_bridge=Inject('gearbox/sim_bridge'),
         prev_script_fn=Inject('gearbox/model_script_name'),
@@ -45,14 +45,14 @@ def open_file_interact(
 
 
 @shortcut(None, (Qt.Key_Space, Qt.Key_F, Qt.Key_C), 'close')
-@reg_inject
+@inject
 def close_file_interact():
     close_file()
 
 
 @shortcut(None, (Qt.Key_Space, Qt.Key_F, Qt.SHIFT + Qt.Key_C),
           'close & save layout')
-@reg_inject
+@inject
 def close_file_save_layout(
         sim_bridge=Inject('gearbox/sim_bridge'),
         layout=Inject('gearbox/layout')):
@@ -61,7 +61,7 @@ def close_file_save_layout(
 
 
 @shortcut(None, (Qt.Key_Space, Qt.Key_F, Qt.Key_R), 'reload')
-@reg_inject
+@inject
 def reload_file(
         sim_bridge=Inject('gearbox/sim_bridge'),
         script_fn=Inject('gearbox/model_script_name'),
@@ -74,7 +74,7 @@ def reload_file(
 
 @shortcut(None, (Qt.Key_Space, Qt.Key_F, Qt.SHIFT + Qt.Key_R),
           'reload & save layout')
-@reg_inject
+@inject
 def reload_file_save_layout(
         sim_bridge=Inject('gearbox/sim_bridge'),
         script_fn=Inject('gearbox/model_script_name'),

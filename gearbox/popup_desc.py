@@ -1,12 +1,12 @@
 from PySide2 import QtWidgets, QtCore, QtGui
-from pygears.conf import Inject, reg_inject, bind, MayInject
+from pygears.conf import Inject, inject, bind, MayInject
 from .html_utils import HtmlFormatter
 from .layout import active_buffer
 
 
 # class PopupDesc(QtWidgets.QLabel):
 class PopupDesc(QtWidgets.QTextEdit):
-    @reg_inject
+    @inject
     def __init__(self,
                  max_width=500,
                  max_height=500,
@@ -39,7 +39,7 @@ class PopupDesc(QtWidgets.QTextEdit):
         inset grey;
         """)
 
-    @reg_inject
+    @inject
     def reposition(self):
         win = self.buff.view
         upper_left = QtCore.QPoint(win.x() + win.width() - self.width(),
@@ -108,7 +108,7 @@ class PopupDesc(QtWidgets.QTextEdit):
         self.delay_timer.stop()
 
 
-@reg_inject
+@inject
 def popup_desc(text, buff, w=MayInject('gearbox/popup_desc')):
     if w is None:
         w = PopupDesc()
@@ -117,7 +117,7 @@ def popup_desc(text, buff, w=MayInject('gearbox/popup_desc')):
     w.popup(text, buff)
 
 
-@reg_inject
+@inject
 def popup_cancel(w=MayInject('gearbox/popup_desc')):
     if w is not None:
         w.cancel()

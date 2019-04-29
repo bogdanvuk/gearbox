@@ -1,21 +1,21 @@
 from functools import partial
 from PySide2 import QtCore
 from pygears.sim import timestep as sim_timestep
-from pygears.conf import reg_inject, Inject, inject_async, bind
+from pygears.conf import inject, Inject, inject_async, bind
 from .dbg import dbg_connect
 
 
-@reg_inject
+@inject
 def timestep(timekeep=Inject('gearbox/timekeep')):
     return timekeep.timestep
 
 
-@reg_inject
+@inject
 def max_timestep(timekeep=Inject('gearbox/timekeep')):
     return timekeep.max_timestep
 
 
-@reg_inject
+@inject
 def timetep_event_register_connect(slot, timekeep=Inject('gearbox/timekeep')):
     dbg_connect(timekeep.timestep_changed, slot)
 
@@ -31,7 +31,7 @@ def timekeep(sim_bridge=Inject('gearbox/sim_bridge')):
 class TimeKeep(QtCore.QObject):
     timestep_changed = QtCore.Signal(int)
 
-    @reg_inject
+    @inject
     def __init__(self,
                  cont_refresh_step=100,
                  sim_bridge=Inject('gearbox/sim_bridge')):
@@ -74,7 +74,7 @@ class TimeKeep(QtCore.QObject):
             return False, True
 
     @timestep.setter
-    @reg_inject
+    @inject
     def timestep(self, val, sim_bridge=Inject('gearbox/sim_bridge')):
         if (self.max_timestep is None) or (val > self.max_timestep):
             self._time_target = val

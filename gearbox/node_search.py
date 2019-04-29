@@ -1,5 +1,5 @@
 from PySide2 import QtCore, QtWidgets, QtGui
-from pygears.conf import Inject, reg_inject
+from pygears.conf import Inject, inject
 from .html_utils import fontify
 from .node_model import NodeModel
 from .minibuffer import CompleterItemDelegate
@@ -75,7 +75,7 @@ class NodeSearchCompleter(QtWidgets.QCompleter):
     def get_result(self, text):
         return self.node[text].name
 
-    @reg_inject
+    @inject
     def filled(self, text, minibuffer=Inject('gearbox/minibuffer')):
         if text == '..':
             node = self.node.parent

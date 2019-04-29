@@ -1,10 +1,10 @@
 import os
 
-from pygears.conf import Inject, PluginBase, config, reg_inject
+from pygears.conf import Inject, PluginBase, config, inject
 
 
 def themify(style):
-    @reg_inject
+    @inject
     def stylerepl(match, theme=Inject('gearbox/theme')):
         return theme[match.group(1)]
 

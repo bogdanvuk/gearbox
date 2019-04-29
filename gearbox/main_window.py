@@ -1,7 +1,7 @@
 import os
 
 from PySide2 import QtCore, QtWidgets, QtGui
-from pygears.conf import PluginBase, registry, safe_bind, reg_inject, Inject, bind, config, MayInject
+from pygears.conf import PluginBase, registry, safe_bind, inject, Inject, bind, config, MayInject
 
 from functools import partial
 from .minibuffer import Minibuffer
@@ -12,7 +12,7 @@ from .dbg import dbg_connect
 class Action(QtWidgets.QAction):
     activated = QtCore.Signal()
 
-    @reg_inject
+    @inject
     def __init__(self,
                  domain,
                  key,
@@ -52,7 +52,7 @@ class Action(QtWidgets.QAction):
 
 
 class Shortcut(QtCore.QObject):
-    @reg_inject
+    @inject
     def __init__(self,
                  domain,
                  key,
@@ -99,7 +99,7 @@ class Shortcut(QtCore.QObject):
             self._qshortcut.setEnabled(False)
 
 
-@reg_inject
+@inject
 def register_prefix(domain, prefix, name, prefixes=Inject('gearbox/prefixes')):
     if not isinstance(prefix, tuple):
         prefix = (prefix, )
@@ -107,7 +107,7 @@ def register_prefix(domain, prefix, name, prefixes=Inject('gearbox/prefixes')):
     prefixes[(domain, prefix)] = name
 
 
-@reg_inject
+@inject
 def message(message, minibuffer=Inject('gearbox/minibuffer')):
     minibuffer.message(message)
 
@@ -167,7 +167,7 @@ class MainWindow(QtWidgets.QMainWindow):
         if not registry('gearbox/main/menus'):
             self.menuBar().hide()
 
-    @reg_inject
+    @inject
     def closeEvent(self,
                    event,
                    script_fn=Inject('gearbox/model_script_name'),
@@ -178,7 +178,7 @@ class MainWindow(QtWidgets.QMainWindow):
         else:
             super().closeEvent(event)
 
-    @reg_inject
+    @inject
     def create_menus(self,
                      prefixes=Inject('gearbox/prefixes'),
                      shortcuts=Inject('gearbox/shortcuts')):
@@ -323,7 +323,7 @@ class MainWindowPlugin(PluginBase):
         safe_bind('gearbox/shortcuts', [])
         safe_bind('gearbox/prefixes', {})
 
-        @reg_inject
+        @inject
         def menu_visibility(var, visible, main=MayInject('gearbox/main/inst')):
             if main:
                 main.menuBar().setVisible(visible)

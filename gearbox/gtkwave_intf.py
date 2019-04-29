@@ -4,14 +4,14 @@ import re
 import pexpect
 from PySide2 import QtCore, QtGui, QtWidgets
 
-from pygears.conf import Inject, reg_inject, registry
+from pygears.conf import Inject, inject, registry
 
 
 class GtkEventProc(QtCore.QObject):
     def gtk_event(self, name, data):
         getattr(self, name, lambda x: x)(data)
 
-    @reg_inject
+    @inject
     def SetMarker(self, data, timekeep=Inject('gearbox/timekeep')):
         print(f'SetMarker: {data}')
 
@@ -262,7 +262,7 @@ class GtkWaveWindow(QtCore.QObject):
         resp = cmd_block.command(cmd, self)
         return resp
 
-    @reg_inject
+    @inject
     def window_up(self, version, pid, window_id,
                   graph=Inject('gearbox/graph')):
         print(f'GtkWave started: {version}, {pid}, {window_id}')
