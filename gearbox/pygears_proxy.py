@@ -10,21 +10,22 @@ import time
 from PySide2 import QtCore, QtWidgets
 
 from pygears import MultiAlternativeError, clear
-from pygears.conf import (Inject, PluginBase, bind, config, inject,
-                          registry, safe_bind)
-from pygears.conf.trace import pygears_excepthook
-from pygears.sim import SimFinish, sim, timestep
+from pygears.conf import (Inject, PluginBase, bind, config, inject, registry,
+                          safe_bind)
+from pygears.conf.trace import pygears_excepthook, log_exception
+from pygears.sim import SimFinish, sim, timestep, sim_log
 from pygears.sim.extens.sim_extend import SimExtend
 from pygears.sim.extens.vcd import VCD
 from pygears.sim.modules import SimVerilated
 
 from .node_model import find_cosim_modules
 
-
 from jinja2.debug import fake_exc_info
+
 
 class EmptyHierarchy(Exception):
     pass
+
 
 class Gearbox(QtCore.QObject, SimExtend):
     sim_event = QtCore.Signal(str)
@@ -316,6 +317,13 @@ class PyGearsClient(QtCore.QObject):
 
     def handle_event(self, name):
         if name == 'after_cleanup':
+            sim_exception = registry('sim/exception')
+            if sim_exception:
+                log_exception(sim_exception)
+                # layout = registry('gearbox/layout')
+                # layout.current_window.place_buffer(
+                #     layout.get_buffer_by_name('compilation'))
+
             self.simulating = False
 
         getattr(self, name).emit()
@@ -436,12 +444,13 @@ class PyGearsClient(QtCore.QObject):
             root = registry('gear/hier_root')
             if not root.child:
                 self.err = EmptyHierarchy('No PyGears model created')
-                exc_info = fake_exc_info((EmptyHierarchy, self.err, None), script_fn, 0)
+                exc_info = fake_exc_info((EmptyHierarchy, self.err, None),
+                                         script_fn, 0)
                 self.err = self.err.with_traceback(exc_info[2])
 
         if self.err is not None:
-            pygears_excepthook(
-                type(self.err), self.err, self.err.__traceback__)
+            pygears_excepthook(type(self.err), self.err,
+                               self.err.__traceback__)
 
         if self.err is None:
             self.invoke_method('run_sim')

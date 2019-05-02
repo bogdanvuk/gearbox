@@ -36,7 +36,6 @@ class Action(QtWidgets.QAction):
         self.triggered.connect(self.activated_slot)
 
     def activated_slot(self):
-        print("Activate")
         self.activated.emit()
 
     @property

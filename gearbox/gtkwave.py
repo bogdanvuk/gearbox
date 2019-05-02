@@ -140,29 +140,26 @@ def get_pg_vcd_item_signals(subgraph, signal_name_map):
 
             return port
 
-        if item not in item_signals:
-            item_signals[item] = []
+        if isinstance(item, Gear):
+            port_name = path[len(new_item_path)]
+            port = port_by_name(item, port_name)
 
-            if isinstance(item, Gear):
+            rtl_port = closest_rtl_from_gear_port(port)
 
-                port_name = path[len(new_item_path)]
-                port = port_by_name(item, port_name)
-
-                rtl_port = closest_rtl_from_gear_port(port)
-
-                try:
-                    pipe = subgraph[rtl_port.consumer.name]
-                    item_signals[pipe] = item_signals[item]
-                    pipe_to_port_map[pipe] = port
-                except (KeyError, AttributeError):
-                    pass
-
+            try:
+                pipe = subgraph[rtl_port.consumer.name]
+                pipe_to_port_map[pipe] = port
+                item = pipe
+            except (KeyError, AttributeError):
                 try:
                     pipe = subgraph[rtl_port.producer.name]
-                    item_signals[pipe] = item_signals[item]
                     pipe_to_port_map[pipe] = port
+                    item = pipe
                 except (KeyError, AttributeError):
                     pass
+
+        if item not in item_signals:
+            item_signals[item] = []
 
         item_signals[item].append(s)
 
@@ -586,7 +583,7 @@ class GtkWaveGraphIntf(QtCore.QObject):
             if not gtk_timestep or ts - self.timestep > 100:
                 self.should_update = False
                 self.gtkwave_intf.command_nb(f'gtkwave::nop', self.cmd_id)
-                print("Again")
+                # print("Again")
                 return
 
         self.update_pipes(p for p in self.vcd_map.vcd_pipes
@@ -642,9 +639,9 @@ class GtkWaveGraphIntf(QtCore.QObject):
         if timestep is None:
             timestep = 0
 
-        print(
-            f"Updating {self.vcd_map.name} from {self.timestep} to {timestep}: {self.cmd_id}"
-        )
+        # print(
+        #     f"Updating {self.vcd_map.name} from {self.timestep} to {timestep}, id: {self.cmd_id}"
+        # )
 
         if timestep < self.timestep:
             self.update_pipes(p for p in self.vcd_map.vcd_pipes

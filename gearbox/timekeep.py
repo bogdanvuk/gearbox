@@ -17,7 +17,8 @@ def max_timestep(timekeep=Inject('gearbox/timekeep')):
 
 @inject
 def timetep_event_register_connect(slot, timekeep=Inject('gearbox/timekeep')):
-    dbg_connect(timekeep.timestep_changed, slot)
+    # dbg_connect(timekeep.timestep_changed, slot)
+    timekeep.timestep_changed.connect(slot)
 
 
 def timestep_event_register(slot):
