@@ -134,7 +134,16 @@ def main(argv=sys.argv, layers=Inject('gearbox/layers')):
     parser.add_argument(
         'script', help="PyGears script", default=None, nargs='?')
 
+    parser.add_argument(
+        '-d',
+        '--outdir',
+        metavar='outdir',
+        default=None,
+        help="Output directory")
+
     args = parser.parse_args(argv[1:])
+
+    bind('sim/artifacts_dir', args.outdir)
 
     main_loop(args.script)
 
