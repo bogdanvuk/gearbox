@@ -155,7 +155,7 @@ class GtkWaveProc(QtCore.QObject):
         # print(f'GtkWave> {cmd_id}, {cmd}')
         self.p.send(cmd + '\n')
         try:
-            self.p.expect('%')
+            self.p.expect('%', timeout=None)
         except pexpect.TIMEOUT:
             print("timeout")
             print(self.p.buffer)

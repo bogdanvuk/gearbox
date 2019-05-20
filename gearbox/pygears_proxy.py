@@ -136,15 +136,17 @@ class Gearbox(QtCore.QObject, SimExtend):
         # self.plugin = Gearbox()
         try:
             sim(extens=[VCD, self], check_activity=False)
-        except Exception:
+        except Exception as e:
             # import traceback
             # traceback.print_exc()
+            log_exception(e)
+            self.sim_event.emit('exception')
 
-            import traceback
-            import pdb
-            extype, value, tb = sys.exc_info()
-            traceback.print_exc()
-            pdb.post_mortem(tb)
+            # import traceback
+            # import pdb
+            # extype, value, tb = sys.exc_info()
+            # traceback.print_exc()
+            # pdb.post_mortem(tb)
 
         self.thrd.quit()
 
@@ -326,7 +328,10 @@ class PyGearsClient(QtCore.QObject):
 
             self.simulating = False
 
-        getattr(self, name).emit()
+        if name == 'exception':
+            self.model_loaded.emit()
+        else:
+            getattr(self, name).emit()
 
     def close_model(self):
         if self.cur_model_issue_id is not None:

@@ -101,7 +101,6 @@ def get_pg_vcd_item_signals(subgraph, signal_name_map):
     item_path = []
 
     for name, s in signal_name_map.items():
-        print(name)
         # item = subgraph
         item = subgraph.rtl.gear
         path = name.split('.')
