@@ -269,7 +269,7 @@ class VerilatorVCDMap:
 
             basename = re.search(
                 r"{0}\.({1}\..*)".format(path_prefix,
-                                         self.sim_module.svmod.sv_inst_name),
+                                         self.sim_module.svmod.inst_name),
                 sig_name)
 
             if basename:

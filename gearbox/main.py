@@ -155,5 +155,5 @@ class SimPlugin(SimVCDPlugin):
             'gearbox/layers',
             # [which_key, graph, main, sniper, description, reloader])
             [timekeep, which_key, graph, gtkwave, sniper, compilation])
-        safe_bind('sim/extens/vcd/shmidcat', True)
-        safe_bind('sim/extens/vcd/vcd_fifo', True)
+        safe_bind('sim_extens/vcd/shmidcat', True)
+        safe_bind('sim_extens/vcd/vcd_fifo', True)
