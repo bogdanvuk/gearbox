@@ -1,6 +1,6 @@
 from gearbox import main
-from pygears.cookbook.rng import rng
-from pygears.common import shred
+from pygears.lib.rng import rng
+from pygears.lib import shred
 
 from functools import partial
 
@@ -44,10 +44,10 @@ from functools import partial
 # G.draw('proba.png')
 
 from pygears.typing import Tuple, Uint
-from pygears.cookbook.rng import rng
+from pygears.lib.rng import rng
 from pygears.sim.modules.verilator import SimVerilated
 
-from pygears.cookbook.verif import verif
+from pygears.lib.verif import verif
 from pygears.sim import sim
 from pygears.sim.modules.drv import drv
 
@@ -99,8 +99,8 @@ verif(
     # f=rng(),
     ref=rng(name='ref_model'))
 
-# from pygears.cookbook.verif import directed
-# from pygears.common.rom import rom
+# from pygears.lib.verif import directed
+# from pygears.lib.rom import rom
 
 # data = list(range(2000))
 # addr = list(range(2000))
