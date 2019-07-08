@@ -17,7 +17,7 @@ from pygears.core.partial import Partial
 from pygears.core.port import InPort
 from pygears.typing.pprint import pprint
 from pygears.typing import is_type
-from pygears.common import sieve, cast
+from pygears.lib import sieve, cast
 
 from .constants import Z_VAL_PIPE
 
