@@ -55,7 +55,7 @@ from pygears.sim.modules.drv import drv
 from pygears.sim.extens.vcd import VCD
 from pygears import bind
 
-from pygears.typing_common.pprint import pprint
+from pygears.typing.pprint import pprint
 
 # pprint.pprint(Tuple[Uint[8], Uint[8]], width=30)
 

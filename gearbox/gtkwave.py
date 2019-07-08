@@ -214,7 +214,10 @@ class VerilatorVCDMap:
         self.sim_module = sim_module
 
         self.rtl_node = rtl_map[self.sim_module.gear]
-        self.path_prefix = '.'.join(['TOP', sim_module.wrap_name])
+        if self.sim_module.language == 'sv':
+            self.path_prefix = '.'.join(['TOP', sim_module.wrap_name])
+        else:
+            self.path_prefix = 'TOP'
 
         self.signal_name_map = self.make_relative_signal_name_map(
             self.path_prefix, self.gtkwave_intf.command('list_signals'))
@@ -451,7 +454,6 @@ class GtkWaveGraphIntf(QtCore.QObject):
         return item in self.vcd_map
 
     def show_item(self, item):
-
         if isinstance(item, PipeModel):
             return self.show_pipe(item)
         elif isinstance(item, NodeModel):

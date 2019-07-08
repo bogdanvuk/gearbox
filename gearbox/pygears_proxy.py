@@ -418,7 +418,7 @@ class PyGearsClient(QtCore.QObject):
         config['trace/ignore'].append(runpy.__file__)
         compilation_log_fn = os.path.join(artifacts_dir, 'compilation.log')
         bind('gearbox/compilation_log_fn', compilation_log_fn)
-        bind('svgen/debug_intfs', ['*'])
+        config['hdl/debug_intfs'] = ['*']
 
         os.system(f'rm -rf {compilation_log_fn}')
 
