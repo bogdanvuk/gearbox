@@ -279,7 +279,7 @@ class NodeModel(NamedHierNode):
     def on_error_path(self, sim_bridge=Inject('gearbox/sim_bridge')):
         issue_path = sim_bridge.cur_model_issue_path
         if (self.parent is not None and issue_path
-                and self.rtl.gear.is_descendent(issue_path[-1])):
+                and self.rtl.gear.has_descendent(issue_path[-1])):
             return True
 
         return False
@@ -298,7 +298,7 @@ class NodeModel(NamedHierNode):
         svmod = svgen_map[self.rtl]
         if svmod.is_generated:
             for m in find_cosim_modules():
-                if m.rtlnode.is_descendent(self.rtl):
+                if m.rtlnode.has_descendent(self.rtl):
                     file_names = svmod.file_name
                     if not isinstance(file_names, tuple):
                         file_names = (file_names, )

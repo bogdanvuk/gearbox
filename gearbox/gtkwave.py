@@ -146,12 +146,19 @@ def get_pg_vcd_item_signals(subgraph, signal_name_map):
             rtl_port = closest_rtl_from_gear_port(port)
 
             try:
-                pipe = subgraph[rtl_port.consumer.name]
+                out_intf = rtl_port.consumer
+                pipe = subgraph[out_intf.name]
                 pipe_to_port_map[pipe] = port
                 item = pipe
             except (KeyError, AttributeError):
                 try:
-                    pipe = subgraph[rtl_port.producer.name]
+                    in_intf = rtl_port.producer
+                    if in_intf.is_broadcast:
+                        index = in_intf.consumers.index(rtl_port)
+                        pipe = subgraph[f'{in_intf.name}_bc_{index}']
+                    else:
+                        pipe = subgraph[in_intf.name]
+
                     pipe_to_port_map[pipe] = port
                     item = pipe
                 except (KeyError, AttributeError):
