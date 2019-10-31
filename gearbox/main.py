@@ -2,6 +2,7 @@
 import argparse
 import os
 import sys
+import runpy
 
 from PySide2 import QtCore
 from gearbox.description import description
@@ -14,6 +15,7 @@ from gearbox.sniper import sniper
 from gearbox.which_key import which_key
 from pygears.conf import (Inject, MayInject, PluginBase, bind, inject,
                           registry, safe_bind)
+from pygears import config
 from pygears.conf.custom_settings import load_rc
 from pygears.sim.extens.vcd import SimVCDPlugin
 
@@ -51,7 +53,7 @@ from .timekeep import timekeep
 
 @inject
 def reloader(
-        outdir=MayInject('sim/artifacts_dir'), plugin=Inject('sim/gearbox')):
+        outdir=MayInject('results-dir'), plugin=Inject('sim/gearbox')):
     if plugin.reload:
         try:
             runpy.run_path(get_save_file_path())
@@ -143,7 +145,7 @@ def main(argv=sys.argv, layers=Inject('gearbox/layers')):
 
     args = parser.parse_args(argv[1:])
 
-    bind('sim/artifacts_dir', args.outdir)
+    config['results-dir'] = args.outdir
 
     main_loop(args.script)
 

@@ -279,7 +279,7 @@ def save(layout=Inject('gearbox/layout')):
 
 @inject
 def get_save_file_path(
-        outdir=MayInject('sim/artifacts_dir'),
+        outdir=MayInject('results-dir'),
         script_fn=Inject('gearbox/model_script_name')):
 
     if script_fn is None:

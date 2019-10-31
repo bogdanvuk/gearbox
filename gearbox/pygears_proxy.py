@@ -135,7 +135,7 @@ class Gearbox(QtCore.QObject, SimExtend):
     def run(self):
         # self.plugin = Gearbox()
         try:
-            sim(extens=[VCD, self], check_activity=False)
+            sim(extens=[self], check_activity=False)
         except Exception as e:
             # import traceback
             # traceback.print_exc()
@@ -182,7 +182,7 @@ class PyGearsProc(QtCore.QObject):
     def run(self):
         # self.plugin = Gearbox()
         try:
-            sim(extens=[VCD, self.plugin], check_activity=False)
+            sim(extens=[self.plugin], check_activity=False)
         except Exception:
             # import traceback
             # traceback.print_exc()
@@ -406,19 +406,19 @@ class PyGearsClient(QtCore.QObject):
         self.model_loaded.emit()
 
     def run_model(self, script_fn):
-        artifacts_dir = registry('sim/artifacts_dir')
+        artifacts_dir = config['results-dir']
         if not artifacts_dir:
             artifacts_dir = os.path.join(os.path.dirname(script_fn), 'build')
-            bind('sim/artifacts_dir', artifacts_dir)
+            config['results-dir'] = artifacts_dir
             print(f"Artifacts dir: {artifacts_dir}")
 
         os.makedirs(artifacts_dir, exist_ok=True)
         sys.path.append(os.path.dirname(script_fn))
-        # config['trace/ignore'].append(os.path.dirname(__file__))
+        config['trace/ignore'].append(os.path.dirname(__file__))
         config['trace/ignore'].append(runpy.__file__)
         compilation_log_fn = os.path.join(artifacts_dir, 'compilation.log')
         bind('gearbox/compilation_log_fn', compilation_log_fn)
-        config['hdl/debug_intfs'] = ['*']
+        config['debug/trace'] = ['*']
 
         os.system(f'rm -rf {compilation_log_fn}')
 

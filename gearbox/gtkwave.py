@@ -56,6 +56,14 @@ class PyGearsVCDMap:
         return "Main"
 
     @property
+    def timestep(self):
+        ts = timestep()
+        if ts is None:
+            return 0
+
+        return ts
+
+    @property
     def vcd_fn(self):
         return self.vcd.trace_fn
 
@@ -177,6 +185,19 @@ def get_verilator_item_signals(subgraph, signal_name_map):
     item = subgraph
     item_path = []
 
+    def find_child(parent, name):
+        # Try name as submodule
+        if name in parent:
+            return parent[name]
+
+        # Try name as interface name
+        intf_name = p.rpartition('_')[0]
+
+        if intf_name in parent:
+            return parent[intf_name]
+
+        return None
+
     for name, s in signal_name_map.items():
         item = subgraph
         path = name.split('.')
@@ -188,13 +209,9 @@ def get_verilator_item_signals(subgraph, signal_name_map):
             if prev_item and p == prev_item.basename:
                 item = prev_item
             else:
-                try:
-                    item = item[p]
-                except KeyError:
-                    try:
-                        item = item[p.rpartition('_')[0]]
-                    except KeyError:
-                        break
+                item = find_child(item, p)
+                if item is None:
+                    break
 
             new_item_path.append(item)
 
@@ -258,8 +275,16 @@ class VerilatorVCDMap:
                 yield item
 
     def item_basename(self, item):
-        item_name_stem = item.name[len(self.rtl_node.parent.name) + 1:]
-        return item_name_stem.replace('/', '.')
+        parent = item.rtl.parent
+        path = [item.basename]
+        while parent != self.rtl_node.parent:
+            path.append(registry('svgen/map')[parent].inst_name)
+            parent = parent.parent
+
+        return '.'.join(reversed(path))
+
+        # item_name_stem = item.name[len(self.rtl_node.parent.name) + 1:]
+        # return item_name_stem.replace('/', '.')
 
     def item_name_stem(self, item):
         return '.'.join((self.path_prefix, self.item_basename(item)))
@@ -267,6 +292,14 @@ class VerilatorVCDMap:
     @property
     def name(self):
         return self.sim_module.name
+
+    @property
+    def timestep(self):
+        ts = timestep()
+        if ts is None:
+            return 0
+
+        return ts + 1
 
     @property
     def vcd_fn(self):
@@ -616,9 +649,7 @@ class GtkWaveGraphIntf(QtCore.QObject):
         # print(f'Exiting')
 
     def update_pipes(self, pipes):
-        ts = timestep()
-        if ts is None:
-            ts = 0
+        ts = self.vcd_map.timestep
 
         signal_names = [(pipe, self.vcd_map.pipe_data_signal_stem(pipe)[:-4])
                         for pipe in pipes if pipe.status[0] != ts]
