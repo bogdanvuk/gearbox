@@ -112,9 +112,9 @@ def layout_unload_connect(sim_bridge=Inject('gearbox/sim_bridge')):
 
 
 def load_str_template(template):
-    return Environment(
-        loader=BaseLoader(), trim_blocks=True,
-        lstrip_blocks=True).from_string(template)
+    return Environment(loader=BaseLoader(),
+                       trim_blocks=True,
+                       lstrip_blocks=True).from_string(template)
 
 
 class GraphStatusSaver(HierYielderBase):
@@ -136,10 +136,8 @@ def save_expanded(buffer_init_commands,
     buffer_init_commands['graph'].append('expand')
 
     return load_str_template(expand_func_template).render({
-        'expanded':
-        expanded,
-        'selected':
-        selected
+        'expanded': expanded,
+        'selected': selected
     })
 
 
@@ -153,10 +151,8 @@ def save_gtkwave(buffer_init_commands, layout=Inject('gearbox/layout')):
         buffer_init_commands[b.name].append('gtkwave_load')
 
     if buffers:
-        return load_str_template(gtkwave_load_func_template).render({
-            'buffers':
-            buffers
-        })
+        return load_str_template(gtkwave_load_func_template).render(
+            {'buffers': buffers})
 
     return ''
 
@@ -182,9 +178,8 @@ def save_description(buffer_init_commands, layout=Inject('gearbox/layout')):
         if hasattr(b.view, 'fn'):
             res += f'describe_file("{b.view.fn}", lineno={b.view.lineno})\n'
 
-    return load_str_template(description_load_template).render({
-        'commands': res
-    })
+    return load_str_template(description_load_template).render(
+        {'commands': res})
 
 
 def save_win_layout(name, layout, parent_name=None):
@@ -195,10 +190,9 @@ def save_win_layout(name, layout, parent_name=None):
         else:
             child_name = name + str(i)
             direction = str(child.direction()).partition(".")[-1]
-            res += (
-                f'{child_name} = WindowLayout(\n'
-                f'    {parent_name}, size=0, '
-                f'direction={direction})\n')
+            res += (f'{child_name} = WindowLayout(\n'
+                    f'    {parent_name}, size=0, '
+                    f'direction={direction})\n')
 
             res += f"{name}.addLayout({child_name})\n"
             res += save_win_layout(child_name, child, parent_name=name)
@@ -223,13 +217,12 @@ config['{{k}}'] = {{v}}
 def save_configuration():
     changed = {
         name: var.val
-        for name, var in config.definitions.items() if var.changed
+        for name, var in config.definitions.items()
+        if name.startswith('gtkwave') and var.changed
     }
 
-    return load_str_template(save_configuration_template).render({
-        'configs':
-        changed
-    })
+    return load_str_template(save_configuration_template).render(
+        {'configs': changed})
 
 
 @inject
@@ -278,9 +271,8 @@ def save(layout=Inject('gearbox/layout')):
 
 
 @inject
-def get_save_file_path(
-        outdir=MayInject('results-dir'),
-        script_fn=Inject('gearbox/model_script_name')):
+def get_save_file_path(outdir=MayInject('results-dir'),
+                       script_fn=Inject('gearbox/model_script_name')):
 
     if script_fn is None:
         script_fn = '.gearbox.py'
