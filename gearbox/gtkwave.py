@@ -299,7 +299,7 @@ class VerilatorVCDMap:
         if ts is None:
             return 0
 
-        return ts + 1
+        return ts
 
     @property
     def vcd_fn(self):
@@ -619,7 +619,10 @@ class GtkWaveGraphIntf(QtCore.QObject):
 
             status, _, gtk_timestep = ret.rpartition('\n')
             if gtk_timestep:
-                self.timestep = (int(gtk_timestep) // 10) - 1
+                try:
+                    self.timestep = (int(gtk_timestep) // 10) - 1
+                except ValueError:
+                    self.timestep = 0
 
             if not gtk_timestep or ts - self.timestep > 100:
                 self.should_update = False
