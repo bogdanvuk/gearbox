@@ -209,9 +209,11 @@ def get_verilator_item_signals(subgraph, signal_name_map):
             if prev_item and p == prev_item.basename:
                 item = prev_item
             else:
-                item = find_child(item, p)
-                if item is None:
+                child_item = find_child(item, p)
+                if child_item is None:
                     break
+
+                item = child_item
 
             new_item_path.append(item)
 

@@ -13,14 +13,15 @@ from gearbox.gtkwave import gtkwave
 from gearbox.main_window import MainWindow
 from gearbox.sniper import sniper
 from gearbox.which_key import which_key
-from pygears.conf import (Inject, MayInject, PluginBase, bind, inject,
-                          registry, safe_bind)
+from pygears.conf import (
+    Inject, MayInject, PluginBase, bind, inject, registry, safe_bind)
 from pygears import config
 from pygears.conf.custom_settings import load_rc
 from pygears.sim.extens.vcd import SimVCDPlugin
 
-from . import (actions, buffer_actions, description_actions, file_actions,
-               graph_actions, gtkwave_actions, toggle_actions, window_actions)
+from . import (
+    actions, buffer_actions, description_actions, file_actions, graph_actions,
+    gtkwave_actions, toggle_actions, window_actions)
 from .compilation import compilation
 from .pygears_proxy import sim_bridge
 # import gearbox.graph
@@ -52,8 +53,7 @@ from .timekeep import timekeep
 
 
 @inject
-def reloader(
-        outdir=MayInject('results-dir'), plugin=Inject('sim/gearbox')):
+def reloader(outdir=MayInject('results-dir'), plugin=Inject('sim/gearbox')):
     if plugin.reload:
         try:
             runpy.run_path(get_save_file_path())
@@ -67,8 +67,7 @@ def pygears_proc(script_fn):
 
 @inject
 def set_main_win_title(
-        script_fn=Inject('gearbox/model_script_name'),
-        main=Inject('gearbox/main/inst')):
+        script_fn=Inject('gearbox/model_script_name'), main=Inject('gearbox/main/inst')):
 
     main.setWindowTitle(f'Gearbox - {script_fn}')
 
@@ -82,14 +81,14 @@ class Application(QtWidgets.QApplication):
 
 
 @inject
-def main_loop(script_fn, layers=Inject('gearbox/layers')):
+def main_loop(script_fn, argv, layers=Inject('gearbox/layers')):
     import faulthandler
     faulthandler.enable(file=open('err.log', 'w'))
 
     bind('gearbox/main/new_model_script_fn', None)
-    sys_args = sys.argv.copy()
     # bind('gearbox/main/argv', sys_args)
 
+    sys_args = argv.copy()
     load_rc('.gearbox', os.getcwd())
 
     # app = QtWidgets.QApplication(sys.argv)
@@ -122,32 +121,33 @@ def main_loop(script_fn, layers=Inject('gearbox/layers')):
     if script_fn:
         print('Quitting: ', sys_args)
         print(('gearbox', sys_args[0], script_fn))
-        os.execl(sys_args[0], 'gearbox', script_fn)
+        cmd = [sys_args[0], 'gearbox']
+        for i in range(2, len(sys_args)):
+            if sys_args[i] in ['-d', '--outdir']:
+                cmd.append(sys_args[i])
+                cmd.append(sys_args[i + 1])
+
+        cmd.append(script_fn)
+        os.execl(*cmd)
     else:
         sys.exit(ret)
 
 
 @inject
 def main(argv=sys.argv, layers=Inject('gearbox/layers')):
-    print(f"Started: {sys.argv}")
-    parser = argparse.ArgumentParser(
-        prog="Gearbox - GUI for the PyGears framework")
+    print(f"Started: {argv}")
+    parser = argparse.ArgumentParser(prog="Gearbox - GUI for the PyGears framework")
+
+    parser.add_argument('script', help="PyGears script", default=None, nargs='?')
 
     parser.add_argument(
-        'script', help="PyGears script", default=None, nargs='?')
-
-    parser.add_argument(
-        '-d',
-        '--outdir',
-        metavar='outdir',
-        default=None,
-        help="Output directory")
+        '-d', '--outdir', metavar='outdir', default=None, help="Output directory")
 
     args = parser.parse_args(argv[1:])
 
     config['results-dir'] = args.outdir
 
-    main_loop(args.script)
+    main_loop(args.script, argv)
 
 
 class SimPlugin(SimVCDPlugin):
