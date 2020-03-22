@@ -28,17 +28,17 @@ def toggle_menu():
 
 @shortcut('gtkwave', Qt.Key_J)
 def trace_down():
-    active_buffer().instance.command('trace_down')
+    active_buffer().intf.gtkwave_intf.command('trace_down')
 
 
 @shortcut('gtkwave', Qt.Key_K)
 def trace_up():
-    active_buffer().instance.command('trace_up')
+    active_buffer().intf.gtkwave_intf.command('trace_up')
 
 
 @shortcut('gtkwave', Qt.Key_Return)
 def trace_toggle():
-    active_buffer().instance.command('gtkwave::/Edit/Toggle_Group_Open|Close')
+    active_buffer().intf.gtkwave_intf.command('gtkwave::/Edit/Toggle_Group_Open|Close')
 
 
 # @inject_async

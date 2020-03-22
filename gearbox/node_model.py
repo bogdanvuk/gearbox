@@ -14,7 +14,7 @@ from .pipe import Pipe
 from .html_utils import highlight, tabulate, highlight_style
 from pygears import registry
 from pygears.core.partial import Partial
-from pygears.core.port import InPort
+from pygears.core.port import InPort, HDLProducer
 from pygears.typing.pprint import pprint
 from pygears.typing import is_type
 from pygears.lib import sieve, cast
@@ -251,11 +251,15 @@ class NodeModel(NamedHierNode):
         for child in self.rtl.child:
             if isinstance(child, RTLIntf):
                 for i in range(len(child.consumers)):
+                    if isinstance(child.producer, HDLProducer):
+                        continue
+
                     self.rtl_map[child] = PipeModel(
                         child, consumer_id=i, parent=self)
 
                     if parent is not None:
                         self.rtl_map[child].view.hide()
+
 
         # import pdb; pdb.set_trace()
         if self.on_error_path:
