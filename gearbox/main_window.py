@@ -1,7 +1,7 @@
 import os
 
 from PySide2 import QtCore, QtWidgets, QtGui
-from pygears.conf import PluginBase, registry, safe_bind, inject, Inject, bind, config, MayInject
+from pygears.conf import PluginBase, inject, Inject, MayInject, reg
 
 from functools import partial
 from .minibuffer import Minibuffer
@@ -13,12 +13,7 @@ class Action(QtWidgets.QAction):
     activated = QtCore.Signal()
 
     @inject
-    def __init__(self,
-                 domain,
-                 key,
-                 callback,
-                 name,
-                 main=Inject('gearbox/main/inst')):
+    def __init__(self, domain, key, callback, name, main=Inject('gearbox/main/inst')):
         super().__init__(name.title(), parent=main)
 
         if not isinstance(key, tuple):
@@ -52,12 +47,7 @@ class Action(QtWidgets.QAction):
 
 class Shortcut(QtCore.QObject):
     @inject
-    def __init__(self,
-                 domain,
-                 key,
-                 callback,
-                 name,
-                 main=Inject('gearbox/main/inst')):
+    def __init__(self, domain, key, callback, name, main=Inject('gearbox/main/inst')):
         super().__init__()
 
         if not isinstance(key, tuple):
@@ -122,8 +112,7 @@ class MainWindow(QtWidgets.QMainWindow):
         super().__init__(parent)
 
         self.setWindowIcon(
-            QtGui.QIcon(os.path.join(os.path.dirname(__file__),
-                                     'gearbox.png')))
+            QtGui.QIcon(os.path.join(os.path.dirname(__file__), 'gearbox.png')))
 
         desktop = QtWidgets.QDesktopWidget()
         desktop_frame = desktop.availableGeometry(self)
@@ -138,7 +127,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.vbox.setMargin(0)
         self.vbox.setContentsMargins(0, 0, 0, 0)
 
-        safe_bind('gearbox/main/inst', self)
+        reg['gearbox/main/inst'] = self
 
         self.buffers = BufferStack(main=self)
         self.vbox.addLayout(self.buffers)
@@ -149,8 +138,8 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.minibuffer = Minibuffer()
         # self.minibuffer.completed.connect(self._minibuffer_completed)
-        safe_bind('gearbox/minibuffer', self.minibuffer)
-        safe_bind('gearbox/domain', None)
+        reg['gearbox/minibuffer'] = self.minibuffer
+        reg['gearbox/domain'] = None
 
         self.vbox.addLayout(self.minibuffer.view)
 
@@ -158,19 +147,20 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self._init_actions()
 
-        # for domain, key, callback, name in registry('gearbox/shortcuts'):
+        # for domain, key, callback, name in reg['gearbox/shortcuts']:
         #     Shortcut(domain, key, callback, name)
 
         self.create_menus()
 
-        if not registry('gearbox/main/menus'):
+        if not reg['gearbox/main/menus']:
             self.menuBar().hide()
 
     @inject
-    def closeEvent(self,
-                   event,
-                   script_fn=Inject('gearbox/model_script_name'),
-                   sim_bridge=Inject('gearbox/sim_bridge')):
+    def closeEvent(
+        self,
+        event,
+        script_fn=Inject('gearbox/model_script_name'),
+        sim_bridge=Inject('gearbox/sim_bridge')):
         if script_fn:
             event.ignore()
             sim_bridge.invoke_method('close_script')
@@ -178,10 +168,9 @@ class MainWindow(QtWidgets.QMainWindow):
             super().closeEvent(event)
 
     @inject
-    def create_menus(self,
-                     prefixes=Inject('gearbox/prefixes'),
-                     shortcuts=Inject('gearbox/shortcuts')):
-        for domain, key, callback, name in registry('gearbox/shortcuts'):
+    def create_menus(
+        self, prefixes=Inject('gearbox/prefixes'), shortcuts=Inject('gearbox/shortcuts')):
+        for domain, key, callback, name in reg['gearbox/shortcuts']:
             if not isinstance(key, tuple):
                 key = (key, )
 
@@ -194,18 +183,15 @@ class MainWindow(QtWidgets.QMainWindow):
                 start_skip = 2
 
             else:
-                submenu = self.get_or_create_submenu(current_menu,
-                                                     domain.title())
+                submenu = self.get_or_create_submenu(current_menu, domain.title())
                 action = self.get_subaction(current_menu, domain.title())
                 action.setVisible(False)
                 current_menu = submenu
 
             for i in range(start_skip, len(key) + 1):
                 if i < len(key):
-                    menu_name = prefixes.get((domain, key[:i]),
-                                             'group').title()
-                    current_menu = self.get_or_create_submenu(
-                        current_menu, menu_name)
+                    menu_name = prefixes.get((domain, key[:i]), 'group').title()
+                    current_menu = self.get_or_create_submenu(current_menu, menu_name)
                 else:
                     action = Action(domain, key, callback, name)
                     self.addAction(action)
@@ -246,8 +232,8 @@ class MainWindow(QtWidgets.QMainWindow):
     #     # if (event.type() is QtCore.QEvent.Type.Leave) or (
     #     #         event.type() is QtCore.QEvent.Type.Enter) or (
     #     #             event.type() is QtCore.QEvent.Type.HoverMove):
-    #     #     editor = registry('gearbox/editor')
-    #     #     graph = registry('gearbox/graph')
+    #     #     editor = reg['gearbox/editor']
+    #     #     graph = reg['gearbox/graph']
     #     #     graph.clearFocus()
     #     #     editor.win.widget.activateWindow()
     #     #     editor.win.widget.setFocus()
@@ -268,9 +254,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.shortcut_triggered.emit(shortcut)
 
     def _init_actions(self):
-        QtWidgets.QShortcut(
-            QtGui.QKeySequence(QtCore.Qt.CTRL + QtCore.Qt.Key_G),
-            self).activated.connect(self._key_cancel_event)
+        QtWidgets.QShortcut(QtGui.QKeySequence(QtCore.Qt.CTRL + QtCore.Qt.Key_G),
+                            self).activated.connect(self._key_cancel_event)
 
         QtWidgets.QShortcut(QtGui.QKeySequence(QtCore.Qt.Key_Escape),
                             self).activated.connect(self._key_cancel_event)
@@ -298,15 +283,14 @@ class MainWindow(QtWidgets.QMainWindow):
     def change_domain(self, domain):
 
         current_menu = self.menuBar()
-        prev_domain = registry('gearbox/domain')
+        prev_domain = reg['gearbox/domain']
 
         if prev_domain:
-            action = self.get_subaction(current_menu,
-                                        registry('gearbox/domain').title())
+            action = self.get_subaction(current_menu, reg['gearbox/domain'].title())
             if action:
                 action.setVisible(False)
 
-        bind('gearbox/domain', domain)
+        reg['gearbox/domain'] = domain
 
         if domain:
             action = self.get_subaction(current_menu, domain.title())
@@ -319,14 +303,12 @@ class MainWindow(QtWidgets.QMainWindow):
 class MainWindowPlugin(PluginBase):
     @classmethod
     def bind(cls):
-        safe_bind('gearbox/shortcuts', [])
-        safe_bind('gearbox/prefixes', {})
+        reg['gearbox/shortcuts'] = []
+        reg['gearbox/prefixes'] = {}
 
         @inject
         def menu_visibility(var, visible, main=MayInject('gearbox/main/inst')):
             if main:
                 main.menuBar().setVisible(visible)
 
-        config.define('gearbox/main/menus',
-                      default=True,
-                      setter=menu_visibility)
+        reg.confdef('gearbox/main/menus', default=True, setter=menu_visibility)

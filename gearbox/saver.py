@@ -1,13 +1,13 @@
 import runpy
 import os
-from pygears.conf import Inject, inject, MayInject, config
+from pygears.conf import Inject, inject, MayInject, reg
 from .graph import GraphVisitor
 from jinja2 import Environment, BaseLoader
 from pygears.core.hier_node import HierYielderBase
 from .layout import Window
 
 save_file_prolog = """
-from pygears.conf import Inject, config, inject_async, inject
+from pygears.conf import Inject, reg, inject_async, inject
 from gearbox.utils import single_shot_connect
 from gearbox.layout import Window, WindowLayout
 from gearbox.description import describe_file
@@ -209,7 +209,7 @@ for i, s in enumerate({streches}):
 
 save_configuration_template = """
 {% for k,v in configs.items() -%}
-config['{{k}}'] = {{v}}
+reg['{{k}}'] = {{v}}
 {% endfor %}
 """
 
@@ -217,7 +217,7 @@ config['{{k}}'] = {{v}}
 def save_configuration():
     changed = {
         name: var.val
-        for name, var in config.definitions.items()
+        for name, var in reg.definitions.items()
         if name.startswith('gtkwave') and var.changed
     }
 

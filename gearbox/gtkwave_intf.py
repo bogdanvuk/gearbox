@@ -4,7 +4,7 @@ import re
 import pexpect
 from PySide2 import QtCore, QtGui, QtWidgets
 
-from pygears.conf import Inject, inject, registry
+from pygears.conf import Inject, inject, reg
 
 
 class GtkEventProc(QtCore.QObject):
@@ -55,8 +55,8 @@ class GtkEventProc(QtCore.QObject):
         # app.processEvents(QtCore.QEventLoop.AllEvents)
 
         if app.focusWidget():
-            app.postEvent(app.focusWidget(),
-                          QtGui.QKeyEvent(QtGui.QKeyEvent.KeyPress, *key))
+            app.postEvent(
+                app.focusWidget(), QtGui.QKeyEvent(QtGui.QKeyEvent.KeyPress, *key))
 
     def KeyRelease(self, data):
 
@@ -65,8 +65,8 @@ class GtkEventProc(QtCore.QObject):
         key = self.detect_key(data)
 
         if app.focusWidget():
-            app.postEvent(app.focusWidget(),
-                          QtGui.QKeyEvent(QtGui.QKeyEvent.KeyRelease, *key))
+            app.postEvent(
+                app.focusWidget(), QtGui.QKeyEvent(QtGui.QKeyEvent.KeyRelease, *key))
 
 
 class GtkWaveProc(QtCore.QObject):
@@ -110,9 +110,19 @@ class GtkWaveProc(QtCore.QObject):
         print(cmd)
         self.p = pexpect.spawnu(cmd)
         self.p.setecho(False)
-        self.p.expect('%')
-        version = re.search(r"GTKWave Analyzer v(\d{1}\.\d{1}.\d{2})",
-                            self.p.before).group(0)
+        try:
+            self.p.expect('%', timeout=4)
+        except pexpect.TIMEOUT:
+            print(f'Gtkwave start failed {self.trace_fn}: {self.p.before}')
+            raise Exception(f'Gtkwave failed to start: {self.p.before}')
+
+        version = re.search(r"GTKWave Analyzer v(\d{1}\.\d{1}.\d{2})", self.p.before)
+
+        if version is None:
+            raise Exception(f'Gtkwave failed to start: {self.p.before}')
+
+        version = version.group(0)
+
         print(f"GtkWave {version} window")
 
         print(self.p.send('gtkwave::getGtkWindowID\n'))
@@ -161,10 +171,8 @@ class GtkWaveProc(QtCore.QObject):
             print(self.p.buffer)
             return
 
-        resp = '\n'.join([
-            d for d in self.p.before.strip().split('\n')
-            if not d.startswith("$$")
-        ])
+        resp = '\n'.join(
+            [d for d in self.p.before.strip().split('\n') if not d.startswith("$$")])
 
         # print(f'GtkWave: {self.p.before.strip()}')
         # print(f'Response: {cmd_id}, {resp}')
@@ -263,8 +271,7 @@ class GtkWaveWindow(QtCore.QObject):
         return resp
 
     @inject
-    def window_up(self, version, pid, window_id,
-                  graph=Inject('gearbox/graph')):
+    def window_up(self, version, pid, window_id, graph=Inject('gearbox/graph')):
         print(f'GtkWave started: {version}, {pid}, {window_id}')
         self.window_id = window_id
         self.gtkwave_win = QtGui.QWindow.fromWinId(window_id)
@@ -275,7 +282,7 @@ class GtkWaveWindow(QtCore.QObject):
         self.widget.setWindowFlag(QtCore.Qt.BypassWindowManagerHint)
 
         self.command(f'gtkwave::toggleStripGUI')
-        if registry('gearbox/gtkwave/menus'):
+        if reg['gearbox/gtkwave/menus']:
             self.command(f'gtkwave::toggleStripGUI')
 
         self.command(f'gtkwave::setZoomFactor -7')

@@ -4,23 +4,19 @@ import os
 import queue
 import runpy
 import sys
-import threading
-import time
 
 from PySide2 import QtCore, QtWidgets
 
-from pygears import MultiAlternativeError, clear
-from pygears.conf import (Inject, PluginBase, bind, config, inject, registry,
-                          safe_bind)
+from pygears import MultiAlternativeError
+from pygears.conf import Inject, PluginBase, inject, reg
 from pygears.conf.trace import pygears_excepthook, log_exception
-from pygears.sim import SimFinish, sim, timestep, sim_log
+from pygears.sim import SimFinish, sim
 from pygears.sim.extens.sim_extend import SimExtend
-from pygears.sim.extens.vcd import VCD
 from pygears.sim.modules import SimVerilated
 
 from .node_model import find_cosim_modules
 
-from jinja2.debug import fake_exc_info
+# from jinja2.debug import fake_exc_info
 
 
 class EmptyHierarchy(Exception):
@@ -31,7 +27,6 @@ class Gearbox(QtCore.QObject, SimExtend):
     sim_event = QtCore.Signal(str)
 
     def __init__(self,
-                 top=None,
                  live=True,
                  reload=True,
                  standalone=False,
@@ -40,7 +35,7 @@ class Gearbox(QtCore.QObject, SimExtend):
         QtCore.QObject.__init__(self)
         self.loop = QtCore.QEventLoop(self)
 
-        bind('sim/gearbox', self)
+        reg['sim/gearbox'] = self
 
         # self.queue = sim_queue
         # if self.queue is None:
@@ -58,8 +53,8 @@ class Gearbox(QtCore.QObject, SimExtend):
         self.thrd.started.connect(self.run)
         self.thrd.start()
 
-    def __call__(self, top):
-        SimExtend.__init__(self, top)
+    def __call__(self):
+        SimExtend.__init__(self)
         return self
 
     def _should_break(self):
@@ -157,7 +152,7 @@ class Gearbox(QtCore.QObject, SimExtend):
 
 def sim_bridge():
     sim_bridge = PyGearsClient()
-    safe_bind('gearbox/sim_bridge', sim_bridge)
+    reg['gearbox/sim_bridge'] = sim_bridge
     return sim_bridge
 
 
@@ -319,10 +314,10 @@ class PyGearsClient(QtCore.QObject):
 
     def handle_event(self, name):
         if name == 'after_cleanup':
-            sim_exception = registry('sim/exception')
+            sim_exception = reg['sim/exception']
             if sim_exception:
                 log_exception(sim_exception)
-                # layout = registry('gearbox/layout')
+                # layout = reg['gearbox/layout']
                 # layout.current_window.place_buffer(
                 #     layout.get_buffer_by_name('compilation'))
 
@@ -348,10 +343,10 @@ class PyGearsClient(QtCore.QObject):
         self.model_closed.emit()
 
     def close_script(self):
-        if registry('gearbox/model_script_name'):
+        if reg['gearbox/model_script_name']:
             # bind('gearbox/model_script_name', None)
             # if self.queue is not None:
-            #     registry('sim/gearbox').done = True
+            #     reg['sim/gearbox'].done = True
             #     self.closing = True
             #     self.cont()
             # else:
@@ -406,25 +401,25 @@ class PyGearsClient(QtCore.QObject):
         self.model_loaded.emit()
 
     def run_model(self, script_fn):
-        artifacts_dir = config['results-dir']
+        artifacts_dir = reg['results-dir']
         if not artifacts_dir:
             artifacts_dir = os.path.join(os.path.dirname(script_fn), 'build')
-            config['results-dir'] = artifacts_dir
+            reg['results-dir'] = artifacts_dir
             print(f"Artifacts dir: {artifacts_dir}")
 
         os.makedirs(artifacts_dir, exist_ok=True)
         sys.path.append(os.path.dirname(script_fn))
-        config['trace/ignore'].append(os.path.dirname(__file__))
-        config['trace/ignore'].append(runpy.__file__)
+        reg['trace/ignore'].append(os.path.dirname(__file__))
+        reg['trace/ignore'].append(runpy.__file__)
         compilation_log_fn = os.path.join(artifacts_dir, 'compilation.log')
-        bind('gearbox/compilation_log_fn', compilation_log_fn)
-        config['debug/trace'] = ['*']
+        reg['gearbox/compilation_log_fn'] = compilation_log_fn
+        reg['debug/trace'] = ['*']
 
         os.system(f'rm -rf {compilation_log_fn}')
 
         # import pdb; pdb.set_trace()
         old_handlers = {}
-        for name in registry('logger'):
+        for name in reg['logger']:
             if name in logging.root.manager.loggerDict:
                 logger = logging.getLogger(name)
                 old_handlers[name] = logger.handlers.copy()
@@ -433,7 +428,7 @@ class PyGearsClient(QtCore.QObject):
                     logger.get_logger_handler(
                         logging.FileHandler(compilation_log_fn)))
 
-        bind('gearbox/model_script_name', script_fn)
+        reg['gearbox/model_script_name'] = script_fn
         self.script_loading_started.emit()
 
         self.err = None
@@ -446,7 +441,7 @@ class PyGearsClient(QtCore.QObject):
         self.script_loaded.emit()
 
         if not self.err:
-            root = registry('gear/hier_root')
+            root = reg['gear/root']
             if not root.child:
                 self.err = EmptyHierarchy('No PyGears model created')
                 exc_info = fake_exc_info((EmptyHierarchy, self.err, None),
@@ -494,7 +489,7 @@ class PyGearsClient(QtCore.QObject):
     #         try:
     #             msg = self.queue.get(0.001)
     #         except queue.Empty:
-    #             if registry('gearbox/model_script_name') is None:
+    #             if reg['gearbox/model_script_name'] is None:
     #                 print("HERE?")
     #                 self.queue = None
     #                 return
@@ -571,5 +566,5 @@ class PyGearsClient(QtCore.QObject):
 class MainWindowPlugin(PluginBase):
     @classmethod
     def bind(cls):
-        safe_bind('gearbox/model_script_name', None)
-        safe_bind('gearbox/compilation_log_fn', None)
+        reg['gearbox/model_script_name'] = None
+        reg['gearbox/compilation_log_fn'] = None

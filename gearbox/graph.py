@@ -16,8 +16,7 @@ from .layout import Buffer, LayoutPlugin
 from .html_utils import tabulate, fontify
 from .utils import single_shot_connect
 
-from pygears.rtl import rtlgen
-from pygears.conf import Inject, inject, bind, MayInject, registry, safe_bind
+from pygears.conf import Inject, inject, MayInject, reg
 
 ZOOM_MIN = -0.95
 ZOOM_MAX = 2.0
@@ -50,9 +49,9 @@ class GraphBuffer(Buffer):
 @inject
 def graph(
         sim_bridge=Inject('gearbox/sim_bridge'),
-        root=Inject('gear/hier_root')):
+        root=Inject('gear/root')):
 
-    bind('gearbox/graph_model_ctrl', GraphModelCtrl())
+    reg['gearbox/graph_model_ctrl'] = GraphModelCtrl()
 
 
 # def graph_delete():
@@ -62,7 +61,7 @@ def graph(
 
 # @inject
 # def graph_create(
-#         root=Inject('gear/hier_root'),
+#         root=Inject('gear/root'),
 #         sim_bridge=Inject('gearbox/sim_bridge')):
 
 #     view = Graph()
@@ -94,14 +93,12 @@ class GraphModelCtrl(QtCore.QObject):
         self.sim_bridge.model_closed.connect(self.graph_delete)
 
     @inject
-    def graph_create(self, root=Inject('gear/hier_root')):
+    def graph_create(self, root=Inject('gear/root')):
         view = Graph()
 
-        bind('gearbox/graph', view)
-        # rtl_root = rtlgen(root, force=True)
-        rtl_root = rtlgen(root)
-        top_model = NodeModel(rtl_root)
-        bind('gearbox/graph_model', top_model)
+        reg['gearbox/graph'] = view
+        top_model = NodeModel(root)
+        reg['gearbox/graph_model'] = top_model
         view.top = top_model.view
         top_model.view.layout()
         view.fit_all()
@@ -122,8 +119,8 @@ class GraphModelCtrl(QtCore.QObject):
     def graph_delete(self):
         self.buff.delete()
         del self.buff
-        bind('gearbox/graph', None)
-        bind('gearbox/graph_model', None)
+        reg['gearbox/graph'] = None
+        reg['gearbox/graph_model'] = None
 
 
 class Graph(QtWidgets.QGraphicsView):
@@ -500,4 +497,4 @@ class Graph(QtWidgets.QGraphicsView):
 class GraphBufferPlugin(LayoutPlugin):
     @classmethod
     def bind(cls):
-        safe_bind('gearbox/plugins/graph', {})
+        reg['gearbox/plugins/graph'] = {}

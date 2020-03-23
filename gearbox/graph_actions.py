@@ -6,7 +6,7 @@ from .pipe import Pipe
 from .popup_desc import popup_desc, popup_cancel
 from functools import wraps
 from PySide2.QtCore import Qt
-from pygears.conf import Inject, inject, registry
+from pygears.conf import Inject, inject, reg
 from .main_window import register_prefix, message
 from .actions import shortcut, get_minibuffer_input, Interactive
 from .description import describe_text, describe_trace, describe_file
@@ -335,7 +335,5 @@ class GraphDescription:
 class GtkwaveActionsPlugin(GraphBufferPlugin):
     @classmethod
     def bind(cls):
-        registry(
-            'gearbox/plugins/graph')['TimestepModeline'] = TimestepModeline
-        registry(
-            'gearbox/plugins/graph')['GraphDescription'] = GraphDescription
+        reg['gearbox/plugins/graph']['TimestepModeline'] = TimestepModeline
+        reg['gearbox/plugins/graph']['GraphDescription'] = GraphDescription

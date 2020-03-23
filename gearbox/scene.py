@@ -1,6 +1,6 @@
 from PySide2 import QtCore, QtGui, QtWidgets
 
-from pygears.conf import Inject, inject, config
+from pygears.conf import Inject, inject, reg
 
 from .theme import ThemePlugin
 
@@ -78,4 +78,4 @@ class NodeScene(QtWidgets.QGraphicsScene):
 class ScenePlugin(ThemePlugin):
     @classmethod
     def bind(cls):
-        config.define('gearbox/theme/graph-grid-color', default='#404040')
+        reg.confdef('gearbox/theme/graph-grid-color', default='#404040')

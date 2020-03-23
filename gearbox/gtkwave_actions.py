@@ -4,7 +4,7 @@ from .actions import shortcut
 from .layout import active_buffer
 from .gtkwave import GtkWaveBufferPlugin
 from .graph import GraphBufferPlugin
-from pygears.conf import Inject, inject_async, inject, bind, registry, MayInject, config
+from pygears.conf import Inject, inject_async, inject, MayInject, reg
 from .sim_actions import time_search, step_simulator, cont_simulator
 from .timestep_modeline import TimestepModeline
 
@@ -23,7 +23,7 @@ def create_node_expand_toggle(
 
 @shortcut('gtkwave', (Qt.Key_T, Qt.Key_M))
 def toggle_menu():
-    config['gearbox/gtkwave/menus'] = not config['gearbox/gtkwave/menus']
+    reg['gearbox/gtkwave/menus'] = not reg['gearbox/gtkwave/menus']
 
 
 @shortcut('gtkwave', Qt.Key_J)
@@ -92,8 +92,6 @@ shortcut('gtkwave', Qt.Key_Colon)(time_search)
 class GtkwaveActionsPlugin(GraphBufferPlugin, GtkWaveBufferPlugin):
     @classmethod
     def bind(cls):
-        registry('gearbox/plugins/graph'
-                 )['GraphGtkwaveSelectSync'] = GraphGtkwaveSelectSync
+        reg['gearbox/plugins/graph']['GraphGtkwaveSelectSync'] = GraphGtkwaveSelectSync
 
-        registry(
-            'gearbox/plugins/gtkwave')['TimestepModeline'] = TimestepModeline
+        reg['gearbox/plugins/gtkwave']['TimestepModeline'] = TimestepModeline

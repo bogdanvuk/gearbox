@@ -2,7 +2,7 @@
 import inspect
 from PySide2.QtCore import Qt
 from PySide2 import QtCore
-from pygears.conf import Inject, inject, registry, inject_async, bind
+from pygears.conf import Inject, reg, inject, inject_async
 from functools import wraps
 from .main_window import Shortcut, register_prefix
 
@@ -58,10 +58,10 @@ def shortcut(domain, shortcut, name=None):
                 }
                 func(**kwds)
 
-            registry('gearbox/shortcuts').append((domain, shortcut, arg_func,
+            reg['gearbox/shortcuts'].append((domain, shortcut, arg_func,
                                                   sh_name))
         else:
-            registry('gearbox/shortcuts').append((domain, shortcut, func,
+            reg['gearbox/shortcuts'].append((domain, shortcut, func,
                                                   sh_name))
 
     return wrapper
@@ -98,7 +98,7 @@ class ShortcutRepeat(QtCore.QObject):
 
 @inject_async
 def create_shortcut_repeater(main=Inject('gearbox/main/inst')):
-    bind('gearbox/shortcut_repeater', ShortcutRepeat(main))
+    reg['gearbox/shortcut_repeater'] = ShortcutRepeat(main)
 
 
 register_prefix(None, Qt.Key_Space, 'SPC')

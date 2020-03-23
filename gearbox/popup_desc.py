@@ -1,5 +1,5 @@
 from PySide2 import QtWidgets, QtCore, QtGui
-from pygears.conf import Inject, inject, bind, MayInject
+from pygears.conf import Inject, inject, reg, MayInject
 from .html_utils import HtmlFormatter
 from .layout import active_buffer
 
@@ -112,7 +112,7 @@ class PopupDesc(QtWidgets.QTextEdit):
 def popup_desc(text, buff, w=MayInject('gearbox/popup_desc')):
     if w is None:
         w = PopupDesc()
-        bind('gearbox/popup_desc', w)
+        reg['gearbox/popup_desc'] = w
 
     w.popup(text, buff)
 

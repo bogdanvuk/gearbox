@@ -1,9 +1,7 @@
 import os
-from functools import partial
 from PySide2.QtCore import Qt
 from PySide2 import QtWidgets
-from pygears.conf import Inject, inject, registry, bind
-from .utils import single_shot_connect
+from pygears.conf import Inject, inject, reg
 from .main_window import register_prefix
 from .actions import shortcut
 from .saver import save
@@ -37,10 +35,10 @@ def open_file_interact(
 
     if script_fn:
         if prev_script_fn:
-            bind('gearbox/main/new_model_script_fn', script_fn)
+            reg['gearbox/main/new_model_script_fn'] = script_fn
             close_file()
         else:
-            registry('gearbox/sim_bridge').invoke_method(
+            reg['gearbox/sim_bridge'].invoke_method(
                 'run_model', script_fn=script_fn)
 
 
@@ -68,7 +66,7 @@ def reload_file(
         layout=Inject('gearbox/layout')):
 
     if script_fn:
-        bind('gearbox/main/new_model_script_fn', script_fn)
+        reg['gearbox/main/new_model_script_fn'] = script_fn
         close_file()
 
 
@@ -82,5 +80,5 @@ def reload_file_save_layout(
 
     if script_fn:
         save()
-        bind('gearbox/main/new_model_script_fn', script_fn)
+        reg['gearbox/main/new_model_script_fn'] = script_fn
         close_file()

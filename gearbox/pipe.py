@@ -1,14 +1,12 @@
 #!/usr/bin/python
-import math
 
 from PySide2 import QtCore, QtGui, QtWidgets
-from pygears.conf import Inject, inject, registry
+from pygears.conf import inject
 
 from .constants import (
     PIPE_DEFAULT_COLOR, PIPE_ACTIVE_COLOR, PIPE_HIGHLIGHT_COLOR,
     PIPE_STYLE_DASHED, PIPE_STYLE_DEFAULT, PIPE_STYLE_DOTTED, PIPE_WIDTH,
     IN_PORT, OUT_PORT, Z_VAL_PIPE, PIPE_WAITED_COLOR, PIPE_HANDSHAKED_COLOR)
-from .port import PortItem
 from .theme import themify
 
 PIPE_STYLES = {

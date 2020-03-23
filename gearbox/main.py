@@ -4,18 +4,14 @@ import os
 import sys
 import runpy
 
-from PySide2 import QtCore
-from gearbox.description import description
-from PySide2 import QtCore, QtGui, QtWidgets
+from PySide2 import QtGui, QtWidgets
 
 from gearbox.graph import graph
 from gearbox.gtkwave import gtkwave
 from gearbox.main_window import MainWindow
 from gearbox.sniper import sniper
 from gearbox.which_key import which_key
-from pygears.conf import (
-    Inject, MayInject, PluginBase, bind, inject, registry, safe_bind)
-from pygears import config
+from pygears.conf import Inject, MayInject, inject, reg
 from pygears.conf.custom_settings import load_rc
 from pygears.sim.extens.vcd import SimVCDPlugin
 
@@ -67,7 +63,7 @@ def pygears_proc(script_fn):
 
 @inject
 def set_main_win_title(
-        script_fn=Inject('gearbox/model_script_name'), main=Inject('gearbox/main/inst')):
+    script_fn=Inject('gearbox/model_script_name'), main=Inject('gearbox/main/inst')):
 
     main.setWindowTitle(f'Gearbox - {script_fn}')
 
@@ -85,7 +81,7 @@ def main_loop(script_fn, argv, layers=Inject('gearbox/layers')):
     import faulthandler
     faulthandler.enable(file=open('err.log', 'w'))
 
-    bind('gearbox/main/new_model_script_fn', None)
+    reg['gearbox/main/new_model_script_fn'] = None
     # bind('gearbox/main/argv', sys_args)
 
     sys_args = argv.copy()
@@ -117,7 +113,7 @@ def main_loop(script_fn, argv, layers=Inject('gearbox/layers')):
 
     main_window.show()
     ret = app.exec_()
-    script_fn = registry('gearbox/main/new_model_script_fn')
+    script_fn = reg['gearbox/main/new_model_script_fn']
     if script_fn:
         print('Quitting: ', sys_args)
         print(('gearbox', sys_args[0], script_fn))
@@ -145,7 +141,7 @@ def main(argv=sys.argv, layers=Inject('gearbox/layers')):
 
     args = parser.parse_args(argv[1:])
 
-    config['results-dir'] = args.outdir
+    reg['results-dir'] = args.outdir
 
     main_loop(args.script, argv)
 
@@ -153,9 +149,6 @@ def main(argv=sys.argv, layers=Inject('gearbox/layers')):
 class SimPlugin(SimVCDPlugin):
     @classmethod
     def bind(cls):
-        safe_bind(
-            'gearbox/layers',
-            # [which_key, graph, main, sniper, description, reloader])
-            [timekeep, which_key, graph, gtkwave, sniper, compilation])
-        safe_bind('sim_extens/vcd/shmidcat', True)
-        safe_bind('sim_extens/vcd/vcd_fifo', True)
+        reg['gearbox/layers'] = [timekeep, which_key, graph, gtkwave, sniper, compilation]
+        reg['sim_extens/vcd/shmidcat'] = True
+        reg['sim_extens/vcd/vcd_fifo'] = True

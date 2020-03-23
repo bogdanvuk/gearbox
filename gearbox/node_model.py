@@ -4,17 +4,14 @@ import functools
 from pygears.sim.modules import SimVerilated, SimSocket
 from pygears.core.hier_node import HierVisitorBase
 from pygears.core.hier_node import NamedHierNode
-from pygears.conf import inject, Inject
-from pygears.rtl.node import RTLNode
-from pygears.rtl.intf import RTLIntf
+from pygears.conf import inject, Inject, reg
 from .node import NodeItem, hier_expand, hier_painter, node_painter, minimized_painter
 from .node import node_layout, hier_layout, minimized_layout
 from pygears.sim.modules.cosim_base import CosimBase
 from .pipe import Pipe
 from .html_utils import highlight, tabulate, highlight_style
-from pygears import registry
 from pygears.core.partial import Partial
-from pygears.core.port import InPort, HDLProducer
+from pygears.core.port import InPort, HDLProducer, HDLConsumer
 from pygears.typing.pprint import pprint
 from pygears.typing import is_type
 from pygears.lib import sieve, cast
@@ -31,7 +28,7 @@ pprint.PrettyPrinter._dispatch[Partial.__repr__] = pprint_Partial
 
 
 @inject
-def find_cosim_modules(top=Inject('gear/hier_root')):
+def find_cosim_modules(top=Inject('gear/root')):
     class CosimVisitor(HierVisitorBase):
         @inject
         def __init__(self, sim_map=Inject('sim/map')):
@@ -52,7 +49,7 @@ def find_cosim_modules(top=Inject('gear/hier_root')):
 from .node_abstract import AbstractNodeItem
 
 from .port import PortItem
-from pygears.rtl.port import OutPort
+from pygears.core.port import OutPort
 from PySide2 import QtWidgets
 
 
@@ -106,12 +103,17 @@ class PipeModel(NamedHierNode):
     def __init__(self, intf, consumer_id, parent=None):
         super().__init__(parent=parent)
 
+        self.svintf = reg['hdlgen/map'].get(intf, None)
+
         self.rtl = intf
         self.consumer_id = consumer_id
         output_port_model = intf.producer
         input_port_model = intf.consumers[consumer_id]
 
-        if output_port_model.node is parent.rtl:
+        if output_port_model is None:
+            breakpoint()
+
+        if output_port_model.gear is parent.rtl:
             try:
                 output_port = parent.view.inputs[output_port_model.index]
             except IndexError:
@@ -122,16 +124,16 @@ class PipeModel(NamedHierNode):
             # parent.input_int_pipes[output_port_model.index] = self
             parent.input_int_pipes.append(self)
         else:
-            output_port = parent[output_port_model.node.basename].view.outputs[
+            output_port = parent[output_port_model.gear.basename].view.outputs[
                 output_port_model.index]
 
             # parent.rtl_map[output_port_model.node].output_ext_pipes[
             #     output_port_model.index] = self
-            parent.rtl_map[output_port_model.node].output_ext_pipes.append(
+            parent.rtl_map[output_port_model.gear].output_ext_pipes.append(
                 self)
 
         try:
-            if input_port_model.node is parent.rtl:
+            if input_port_model.gear is parent.rtl:
                 try:
                     input_port = parent.view.outputs[input_port_model.index]
                 except IndexError:
@@ -142,10 +144,10 @@ class PipeModel(NamedHierNode):
                 self.consumer = parent
                 self.consumer.output_int_pipes.append(self)
             else:
-                input_port = parent[input_port_model.node.
+                input_port = parent[input_port_model.gear.
                                     basename].view.inputs[input_port_model.
                                                           index]
-                self.consumer = parent.rtl_map[input_port_model.node]
+                self.consumer = parent.rtl_map[input_port_model.gear]
                 self.consumer.input_ext_pipes.append(self)
 
         except KeyError:
@@ -178,18 +180,27 @@ class PipeModel(NamedHierNode):
     @property
     @functools.lru_cache(maxsize=None)
     def name(self):
-        if self.rtl.is_broadcast:
-            return f'{self.rtl.name}_bc_{self.consumer_id}'
+        name = self.rtl.name
+        if self.svintf is not None:
+            name = name.split('.')[0] + '.' + self.svintf.basename
+
+        if len(self.rtl.consumers) > 1:
+            return f'{name}_bc_{self.consumer_id}'
         else:
-            return self.rtl.name
+            return name
 
     @property
     @functools.lru_cache(maxsize=None)
     def basename(self):
-        if self.rtl.is_broadcast:
-            return f'{self.rtl.basename}_bc_{self.consumer_id}'
+        if self.svintf is not None:
+            basename = self.svintf.basename
         else:
-            return self.rtl.basename
+            basename = self.rtl.basename
+
+        if len(self.rtl.consumers) > 1:
+            return f'{basename}_bc_{self.consumer_id}'
+        else:
+            return basename
 
     @property
     def hierarchical(self):
@@ -240,25 +251,30 @@ class NodeModel(NamedHierNode):
                 self.view._add_port(port)
 
         for child in self.rtl.child:
-            if isinstance(child, RTLNode):
-                self.rtl_map[child] = NodeModel(child, self)
+            self.rtl_map[child] = NodeModel(child, self)
 
-                if parent is not None:
-                    self.rtl_map[child].view.hide()
+            if parent is not None:
+                self.rtl_map[child].view.hide()
 
         self.setup_view(painter=painter)
 
-        for child in self.rtl.child:
-            if isinstance(child, RTLIntf):
-                for i in range(len(child.consumers)):
-                    if isinstance(child.producer, HDLProducer):
-                        continue
+        for child in self.rtl.local_intfs:
+            for i in range(len(child.consumers)):
+                if isinstance(child.producer, HDLProducer):
+                    continue
 
-                    self.rtl_map[child] = PipeModel(
-                        child, consumer_id=i, parent=self)
+                if child.consumers and isinstance(child.consumers[0], HDLConsumer):
+                    continue
 
-                    if parent is not None:
-                        self.rtl_map[child].view.hide()
+                if child.producer is None:
+                    # TODO: This should be an error?
+                    continue
+
+                self.rtl_map[child] = PipeModel(
+                    child, consumer_id=i, parent=self)
+
+                if parent is not None:
+                    self.rtl_map[child].view.hide()
 
 
         # import pdb; pdb.set_trace()
@@ -266,6 +282,9 @@ class NodeModel(NamedHierNode):
             self.set_status('error')
         else:
             self.set_status('empty')
+
+    def __getitem__(self, path):
+        return super().__getitem__(path.replace('.', '/'))
 
     @property
     @inject
@@ -295,7 +314,7 @@ class NodeModel(NamedHierNode):
 
     @property
     @inject
-    def rtl_source(self, svgen_map=Inject('svgen/map')):
+    def rtl_source(self, svgen_map=Inject('hdlgen/map')):
         if self.rtl not in svgen_map:
             return None
 
@@ -345,7 +364,7 @@ class NodeModel(NamedHierNode):
                 val_style = 'style="font-weight:bold"'
             elif inspect.isclass(val) and not is_type(val):
                 val = val.__name__
-            elif name not in registry('gear/params/extra').keys():
+            elif name not in reg['gear/params/extra'].keys():
                 # if isinstance(val, (list, tuple)) and len(val) > 5:
                 #     val = fmt(val[:2]) + '\n...'
 
@@ -379,7 +398,7 @@ padding-right: 10px;
 
     @property
     def hierarchical(self):
-        return bool(self.rtl.is_hierarchical)
+        return bool(self.rtl.hierarchical)
 
     @property
     def pipes(self):

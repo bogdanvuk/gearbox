@@ -2,7 +2,7 @@ import math
 from . import html_utils
 
 from PySide2.QtWidgets import QLabel
-from pygears.conf import Inject, bind, inject
+from pygears.conf import Inject, reg, inject
 from PySide2.QtGui import QKeySequence
 from PySide2 import QtCore
 
@@ -11,7 +11,7 @@ from PySide2 import QtCore
 def which_key(main=Inject('gearbox/main/inst')):
     w = WhichKey(main)
     main.vbox.insertWidget(main.vbox.count() - 1, w)
-    bind('gearbox/which_key', w)
+    reg['gearbox/which_key'] = w
 
 
 class WhichKey(QLabel):

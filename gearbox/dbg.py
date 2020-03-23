@@ -1,5 +1,5 @@
 from functools import wraps
-from pygears.conf import PluginBase, config
+from pygears.conf import PluginBase, reg
 
 
 def dbg_connect(signal, f):
@@ -27,12 +27,12 @@ def debuggable(f):
     @wraps(f)
     def wrap(*args, **kwds):
         try:
-            if config['gearbox/dbg/print_entrance']:
+            if reg['gearbox/dbg/print_entrance']:
                 print(f'Entering {f}')
 
             res = f(*args, **kwds)
 
-            if config['gearbox/dbg/print_entrance']:
+            if reg['gearbox/dbg/print_entrance']:
                 print(f'Leaving {f}')
 
             return res
@@ -45,7 +45,7 @@ def debuggable(f):
             pdb.post_mortem(tb)
             raise e
 
-    if config['gearbox/dbg/except']:
+    if reg['gearbox/dbg/except']:
         return wrap
     else:
         return f
@@ -83,5 +83,5 @@ class Profiler():
 class ThemePlugin(PluginBase):
     @classmethod
     def bind(cls):
-        config.define('gearbox/dbg/except', default=True)
-        config.define('gearbox/dbg/print_entrance', default=False)
+        reg.confdef('gearbox/dbg/except', default=True)
+        reg.confdef('gearbox/dbg/print_entrance', default=False)

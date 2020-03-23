@@ -2,7 +2,7 @@ import pygraphviz as pgv
 from PySide2 import QtCore, QtGui, QtWidgets
 
 from pygears.conf import Inject, inject
-from pygears.rtl.port import InPort
+from pygears.core.port import InPort
 
 from . import gv_utils
 from .constants import NODE_SEL_BORDER_COLOR, NODE_SEL_COLOR, Z_VAL_NODE

@@ -1,6 +1,6 @@
 from PySide2 import QtWidgets, QtGui, QtCore
 from .layout import Buffer
-from pygears.conf import Inject, inject, bind, MayInject, registry
+from pygears.conf import Inject, inject, reg
 import pygments
 from pygments.lexers import get_lexer_for_filename, PythonLexer, Python3Lexer, ClassNotFound
 from pygments.formatters import HtmlFormatter
@@ -22,7 +22,7 @@ class DescriptionBuffer(Buffer):
 def description():
     viewer = Description()
     DescriptionBuffer(viewer, 'description')
-    bind('gearbox/description', viewer)
+    reg['gearbox/description'] = viewer
 
 
 class Description(QtWidgets.QTextEdit):

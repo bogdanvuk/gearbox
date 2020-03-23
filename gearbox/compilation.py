@@ -1,9 +1,7 @@
-import time
 import re
-from PySide2 import QtWidgets, QtGui, QtCore
-from pygears.conf import Inject, inject, bind, MayInject, registry, safe_bind
-from .layout import Buffer, LayoutPlugin, show_buffer
-from .html_utils import fontify
+from PySide2 import QtCore, QtWidgets
+from pygears.conf import Inject, inject
+from .layout import Buffer, show_buffer
 from .description import describe_file
 from .theme import themify
 

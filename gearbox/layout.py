@@ -1,6 +1,6 @@
 import os
 from .modeline import Modeline
-from pygears.conf import Inject, inject, safe_bind, PluginBase, registry, config, MayInject
+from pygears.conf import Inject, inject, PluginBase, reg, MayInject
 from PySide2 import QtCore, QtWidgets, QtGui
 
 
@@ -40,7 +40,7 @@ class Buffer(QtCore.QObject):
 
         if plugins is None:
             try:
-                plugins = registry(f'gearbox/plugins/{self.domain}')
+                plugins = reg[f'gearbox/plugins/{self.domain}']
             except KeyError:
                 plugins = {}
 
@@ -142,7 +142,7 @@ class Window(QtWidgets.QVBoxLayout):
         self.addWidget(self.placeholder, 1)
         self.addWidget(self.modeline)
 
-        if not registry('gearbox/main/tabbar'):
+        if not reg['gearbox/main/tabbar']:
             self.tab_bar.hide()
 
         if buff is not None:
@@ -463,7 +463,7 @@ class BufferStack(QtWidgets.QStackedLayout):
         self.setContentsMargins(0, 0, 0, 0)
         self.buffers = []
 
-        safe_bind('gearbox/layout', self)
+        reg['gearbox/layout'] = self
 
         self.clear_layout()
 
@@ -614,7 +614,7 @@ class BufferStack(QtWidgets.QStackedLayout):
 class LayoutPlugin(PluginBase):
     @classmethod
     def bind(cls):
-        safe_bind('gearbox/plugins', {})
+        reg['gearbox/plugins'] = {}
 
         @inject
         def tab_bar_visibility(var,
@@ -624,5 +624,5 @@ class LayoutPlugin(PluginBase):
                 for w in layout.windows:
                     w.tab_bar.setVisible(visible)
 
-        config.define(
+        reg.confdef(
             'gearbox/main/tabbar', default=True, setter=tab_bar_visibility)
