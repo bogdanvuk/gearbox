@@ -259,7 +259,7 @@ def save(layout=Inject('gearbox/layout')):
 
         f.write(save_file_prolog)
 
-        f.write(save_configuration())
+        # f.write(save_configuration())
 
         f.write(save_expanded(buffer_init_commands))
 
