@@ -214,15 +214,15 @@ reg['{{k}}'] = {{v}}
 """
 
 
-def save_configuration():
-    changed = {
-        name: var.val
-        for name, var in reg.definitions.items()
-        if name.startswith('gtkwave') and var.changed
-    }
+# def save_configuration():
+#     changed = {
+#         name: var.val
+#         for name, var in reg.definitions.items()
+#         if name.startswith('gtkwave') and var.changed
+#     }
 
-    return load_str_template(save_configuration_template).render(
-        {'configs': changed})
+#     return load_str_template(save_configuration_template).render(
+#         {'configs': changed})
 
 
 @inject
@@ -259,7 +259,7 @@ def save(layout=Inject('gearbox/layout')):
 
         f.write(save_file_prolog)
 
-        f.write(save_configuration())
+        # f.write(save_configuration())
 
         f.write(save_expanded(buffer_init_commands))
 
