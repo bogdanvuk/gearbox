@@ -434,7 +434,9 @@ class PyGearsClient(QtCore.QObject):
         self.err = None
         self.cur_model_issue_id = None
         try:
+            reg['sim/dryrun'] = True
             runpy.run_path(script_fn)
+            reg['sim/dryrun'] = False
         except Exception as e:
             self.err = e
 

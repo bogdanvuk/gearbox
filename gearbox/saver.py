@@ -214,15 +214,15 @@ reg['{{k}}'] = {{v}}
 """
 
 
-def save_configuration():
-    changed = {
-        name: var.val
-        for name, var in reg.definitions.items()
-        if name.startswith('gtkwave') and var.changed
-    }
+# def save_configuration():
+#     changed = {
+#         name: var.val
+#         for name, var in reg.definitions.items()
+#         if name.startswith('gtkwave') and var.changed
+#     }
 
-    return load_str_template(save_configuration_template).render(
-        {'configs': changed})
+#     return load_str_template(save_configuration_template).render(
+#         {'configs': changed})
 
 
 @inject
