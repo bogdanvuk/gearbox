@@ -150,7 +150,7 @@ class PipeModel(NamedHierNode):
                 self.consumer = parent.rtl_map[input_port_model.gear]
                 self.consumer.input_ext_pipes.append(self)
 
-        except KeyError:
+        except AttributeError:
             import pdb
             pdb.set_trace()
 
@@ -250,31 +250,33 @@ class NodeModel(NamedHierNode):
             for port in self.rtl.in_ports + self.rtl.out_ports:
                 self.view._add_port(port)
 
-        for child in self.rtl.child:
-            self.rtl_map[child] = NodeModel(child, self)
-
-            if parent is not None:
-                self.rtl_map[child].view.hide()
-
-        self.setup_view(painter=painter)
-
-        for child in self.rtl.local_intfs:
-            for i in range(len(child.consumers)):
-                if isinstance(child.producer, HDLProducer):
-                    continue
-
-                if child.consumers and isinstance(child.consumers[0], HDLConsumer):
-                    continue
-
-                if child.producer is None:
-                    # TODO: This should be an error?
-                    continue
-
-                self.rtl_map[child] = PipeModel(
-                    child, consumer_id=i, parent=self)
+        if self.hierarchical:
+            for child in self.rtl.child:
+                self.rtl_map[child] = NodeModel(child, self)
 
                 if parent is not None:
                     self.rtl_map[child].view.hide()
+
+        self.setup_view(painter=painter)
+
+        if self.hierarchical:
+            for child in self.rtl.local_intfs:
+                for i in range(len(child.consumers)):
+                    if isinstance(child.producer, HDLProducer):
+                        continue
+
+                    if child.consumers and isinstance(child.consumers[0], HDLConsumer):
+                        continue
+
+                    if child.producer is None:
+                        # TODO: This should be an error?
+                        continue
+
+                    self.rtl_map[child] = PipeModel(
+                        child, consumer_id=i, parent=self)
+
+                    if parent is not None:
+                        self.rtl_map[child].view.hide()
 
 
         # import pdb; pdb.set_trace()

@@ -2,7 +2,7 @@ from PySide2 import QtCore
 import collections
 import sys
 
-from pygears.core.gear import Gear
+from pygears import find
 from .timekeep import timestep, timestep_event_register
 from pygears.sim.modules import SimVerilated
 from .node_model import find_cosim_modules, PipeModel, NodeModel
@@ -14,8 +14,8 @@ from .layout import active_buffer, Buffer, LayoutPlugin
 from .utils import single_shot_connect
 from .dbg import dbg_connect
 from functools import partial
+from .gtkwave_vcd import PyGearsVCDMap, VerilatorVCDMap
 import os
-import re
 
 
 class ItemNotTraced(Exception):
@@ -26,314 +26,311 @@ def active_intf():
     active_buffer()
 
 
-class PyGearsVCDMap:
-    def __init__(
-        self,
-        vcd,
-        gtkwave_intf,
-    ):
-        self.gtkwave_intf = gtkwave_intf
-        self.vcd = vcd
-
-        self.signal_name_map = {
-            s.strip(): s.strip()
-            for s in self.gtkwave_intf.command('list_signals').split('\n')
-        }
-
-        self.item_signals, self.pipe_to_port_map = get_pg_vcd_item_signals(
-            self.subgraph, self.signal_name_map)
-
-        # self.pipe_to_port_map = {}
-
-    @property
-    @inject
-    def subgraph(self, graph=Inject('gearbox/graph_model')):
-        return graph
-
-    @property
-    def name(self):
-        return "Main"
-
-    @property
-    def timestep(self):
-        ts = timestep()
-        if ts is None:
-            return 0
-
-        return ts
-
-    @property
-    def vcd_fn(self):
-        return self.vcd.trace_fn
-
-    def pipe_data_signal_stem(self, item):
-        return self.item_name_stem(item) + '.data'
-
-    def pipe_handshake_signals(self, item):
-        return (
-            self.item_name_stem(item) + '.valid', self.item_name_stem(item) + '.ready')
-
-    def item_basename(self, item):
-        item_name_stem = item.name[1:]
-        return item_name_stem.replace('/', '.')
-
-    def item_name_stem(self, item):
-        port = self.pipe_to_port_map[item]
-        # return self.item_basename(item)
-        return self.item_basename(port)
-
-    @property
-    def vcd_pipes(self):
-        for item in self.item_signals:
-            if isinstance(item, PipeModel):
-                yield item
-
-    @property
-    def vcd_nodes(self):
-        for item in self.item_signals:
-            if isinstance(item, NodeModel):
-                yield item
-
-    def __contains__(self, item):
-        return item in self.item_signals
-
-    def __getitem__(self, item):
-        return self.item_signals[item]
-
-
-def get_pg_vcd_item_signals(subgraph, signal_name_map):
-    item_signals = {}
-    pipe_to_port_map = {}
-    item = subgraph.rtl
-    item_path = []
-
-    for name, s in signal_name_map.items():
-        # item = subgraph
-        item = subgraph.rtl
-        path = name.split('.')
-
-        new_item_path = []
-
-        import itertools
-        for p, prev_item in itertools.zip_longest(path, item_path):
-            if prev_item and p == prev_item.basename:
-                item = prev_item
-            else:
-                try:
-                    item = item[p]
-                except KeyError:
-                    break
-
-            new_item_path.append(item)
-
-            if not item.hierarchical:
-                break
+# class PyGearsVCDMap:
+#     def __init__(
+#         self,
+#         vcd,
+#         gtkwave_intf,
+#     ):
+#         self.gtkwave_intf = gtkwave_intf
+#         self.vcd = vcd
+
+#         self.signal_name_map = {
+#             s.strip(): s.strip()
+#             for s in self.gtkwave_intf.command('list_signals').split('\n')
+#         }
+
+#         self.item_signals, self.pipe_to_port_map = get_pg_vcd_item_signals(
+#             self.subgraph, self.signal_name_map)
+
+#         # self.pipe_to_port_map = {}
+
+#     @property
+#     @inject
+#     def subgraph(self, graph=Inject('gearbox/graph_model')):
+#         return graph
+
+#     @property
+#     def name(self):
+#         return "Main"
+
+#     @property
+#     def timestep(self):
+#         ts = timestep()
+#         if ts is None:
+#             return 0
+
+#         return ts
+
+#     @property
+#     def vcd_fn(self):
+#         return self.vcd.trace_fn
+
+#     def pipe_data_signal_stem(self, item):
+#         return self.item_name_stem(item) + '.data'
+
+#     def pipe_handshake_signals(self, item):
+#         return (
+#             self.item_name_stem(item) + '.valid', self.item_name_stem(item) + '.ready')
+
+#     def item_basename(self, item):
+#         item_name_stem = item.name[1:]
+#         return item_name_stem.replace('/', '.')
+
+#     def item_name_stem(self, item):
+#         port = self.pipe_to_port_map[item]
+#         # return self.item_basename(item)
+#         return self.item_basename(port)
+
+#     @property
+#     def vcd_pipes(self):
+#         for item in self.item_signals:
+#             if isinstance(item, PipeModel):
+#                 yield item
+
+#     @property
+#     def vcd_nodes(self):
+#         for item in self.item_signals:
+#             if isinstance(item, NodeModel):
+#                 yield item
+
+#     def __contains__(self, item):
+#         return item in self.item_signals
+
+#     def __getitem__(self, item):
+#         return self.item_signals[item]
+
+# def get_pg_vcd_item_signals(subgraph, signal_name_map):
+#     item_signals = {}
+#     pipe_to_port_map = {}
+#     item = subgraph.rtl
+#     item_path = []
+
+#     for name, s in signal_name_map.items():
+#         # item = subgraph
+#         item = subgraph.rtl
+#         path = name.split('.')
+
+#         new_item_path = []
+
+#         import itertools
+#         for p, prev_item in itertools.zip_longest(path, item_path):
+#             if prev_item and p == prev_item.basename:
+#                 item = prev_item
+#             else:
+#                 try:
+#                     item = item[p]
+#                 except KeyError:
+#                     break
+
+#             new_item_path.append(item)
+
+#             if not item.hierarchical:
+#                 break
+
+#         item_path = new_item_path
 
-        item_path = new_item_path
+#         def port_by_name(item, port_name):
+#             def _port_by_name(ports, name):
+#                 for port in ports:
+#                     if port.basename == name:
+#                         return port
+#                 else:
+#                     raise KeyError
 
-        def port_by_name(item, port_name):
-            def _port_by_name(ports, name):
-                for port in ports:
-                    if port.basename == name:
-                        return port
-                else:
-                    raise KeyError
+#             port = None
 
-            port = None
+#             try:
+#                 port = _port_by_name(item.in_ports, port_name)
+#             except KeyError:
+#                 pass
 
-            try:
-                port = _port_by_name(item.in_ports, port_name)
-            except KeyError:
-                pass
+#             try:
+#                 port = _port_by_name(item.out_ports, port_name)
+#             except KeyError:
+#                 pass
 
-            try:
-                port = _port_by_name(item.out_ports, port_name)
-            except KeyError:
-                pass
+#             return port
+
+#         if isinstance(item, Gear):
+#             port_name = path[len(new_item_path)]
+#             port = port_by_name(item, port_name)
 
-            return port
+#             if port is not None:
+#                 # rtl_port = closest_rtl_from_gear_port(port)
+#                 rtl_port = port
 
-        if isinstance(item, Gear):
-            port_name = path[len(new_item_path)]
-            port = port_by_name(item, port_name)
+#                 try:
+#                     out_intf = rtl_port.consumer
+#                     pipe = subgraph[out_intf.name]
+#                     pipe_to_port_map[pipe] = port
+#                     item = pipe
+#                 except (KeyError, AttributeError):
+#                     try:
+#                         in_intf = rtl_port.producer
+#                         if in_intf.is_broadcast:
+#                             index = in_intf.consumers.index(rtl_port)
+#                             pipe = subgraph[f'{in_intf.name}_bc_{index}']
+#                         else:
+#                             pipe = subgraph[in_intf.name]
 
-            if port is not None:
-                # rtl_port = closest_rtl_from_gear_port(port)
-                rtl_port = port
+#                         pipe_to_port_map[pipe] = port
+#                         item = pipe
+#                     except (KeyError, AttributeError):
+#                         pass
 
-                try:
-                    out_intf = rtl_port.consumer
-                    pipe = subgraph[out_intf.name]
-                    pipe_to_port_map[pipe] = port
-                    item = pipe
-                except (KeyError, AttributeError):
-                    try:
-                        in_intf = rtl_port.producer
-                        if in_intf.is_broadcast:
-                            index = in_intf.consumers.index(rtl_port)
-                            pipe = subgraph[f'{in_intf.name}_bc_{index}']
-                        else:
-                            pipe = subgraph[in_intf.name]
+#         if item not in item_signals:
+#             item_signals[item] = []
 
-                        pipe_to_port_map[pipe] = port
-                        item = pipe
-                    except (KeyError, AttributeError):
-                        pass
+#         item_signals[item].append(s)
+
+#     return item_signals, pipe_to_port_map
+
+# def get_verilator_item_signals(subgraph, signal_name_map):
+#     item_signals = {}
+#     item = subgraph
+#     item_path = []
 
-        if item not in item_signals:
-            item_signals[item] = []
+#     def find_child(parent, name):
+#         # Try name as submodule
+#         if name in parent:
+#             return parent[name]
 
-        item_signals[item].append(s)
+#         # Try name as interface name
+#         intf_name = p.rpartition('_')[0]
 
-    return item_signals, pipe_to_port_map
+#         if intf_name in parent:
+#             return parent[intf_name]
 
+#         return None
+
+#     for name, s in signal_name_map.items():
+#         item = subgraph
+#         path = name.split('.')
 
-def get_verilator_item_signals(subgraph, signal_name_map):
-    item_signals = {}
-    item = subgraph
-    item_path = []
+#         new_item_path = []
 
-    def find_child(parent, name):
-        # Try name as submodule
-        if name in parent:
-            return parent[name]
+#         import itertools
+#         for p, prev_item in itertools.zip_longest(path[1:], item_path):
+#             if prev_item and p == prev_item.basename:
+#                 item = prev_item
+#             else:
+#                 child_item = find_child(item, p)
+#                 if child_item is None:
+#                     break
 
-        # Try name as interface name
-        intf_name = p.rpartition('_')[0]
+#                 item = child_item
+
+#             new_item_path.append(item)
 
-        if intf_name in parent:
-            return parent[intf_name]
+#             if not item.hierarchical:
+#                 break
 
-        return None
+#         item_path = new_item_path
 
-    for name, s in signal_name_map.items():
-        item = subgraph
-        path = name.split('.')
+#         if item not in item_signals:
+#             item_signals[item] = []
 
-        new_item_path = []
+#         item_signals[item].append(s)
 
-        import itertools
-        for p, prev_item in itertools.zip_longest(path[1:], item_path):
-            if prev_item and p == prev_item.basename:
-                item = prev_item
-            else:
-                child_item = find_child(item, p)
-                if child_item is None:
-                    break
+#     return item_signals
 
-                item = child_item
+# class VerilatorVCDMap:
+#     @inject
+#     def __init__(self, sim_module, gtkwave_intf):
+#         self.gtkwave_intf = gtkwave_intf
+#         self.sim_module = sim_module
 
-            new_item_path.append(item)
+#         # self.rtl_node = rtl_map[self.sim_module.gear]
+#         self.rtl_node = self.sim_module.gear
+#         if self.sim_module.lang == 'sv':
+#             hdlmod = reg[f'hdlgen/map'][sim_module.top]
+#             self.path_prefix = '.'.join(['TOP', f'{hdlmod.module_name}_v_wrap'])
+#         else:
+#             self.path_prefix = 'TOP'
 
-            if not item.hierarchical:
-                break
+#         self.signal_name_map = self.make_relative_signal_name_map(
+#             self.path_prefix, self.gtkwave_intf.command('list_signals'))
 
-        item_path = new_item_path
+#         self.item_signals = get_verilator_item_signals(
+#             self.subgraph, self.signal_name_map)
 
-        if item not in item_signals:
-            item_signals[item] = []
+#         print("VCD Init done")
 
-        item_signals[item].append(s)
+#     @property
+#     @inject
+#     def subgraph(self, graph=Inject('gearbox/graph_model')):
+#         return graph[self.sim_module.gear.name[1:]]
 
-    return item_signals
+#     def pipe_data_signal_stem(self, item):
+#         return self.item_name_stem(item) + '_data'
 
+#     def pipe_handshake_signals(self, item):
+#         return (
+#             self.item_name_stem(item) + '_valid', self.item_name_stem(item) + '_ready')
 
-class VerilatorVCDMap:
-    @inject
-    def __init__(self, sim_module, gtkwave_intf):
-        self.gtkwave_intf = gtkwave_intf
-        self.sim_module = sim_module
+#     @property
+#     def vcd_pipes(self):
+#         for item in self.item_signals:
+#             if isinstance(item, PipeModel):
+#                 yield item
 
-        # self.rtl_node = rtl_map[self.sim_module.gear]
-        self.rtl_node = self.sim_module.gear
-        if self.sim_module.lang == 'sv':
-            hdlmod = reg[f'hdlgen/map'][sim_module.top]
-            self.path_prefix = '.'.join(['TOP', f'{hdlmod.module_name}_v_wrap'])
-        else:
-            self.path_prefix = 'TOP'
+#     def vcd_nodes(self):
+#         for item in self.item_signals:
+#             if isinstance(item, NodeModel):
+#                 yield item
 
-        self.signal_name_map = self.make_relative_signal_name_map(
-            self.path_prefix, self.gtkwave_intf.command('list_signals'))
+#     def item_basename(self, item):
+#         parent = item.rtl.parent
+#         path = [item.basename]
+#         while parent != self.rtl_node.parent:
+#             path.append(reg['hdlgen/map'][parent].inst_name)
+#             parent = parent.parent
 
-        self.item_signals = get_verilator_item_signals(
-            self.subgraph, self.signal_name_map)
+#         return '.'.join(reversed(path))
 
-        print("VCD Init done")
+#         # item_name_stem = item.name[len(self.rtl_node.parent.name) + 1:]
+#         # return item_name_stem.replace('/', '.')
 
-    @property
-    @inject
-    def subgraph(self, graph=Inject('gearbox/graph_model')):
-        return graph[self.sim_module.gear.name[1:]]
+#     def item_name_stem(self, item):
+#         return '.'.join((self.path_prefix, self.item_basename(item)))
 
-    def pipe_data_signal_stem(self, item):
-        return self.item_name_stem(item) + '_data'
+#     @property
+#     def name(self):
+#         return self.sim_module.name
 
-    def pipe_handshake_signals(self, item):
-        return (
-            self.item_name_stem(item) + '_valid', self.item_name_stem(item) + '_ready')
+#     @property
+#     def timestep(self):
+#         ts = timestep()
+#         if ts is None:
+#             return 0
 
-    @property
-    def vcd_pipes(self):
-        for item in self.item_signals:
-            if isinstance(item, PipeModel):
-                yield item
+#         return ts
 
-    def vcd_nodes(self):
-        for item in self.item_signals:
-            if isinstance(item, NodeModel):
-                yield item
+#     @property
+#     def vcd_fn(self):
+#         return self.sim_module.trace_fn
 
-    def item_basename(self, item):
-        parent = item.rtl.parent
-        path = [item.basename]
-        while parent != self.rtl_node.parent:
-            path.append(reg['hdlgen/map'][parent].inst_name)
-            parent = parent.parent
+#     def make_relative_signal_name_map(self, path_prefix, signal_list):
+#         signal_name_map = {}
+#         for sig_name in signal_list.split('\n'):
+#             sig_name = sig_name.strip()
 
-        return '.'.join(reversed(path))
+#             basename = re.search(
+#                 r"{0}\.({1}\..*)".format(
+#                     path_prefix, reg['hdlgen/map'][self.sim_module.top].inst_name),
+#                 sig_name)
 
-        # item_name_stem = item.name[len(self.rtl_node.parent.name) + 1:]
-        # return item_name_stem.replace('/', '.')
+#             if basename:
+#                 signal_name_map[basename.group(1)] = sig_name
 
-    def item_name_stem(self, item):
-        return '.'.join((self.path_prefix, self.item_basename(item)))
+#         return signal_name_map
 
-    @property
-    def name(self):
-        return self.sim_module.name
+#     def __contains__(self, item):
+#         return item in self.item_signals
 
-    @property
-    def timestep(self):
-        ts = timestep()
-        if ts is None:
-            return 0
-
-        return ts
-
-    @property
-    def vcd_fn(self):
-        return self.sim_module.trace_fn
-
-    def make_relative_signal_name_map(self, path_prefix, signal_list):
-        signal_name_map = {}
-        for sig_name in signal_list.split('\n'):
-            sig_name = sig_name.strip()
-
-            basename = re.search(
-                r"{0}\.({1}\..*)".format(
-                    path_prefix, reg['hdlgen/map'][self.sim_module.top].inst_name),
-                sig_name)
-
-            if basename:
-                signal_name_map[basename.group(1)] = sig_name
-
-        return signal_name_map
-
-    def __contains__(self, item):
-        return item in self.item_signals
-
-    def __getitem__(self, item):
-        return self.item_signals[item]
+#     def __getitem__(self, item):
+#         return self.item_signals[item]
 
 
 @inject
@@ -375,7 +372,9 @@ class GtkWave:
         self.buffers = []
 
         try:
-            self.create_gtkwave_instance(reg['VCD'], PyGearsVCDMap)
+            vcd = reg['VCD']
+            vcd.gear = find('/')
+            self.create_gtkwave_instance(vcd, PyGearsVCDMap)
         except KeyError:
             pass
 
@@ -402,7 +401,10 @@ class GtkWave:
                 partial(self.create_gtkwave_buffer, window, vcd_trace_obj, vcd_map_cls))
 
     def create_gtkwave_buffer(self, window, vcd_trace_obj, vcd_map_cls):
-        vcd_map = vcd_map_cls(vcd_trace_obj, window)
+
+        sigs = [s.strip() for s in window.command('list_signals').split('\n')]
+
+        vcd_map = vcd_map_cls(vcd_trace_obj.gear, sigs)
         intf = GtkWaveGraphIntf(vcd_map, window)
         self.graph_intfs.append(intf)
 
@@ -510,8 +512,14 @@ class GtkWaveGraphIntf(QtCore.QObject):
     def show_node(self, node):
         sigs = self.vcd_map[node]
         commands = []
-        commands.append(f'gtkwave::addSignalsFromList {{{" ".join(sigs)}}}')
-        commands.append(f'gtkwave::highlightSignalsFromList {{{" ".join(sigs)}}}')
+
+        for i in range(0, len(sigs), 20):
+            s = sigs[i:i+20]
+            commands.append(f'gtkwave::addSignalsFromList {{{" ".join(s)}}}')
+
+        for i in range(0, len(sigs), 20):
+            s = sigs[i:i+20]
+            commands.append(f'gtkwave::highlightSignalsFromList {{{" ".join(s)}}}')
 
         commands.append(f'gtkwave::/Edit/Create_Group {node.name}')
 
@@ -524,12 +532,10 @@ class GtkWaveGraphIntf(QtCore.QObject):
     def show_pipe(self, pipe):
 
         struct_sigs = collections.defaultdict(dict)
-        sig_names = []
 
         intf_name = pipe.name.replace('.', '/')
         status_sig = intf_name + '_state'
         valid_sig, ready_sig = self.vcd_map.pipe_handshake_signals(pipe)
-        data_sig_stem = self.vcd_map.pipe_data_signal_stem(pipe)
         self.items_on_wave[pipe] = intf_name
 
         commands = []
@@ -545,24 +551,6 @@ class GtkWaveGraphIntf(QtCore.QObject):
             f'gtkwave::setCurrentTranslateTransProc "{sys.executable} {dti_translate_path}"')
         commands.append(f'gtkwave::installTransFilter 1')
 
-        for s in self.vcd_map[pipe]:
-            if s.startswith(data_sig_stem):
-                sig_names.append(s)
-
-                stem = s[len(data_sig_stem) - 4:]
-                sig_name_no_width = stem.partition('[')[0]
-
-                path = sig_name_no_width.split('.')
-                place = struct_sigs
-                for p in path[:-1]:
-                    if p not in place:
-                        place[p] = {}
-
-                    place = place[p]
-
-                place[path[-1]] = s
-
-        commands.append('gtkwave::addSignalsFromList {' + " ".join(sig_names) + '}')
 
         def dfs(name, lvl):
             if isinstance(lvl, dict):
@@ -572,17 +560,22 @@ class GtkWaveGraphIntf(QtCore.QObject):
                         ret = yield from dfs(k, v)
                         selected.extend(ret)
                     else:
-                        selected.append(v)
+                        selected.extend(v)
 
             else:
-                selected = [lvl]
+                selected = lvl
 
             yield name, selected
             return selected
 
-        struct_sigs = dict(struct_sigs)
+        struct_sigs = self.vcd_map.get_pipe_groups(pipe)
 
-        groups = list(dfs(intf_name, struct_sigs['data']))
+        groups = list(dfs(intf_name, struct_sigs))
+
+        all_sigs = groups[-1][1]
+
+        commands.append('gtkwave::addSignalsFromList {' + " ".join(all_sigs) + '}')
+
         for name, selected in reversed(groups):
             commands.append(
                 'gtkwave::highlightSignalsFromList {' + " ".join(selected) + '}')
@@ -651,6 +644,7 @@ class GtkWaveGraphIntf(QtCore.QObject):
         # print(f'Exiting')
 
     def update_pipes(self, pipes):
+
         ts = self.vcd_map.timestep
 
         signal_names = [
