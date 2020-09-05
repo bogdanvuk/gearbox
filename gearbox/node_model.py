@@ -106,12 +106,10 @@ class PipeModel(NamedHierNode):
         self.svintf = reg['hdlgen/map'].get(intf, None)
 
         self.rtl = intf
+
         self.consumer_id = consumer_id
         output_port_model = intf.producer
         input_port_model = intf.consumers[consumer_id]
-
-        if output_port_model is None:
-            breakpoint()
 
         if output_port_model.gear is parent.rtl:
             try:
@@ -212,6 +210,7 @@ class NodeModel(NamedHierNode):
         super().__init__(parent=parent)
 
         self.rtl = gear
+        reg['gearbox/graph_model_map'][gear] = self
 
         # self.input_ext_pipes = [None] * len(self.rtl.in_ports)
         # self.output_ext_pipes = [None] * len(self.rtl.out_ports)

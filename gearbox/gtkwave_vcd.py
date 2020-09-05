@@ -1,5 +1,6 @@
 from .node_model import find_cosim_modules, PipeModel, NodeModel
 from pygears import reg, find
+from pygears.hdl import hdlgen
 from pygears.conf import inject, Inject
 from pygears.core.graph import PathError
 from pygears.typing import Tuple, Union, Queue, Array, typeof
@@ -67,6 +68,7 @@ def get_item_signals(subgraph, signals, prefix=''):
 class VCDMap:
     def __init__(self, module, sigs):
         self.module = module
+        self.model = reg['gearbox/graph_model_map'][module]
         self.sigs = sigs
         self.sigmap = get_item_signals(find('/'), sigs, self.path_prefix)
         self.item_signals = {}
@@ -107,7 +109,9 @@ class VCDMap:
 
 class VerilatorVCDMap(VCDMap):
     def __init__(self, module, sigs):
-        self.hdlmod = reg[f'hdlgen/map'][module]
+        self.hdlgen_map = reg[f'hdlgen/map']
+
+        self.hdlmod = self.hdlgen_map[module]
         if self.hdlmod.wrapped:
             self.path_prefix = '.'.join(['TOP', self.hdlmod.wrap_module_name, ''])
         else:
@@ -117,18 +121,20 @@ class VerilatorVCDMap(VCDMap):
 
     def pipe_data_signal_stem(self, item):
         basename = self.item_basename(item)
+        if f'{self.path_prefix}{basename}' == "TOP.top_v_wrap.top.dout":
+            breakpoint()
+
         return f'{self.path_prefix}{basename}_data'
 
     def pipe_handshake_signals(self, item):
         basename = self.item_basename(item)
-        return (
-            f'{self.path_prefix}{basename}_valid', f'{self.path_prefix}{basename}_ready')
+        return (f'{self.path_prefix}{basename}_valid', f'{self.path_prefix}{basename}_ready')
 
     def item_basename(self, item):
         parent = item.rtl.parent
         path = [item.basename]
         while parent != self.module.parent:
-            path.append(reg['hdlgen/map'][parent].inst_name)
+            path.append(self.hdlgen_map[parent].inst_name)
             parent = parent.parent
 
         return '.'.join(reversed(path))
@@ -146,12 +152,26 @@ class VerilatorVCDMap(VCDMap):
                 parent_node = item.rtl.parent
 
                 basename = self.item_basename(item)
-                sigs = [f'{self.path_prefix}{s}' for s in self.sigmap[parent_node] if s.startswith(basename)]
+                sigs = [
+                    f'{self.path_prefix}{s}' for s in self.sigmap[parent_node]
+                    if s.startswith(basename)
+                ]
                 self.item_signals[item] = sigs
             else:
                 self.item_signals[item] = [f'{self.path_prefix}{s}' for s in self.sigmap[item.rtl]]
 
         return self.item_signals[item]
+
+    def __contains__(self, item):
+        if isinstance(item, PipeModel):
+            if not item.svintf:
+                raise KeyError
+
+            rtl = item.parent.rtl
+        else:
+            rtl = item.rtl
+
+        return self.module.has_descendent(rtl)
 
 
 def get_type_groups(sigs, t, path):
@@ -186,7 +206,7 @@ class PyGearsVCDMap(VCDMap):
         return item.rtl.end_producer[0].consumers[0]
 
     def item_basename(self, item):
-        prod_port = self.pipe_source_port(item)
+        prod_port = item.rtl.consumers[item.consumer_id]
         item_name_stem = prod_port.name[1:]
         return item_name_stem.replace('/', '.')
 
@@ -200,16 +220,23 @@ class PyGearsVCDMap(VCDMap):
 
         if item not in self.item_signals:
             if isinstance(item, PipeModel):
-                prod_gear = self.pipe_source_port(item).gear
+                prod_port = item.rtl.consumers[item.consumer_id]
+                prod_gear = prod_port.gear
 
-                if prod_gear in self.sigmap:
-                    basename = self.item_basename(item)
-                    sigs = [s for s in self.sigmap[prod_gear] if s.startswith(basename)]
-                else:
-                    pass
+                if prod_gear not in self.sigmap:
+                    raise KeyError
+
+                basename = self.item_basename(item)
+                sigs = []
+                for s in self.sigmap[prod_gear]:
+                    if s.startswith(basename) and s[len(basename)] == '.':
+                        sigs.append(s)
 
                 self.item_signals[item] = sigs
             else:
                 raise KeyError
 
         return self.item_signals[item]
+
+    def __contains__(self, item):
+        return item.rtl not in reg[f'hdlgen/map']

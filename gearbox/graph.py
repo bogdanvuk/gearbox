@@ -11,12 +11,13 @@ from .pipe import Pipe
 from .port import PortItem
 from .scene import NodeScene
 from .node import NodeItem
-from .node_model import NodeModel
+from .node_model import NodeModel, find_cosim_modules
 from .layout import Buffer, LayoutPlugin
 from .html_utils import tabulate, fontify
 from .utils import single_shot_connect
 
 from pygears.conf import Inject, inject, MayInject, reg
+from pygears.hdl import hdlgen
 
 ZOOM_MIN = -0.95
 ZOOM_MAX = 2.0
@@ -97,6 +98,11 @@ class GraphModelCtrl(QtCore.QObject):
         view = Graph()
 
         reg['gearbox/graph'] = view
+        reg['gearbox/graph_model_map'] = {}
+
+        for m in find_cosim_modules():
+            hdlgen(m.top, generate=False, lang=m.lang, copy_files=False, toplang='v')
+
         top_model = NodeModel(root)
         reg['gearbox/graph_model'] = top_model
         view.top = top_model.view
@@ -121,6 +127,7 @@ class GraphModelCtrl(QtCore.QObject):
         del self.buff
         reg['gearbox/graph'] = None
         reg['gearbox/graph_model'] = None
+        reg['gearbox/graph_model_map'] = {}
 
 
 class Graph(QtWidgets.QGraphicsView):

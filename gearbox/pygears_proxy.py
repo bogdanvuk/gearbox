@@ -108,6 +108,13 @@ class Gearbox(QtCore.QObject, SimExtend):
             # sys.exit(0)
 
     def before_run(self, sim):
+        # Gearbox has to be last of all plugins to receive 'after_timestep'
+        # event, so that for an example VCD plugin finished flushing waveforms
+        e = sim.events['after_timestep']
+        i = e.index(self.after_timestep)
+        del e[i]
+        e.append(self.after_timestep)
+
         self.handle_event('before_run')
 
     # def at_exit(self, sim):
