@@ -1,6 +1,7 @@
 import re
 from PySide2 import QtCore, QtWidgets
 from pygears.conf import Inject, inject
+from pygears import reg
 from .layout import Buffer, show_buffer
 from .description import describe_file
 from .theme import themify
@@ -20,6 +21,7 @@ class TailProc(QtCore.QObject):
         self.moveToThread(self.thrd)
 
         self.timer = QtCore.QTimer()
+        reg['gearbox/main/threads'].add(self.thrd)
         self.timer.moveToThread(self.thrd)
         self.timer.setInterval(100)
         self.timer.timeout.connect(self.read)
@@ -32,6 +34,7 @@ class TailProc(QtCore.QObject):
         self.thrd.start()
 
     def quit(self):
+        print('Close tail proc')
         self.timer.stop()
         self.f.close()
         self.thrd.quit()

@@ -28,14 +28,14 @@ def active_intf():
 
 @inject
 def gtkwave(graph_model_ctrl=Inject('gearbox/graph_model_ctrl')):
-    dbg_connect(graph_model_ctrl.working_model_loaded, gtkwave_create)
+    dbg_connect(graph_model_ctrl.graph_loaded, gtkwave_create)
 
 
 @inject
-def gtkwave_create(sim_bridge=Inject('gearbox/sim_bridge')):
+def gtkwave_create(graph_model_ctrl=Inject('gearbox/graph_model_ctrl')):
     gtkwave = GtkWave()
     reg['gearbox/gtkwave/inst'] = gtkwave
-    single_shot_connect(sim_bridge.model_closed, gktwave_delete)
+    single_shot_connect(graph_model_ctrl.graph_closed, gktwave_delete)
 
 
 @inject
@@ -89,8 +89,9 @@ class GtkWave:
         if window.window_id is not None:
             self.create_gtkwave_buffer()
         else:
-            dbg_connect(window.initialized,
-                        partial(self.create_gtkwave_buffer, window, vcd_trace_obj, vcd_map_cls))
+            print(f'Connecting init for {vcd_trace_obj}, {vcd_map_cls}')
+            single_shot_connect(window.initialized,
+                                partial(self.create_gtkwave_buffer, window, vcd_trace_obj, vcd_map_cls))
 
     def create_gtkwave_buffer(self, window, vcd_trace_obj, vcd_map_cls):
 
@@ -370,6 +371,10 @@ class GtkWaveGraphIntf(QtCore.QObject):
 
             ret = self.gtkwave_intf.command(
                 f'get_values {ts*10} [list {" ".join(s[1] for s in cur_names)}]')
+
+            if ret is None:
+                return
+
             rtl_status = ret.split('\n')
 
             if len(rtl_status) != (cur_slice.stop - cur_slice.start):

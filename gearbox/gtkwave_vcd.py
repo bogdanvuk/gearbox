@@ -165,7 +165,7 @@ class VerilatorVCDMap(VCDMap):
     def __contains__(self, item):
         if isinstance(item, PipeModel):
             if not item.svintf:
-                raise KeyError
+                return False
 
             rtl = item.parent.rtl
         else:

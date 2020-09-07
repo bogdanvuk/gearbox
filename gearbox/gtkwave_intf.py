@@ -55,8 +55,7 @@ class GtkEventProc(QtCore.QObject):
         # app.processEvents(QtCore.QEventLoop.AllEvents)
 
         if app.focusWidget():
-            app.postEvent(
-                app.focusWidget(), QtGui.QKeyEvent(QtGui.QKeyEvent.KeyPress, *key))
+            app.postEvent(app.focusWidget(), QtGui.QKeyEvent(QtGui.QKeyEvent.KeyPress, *key))
 
     def KeyRelease(self, data):
 
@@ -65,8 +64,7 @@ class GtkEventProc(QtCore.QObject):
         key = self.detect_key(data)
 
         if app.focusWidget():
-            app.postEvent(
-                app.focusWidget(), QtGui.QKeyEvent(QtGui.QKeyEvent.KeyRelease, *key))
+            app.postEvent(app.focusWidget(), QtGui.QKeyEvent(QtGui.QKeyEvent.KeyRelease, *key))
 
 
 class GtkWaveProc(QtCore.QObject):
@@ -78,23 +76,17 @@ class GtkWaveProc(QtCore.QObject):
     def __init__(self, trace_fn):
         super().__init__()
 
-        self.gtkwave_thread = QtCore.QThread()
+        self.thrd = QtCore.QThread()
+        reg['gearbox/main/threads'].add(self.thrd)
         self.trace_fn = trace_fn
-        self.moveToThread(self.gtkwave_thread)
+        self.moveToThread(self.thrd)
         self.exiting = False
         self.cmd_id = None
         self.shmidcat = (os.path.splitext(self.trace_fn)[-1] != '.vcd')
-        self.gtkwave_thread.started.connect(self.run)
-        self.gtkwave_thread.start()
+        self.thrd.started.connect(self.run)
+        self.thrd.start()
 
     def run(self):
-        # self.shmid_proc = subprocess.Popen(
-        #     f'tail -f -n +1 {self.trace_fn} | shmidcat',
-        #     shell=True,
-        #     stdout=subprocess.PIPE)
-
-        # vcd_shr_obj = self.shmid_proc.stdout.readline().decode().strip()
-
         local_dir = os.path.abspath(os.path.dirname(__file__))
         script_fn = os.path.join(local_dir, "gtkwave.tcl")
         gtkwaverc_fn = os.path.join(local_dir, "gtkwaverc")
@@ -132,35 +124,31 @@ class GtkWaveProc(QtCore.QObject):
         print(f'Window id: {window_id} -> {int(window_id)}')
         self.window_up.emit(version, self.p.pid, int(window_id))
 
-        # while (self.event_proc is not None):
         while (1):
-            self.gtkwave_thread.eventDispatcher().processEvents(
-                QtCore.QEventLoop.AllEvents)
-
-            # if self.cmd_id is not None:
-            #     continue
+            self.thrd.eventDispatcher().processEvents(QtCore.QEventLoop.AllEvents)
 
             try:
                 data = ''
                 while True:
                     data += self.p.read_nonblocking(size=4096, timeout=0.01)
-            except pexpect.TIMEOUT:
-                if self.exiting:
-                    self.gtkwave_thread.quit()
-                    return
 
-            # if data.strip():
-            #     print(f'Unsollicited: {data}')
+            except pexpect.TIMEOUT:
+                pass
+            except pexpect.EOF:
+                self.thrd.quit()
+                return
 
             for d in data.strip().split('\n'):
                 res = re.search(r"^\$\$(\w+):(.*)$", d)
 
                 if res:
                     self.gtk_event.emit(res.group(1), res.group(2))
-                    self.gtkwave_thread.eventDispatcher().processEvents(
-                        QtCore.QEventLoop.AllEvents)
+                    self.thrd.eventDispatcher().processEvents(QtCore.QEventLoop.AllEvents)
 
     def command(self, cmd, cmd_id):
+        if self.p.closed:
+            return
+
         self.cmd_id = cmd_id
         # print(f'GtkWave> {cmd_id}, {cmd}')
         self.p.send(cmd + '\n')
@@ -170,9 +158,10 @@ class GtkWaveProc(QtCore.QObject):
             print("timeout")
             print(self.p.buffer)
             return
+        except pexpect.EOF:
+            return
 
-        resp = '\n'.join(
-            [d for d in self.p.before.strip().split('\n') if not d.startswith("$$")])
+        resp = '\n'.join([d for d in self.p.before.strip().split('\n') if not d.startswith("$$")])
 
         # print(f'GtkWave: {self.p.before.strip()}')
         # print(f'Response: {cmd_id}, {resp}')
@@ -181,8 +170,17 @@ class GtkWaveProc(QtCore.QObject):
 
     def close(self):
         print("aboutToQuit gtkwave")
-        self.exiting = True
-        # self.gtkwave_thread.wait()
+        # import signal
+        # self.p.kill(signal.SIGKILL)
+        self.p.terminate()
+
+        self.thrd.wait()
+
+        self.p.close()
+        print(f'Pexpect {self.thrd.isRunning()}: ', self.p.exitstatus, self.p.signalstatus)
+
+        # self.exiting = True
+        # self.thrd.wait()
 
 
 class GtkWaveCmdBlock(QtCore.QEventLoop):
@@ -195,7 +193,7 @@ class GtkWaveCmdBlock(QtCore.QEventLoop):
         gtk_wave.send_command.emit(cmd, self.cmd_id)
         gtk_wave.proc.response.connect(self.response)
         self.exec_()
-        return self.resp
+        return getattr(self, 'resp', None)
 
     def response(self, resp, cmd_id):
         if cmd_id == self.cmd_id:
@@ -246,7 +244,9 @@ class GtkWaveWindow(QtCore.QObject):
         self.send_command.connect(self.proc.command)
         self.response = self.proc.response
 
-        self.deleted.connect(self.proc.close)
+        # self.deleted.connect(self.proc.close)
+        # QtWidgets.QApplication.instance().aboutToQuit.connect(self.close)
+
         # QtWidgets.QApplication.instance().aboutToQuit.connect(self.proc.close)
 
     @property
@@ -277,6 +277,7 @@ class GtkWaveWindow(QtCore.QObject):
         self.gtkwave_win = QtGui.QWindow.fromWinId(window_id)
         self.widget = QtWidgets.QWidget.createWindowContainer(self.gtkwave_win)
         # self.widget.setFocusPolicy(QtCore.Qt.NoFocus)
+
         self.widget.setWindowFlag(QtCore.Qt.X11BypassWindowManagerHint)
         self.widget.setWindowFlag(QtCore.Qt.BypassGraphicsProxyWidget)
         self.widget.setWindowFlag(QtCore.Qt.BypassWindowManagerHint)
@@ -290,5 +291,13 @@ class GtkWaveWindow(QtCore.QObject):
         self.initialized.emit()
 
     def close(self):
+        # self.gtkwave_win.setParent(None)
+        # self.widget.destroy()
+        # self.widget.setParent()
+        print("aboutToQuit GtkWaveWindow")
+
+        # self.gtkwave_win.setParent(None)
+        self.widget.destroy()
+
         self.deleted.emit()
-        self.proc.gtkwave_thread.wait()
+        self.proc.close()

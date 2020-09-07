@@ -15,9 +15,8 @@ from pygears.conf import Inject, MayInject, inject, reg
 from pygears.conf.custom_settings import load_rc
 from pygears.sim.extens.vcd import SimVCDPlugin
 
-from . import (
-    actions, buffer_actions, description_actions, file_actions, graph_actions,
-    gtkwave_actions, toggle_actions, window_actions)
+from . import (actions, buffer_actions, description_actions, file_actions, graph_actions,
+               gtkwave_actions, toggle_actions, window_actions)
 from .compilation import compilation
 from .pygears_proxy import sim_bridge
 # import gearbox.graph
@@ -62,8 +61,8 @@ def pygears_proc(script_fn):
 
 
 @inject
-def set_main_win_title(
-    script_fn=Inject('gearbox/model_script_name'), main=Inject('gearbox/main/inst')):
+def set_main_win_title(script_fn=Inject('gearbox/model_script_name'),
+                       main=Inject('gearbox/main/inst')):
 
     main.setWindowTitle(f'Gearbox - {script_fn}')
 
@@ -73,6 +72,13 @@ class Application(QtWidgets.QApplication):
         # import faulthandler
         # faulthandler.dump_traceback_later(1, file=open('err.log', 'w'))
         print('Quit called')
+        self.sim_bridge_inst.close_script()
+
+        # self.sim_bridge_inst.pygears_proc.done = True
+        # self.sim_bridge_inst.pygears_proc.cont()
+        # self.sim_bridge_inst.thrd.quit()
+        # self.sim_bridge_inst.thrd.wait()
+
         super().quit()
 
 
@@ -82,6 +88,7 @@ def main_loop(script_fn, argv, layers=Inject('gearbox/layers')):
     faulthandler.enable(file=open('err.log', 'w'))
 
     reg['gearbox/main/new_model_script_fn'] = None
+    reg['gearbox/main/threads'] = set()
     # bind('gearbox/main/argv', sys_args)
 
     sys_args = argv.copy()
@@ -103,6 +110,7 @@ def main_loop(script_fn, argv, layers=Inject('gearbox/layers')):
     sim_bridge_inst = sim_bridge()
     sim_bridge_inst.script_loading_started.connect(set_main_win_title)
     sim_bridge_inst.script_loading_started.connect(load)
+    app.sim_bridge_inst = sim_bridge_inst
 
     for l in layers:
         l()
@@ -114,8 +122,14 @@ def main_loop(script_fn, argv, layers=Inject('gearbox/layers')):
     main_window.show()
     ret = app.exec_()
     script_fn = reg['gearbox/main/new_model_script_fn']
+
+    print('Quitting: ', sys_args)
+    for t in reg['gearbox/main/threads']:
+        t.wait()
+
+    print('Threads waited for')
+
     if script_fn:
-        print('Quitting: ', sys_args)
         print(('gearbox', sys_args[0], script_fn))
         cmd = [sys_args[0], 'gearbox']
         for i in range(2, len(sys_args)):
@@ -136,8 +150,7 @@ def main(argv=sys.argv, layers=Inject('gearbox/layers')):
 
     parser.add_argument('script', help="PyGears script", default=None, nargs='?')
 
-    parser.add_argument(
-        '-d', '--outdir', metavar='outdir', default=None, help="Output directory")
+    parser.add_argument('-d', '--outdir', metavar='outdir', default=None, help="Output directory")
 
     args = parser.parse_args(argv[1:])
 

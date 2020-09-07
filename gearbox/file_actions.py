@@ -16,8 +16,7 @@ def close_file(
         layout=Inject('gearbox/layout')):
 
     if script_fn is not None:
-        sim_bridge.invoke_method('close_script')
-        # layout.clear()
+        QtWidgets.QApplication.instance().quit()
 
 
 @shortcut(None, (Qt.Key_Space, Qt.Key_F, Qt.Key_F), 'open')

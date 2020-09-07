@@ -163,41 +163,6 @@ def sim_bridge():
     return sim_bridge
 
 
-class PyGearsProc(QtCore.QObject):
-    def __init__(self):
-        super().__init__()
-
-        self.thrd = QtCore.QThread()
-        self.moveToThread(self.thrd)
-        self.thrd.started.connect(self.run)
-
-        # self.queue = queue.Queue()
-        # self.plugin = functools.partial(Gearbox, standalone=True)
-        self.plugin = Gearbox()
-        self.plugin.moveToThread(self.thrd)
-
-        # QtWidgets.QApplication.instance().aboutToQuit.connect(
-        #     self.thrd.terminate)
-
-        self.thrd.start()
-
-    def run(self):
-        # self.plugin = Gearbox()
-        try:
-            sim(extens=[self.plugin], check_activity=False)
-        except Exception:
-            # import traceback
-            # traceback.print_exc()
-
-            import traceback
-            import pdb
-            extype, value, tb = sys.exc_info()
-            traceback.print_exc()
-            pdb.post_mortem(tb)
-
-        self.thrd.quit()
-
-
 def _err_reconnect_dfs(err, issue_id, path):
     if isinstance(err, MultiAlternativeError):
         if hasattr(err, 'root_gear'):
@@ -236,9 +201,10 @@ class PyGearsClient(QtCore.QObject):
     script_closed = QtCore.Signal()
     model_closed = QtCore.Signal()
     model_loaded = QtCore.Signal()
+    sim_init = QtCore.Signal()
     message = QtCore.Signal(str)
 
-    before_run = QtCore.Signal()
+    # These are called automatically by handle_event
     after_cleanup = QtCore.Signal()
     after_timestep = QtCore.Signal()
     at_exit = QtCore.Signal()
@@ -259,9 +225,12 @@ class PyGearsClient(QtCore.QObject):
         self.err = None
         self.cur_model_issue_id = None
         self.pygears_proc = None
+        self.model_was_loaded = True
 
-        QtWidgets.QApplication.instance().aboutToQuit.connect(self.quit)
-        self.script_closed.connect(QtWidgets.QApplication.instance().quit)
+        # QtWidgets.QApplication.instance().aboutToQuit.connect(self.quit)
+        # self.script_closed.connect(QtWidgets.QApplication.instance().quit)
+        # QtWidgets.QApplication.instance().aboutToQuit.connect(self.close_script)
+
         self.start_thread()
 
     @property
@@ -276,6 +245,7 @@ class PyGearsClient(QtCore.QObject):
 
     def start_thread(self):
         self.thrd = QtCore.QThread()
+        reg['gearbox/main/threads'].add(self.thrd)
         self.moveToThread(self.thrd)
         # self.loop.moveToThread(self.thrd)
         # self.thrd.started.connect(self.run)
@@ -298,20 +268,6 @@ class PyGearsClient(QtCore.QObject):
     def run_sim(self):
         print("Running sim")
 
-        # self.plugin = Gearbox()
-        # try:
-        #     sim(extens=[VCD, self.plugin], check_activity=False)
-        # except Exception:
-        #     # import traceback
-        #     # traceback.print_exc()
-
-        #     import traceback
-        #     import pdb
-        #     extype, value, tb = sys.exc_info()
-        #     traceback.print_exc()
-        #     pdb.post_mortem(tb)
-
-        # self.pygears_proc = PyGearsProc()
         self.pygears_proc = Gearbox()
         self.pygears_proc.sim_event.connect(self.handle_event)
         self.simulating = True
@@ -324,13 +280,11 @@ class PyGearsClient(QtCore.QObject):
             sim_exception = reg['sim/exception']
             if sim_exception:
                 log_exception(sim_exception)
-                # layout = reg['gearbox/layout']
-                # layout.current_window.place_buffer(
-                #     layout.get_buffer_by_name('compilation'))
 
             self.simulating = False
 
-        if name == 'exception':
+        if (name == 'before_run') or (name == 'exception' and not self.model_was_loaded):
+            self.model_was_loaded = True
             self.model_loaded.emit()
         else:
             getattr(self, name).emit()
@@ -351,24 +305,17 @@ class PyGearsClient(QtCore.QObject):
 
     def close_script(self):
         if reg['gearbox/model_script_name']:
-            # bind('gearbox/model_script_name', None)
-            # if self.queue is not None:
-            #     reg['sim/gearbox'].done = True
-            #     self.closing = True
-            #     self.cont()
-            # else:
-
             print("Closing script!")
             if self.pygears_proc:
                 self.pygears_proc.done = True
                 self.pygears_proc.cont()
-                # self.pygears_proc.wait()
+                self.pygears_proc.thrd.wait()
 
+            print("Closing script - signals!")
             self.model_closed.emit()
             self.script_closed.emit()
-            # self.thrd.quit()
-            # self.queue = None
-            # self.loop.quit()
+
+        self.thrd.quit()
 
     @property
     @inject
@@ -436,6 +383,7 @@ class PyGearsClient(QtCore.QObject):
                         logging.FileHandler(compilation_log_fn)))
 
         reg['gearbox/model_script_name'] = script_fn
+        print(f'Script loading started')
         self.script_loading_started.emit()
 
         self.err = None
@@ -463,113 +411,14 @@ class PyGearsClient(QtCore.QObject):
 
         if self.err is None:
             self.invoke_method('run_sim')
-            # QtCore.QTimer.singleShot(10, self.model_loaded.emit)
-            # self.model_loaded.emit()
 
     def cont(self):
         if self.simulating:
             self.pygears_proc.cont()
 
-        # QtCore.QMetaObject.invokeMethod(self.loop, 'quit',
-        #                                 QtCore.Qt.AutoConnection)
-
-    # def _should_break(self):
-    #     triggered = False
-    #     discard = []
-
-    #     for b in self.breakpoints:
-    #         trig, keep = b()
-    #         if trig:
-    #             triggered = True
-
-    #         if not keep:
-    #             discard.append(b)
-
-    #     self.breakpoints.difference_update(discard)
-
-    #     return triggered
-
-    # def queue_loop(self):
-    #     while self.queue is not None:
-
-    #         self.thrd.eventDispatcher().processEvents(
-    #             QtCore.QEventLoop.AllEvents)
-
-    #         try:
-    #             msg = self.queue.get(0.001)
-    #         except queue.Empty:
-    #             if reg['gearbox/model_script_name'] is None:
-    #                 print("HERE?")
-    #                 self.queue = None
-    #                 return
-    #             else:
-    #                 continue
-
-    #         print(f"Queue Loop msg: {msg}")
-
-    #         if msg == "after_timestep":
-    #             self.after_timestep.emit()
-    #             if self._should_break():
-    #                 self.running = False
-    #                 self.sim_refresh.emit()
-    #                 self.loop.exec_()
-    #         elif msg == "after_cleanup":
-    #             if not self.closing:
-    #                 self.sim_refresh.emit()
-    #                 self.after_cleanup.emit()
-
-    #             # self.queue.task_done()
-    #             # self.queue = None
-    #             # self.closing = False
-    #             # return
-
-    #         elif msg == "at_exit":
-    #             # import faulthandler
-    #             # faulthandler.dump_traceback(file=open('err.log', 'w'))
-    #             # if self.closing:
-    #             #     self.model_closed.emit()
-    #             #     self.script_closed.emit()
-
-    #             # # self.quit()
-    #             self.queue.task_done()
-    #             # self.thrd.eventDispatcher().processEvents(
-    #             #     QtCore.QEventLoop.AllEvents)
-    #             # self.thrd.msleep(100)
-
-    #             # self.queue = None
-    #             # self.closing = False
-    #             return
-    #         elif msg == "before_run":
-    #             self.before_run.emit()
-    #             self.running = False
-    #             self.loop.exec_()
-    #             self.running = True
-
-    #         if self.queue:
-    #             self.queue.task_done()
-
-    # def run(self):
-    #     while self.queue is None:
-    #         self.thrd.eventDispatcher().processEvents(
-    #             QtCore.QEventLoop.AllEvents)
-    #         self.thrd.msleep(100)
-
-    #     try:
-    #         self.queue_loop()
-    #     except Exception:
-    #         import traceback
-    #         traceback.print_exc()
-
+    # def quit(self):
+    #     print("aboutToQuit proxy")
     #     self.thrd.quit()
-
-    def quit(self):
-        print("aboutToQuit proxy")
-        self.thrd.quit()
-        # self.plugin.done = True
-        # self.loop.quit()
-
-    # def refresh_timeout(self):
-    #     self.sim_refresh.emit()
 
 
 class MainWindowPlugin(PluginBase):

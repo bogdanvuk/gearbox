@@ -82,19 +82,19 @@ def graph(
 #     return buff
 
 class GraphModelCtrl(QtCore.QObject):
-    model_loaded = QtCore.Signal()
-    working_model_loaded = QtCore.Signal()
+    graph_loaded = QtCore.Signal()
+    graph_closed = QtCore.Signal()
 
     @inject
     def __init__(self, sim_bridge=Inject('gearbox/sim_bridge')):
         super().__init__()
         self.sim_bridge = sim_bridge
         self.sim_bridge.model_loaded.connect(self.graph_create)
-        self.sim_bridge.before_run.connect(self.graph_create)
         self.sim_bridge.model_closed.connect(self.graph_delete)
 
     @inject
     def graph_create(self, root=Inject('gear/root')):
+        print(f'Graph create')
         view = Graph()
 
         reg['gearbox/graph'] = view
@@ -111,10 +111,8 @@ class GraphModelCtrl(QtCore.QObject):
 
         self.buff = GraphBuffer(view, 'graph')
 
-        self.model_loaded.emit()
-
         if not self.err:
-            self.working_model_loaded.emit()
+            self.graph_loaded.emit()
 
         return self.buff
 
@@ -123,11 +121,13 @@ class GraphModelCtrl(QtCore.QObject):
         return self.sim_bridge.err
 
     def graph_delete(self):
+        print(f'Deleting graph')
         self.buff.delete()
         del self.buff
         reg['gearbox/graph'] = None
         reg['gearbox/graph_model'] = None
         reg['gearbox/graph_model_map'] = {}
+        self.graph_closed.emit()
 
 
 class Graph(QtWidgets.QGraphicsView):
