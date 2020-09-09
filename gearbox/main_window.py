@@ -164,6 +164,7 @@ class MainWindow(QtWidgets.QMainWindow):
         if script_fn:
             event.ignore()
             sim_bridge.invoke_method('close_script')
+            QtWidgets.QApplication.instance().quit()
         else:
             super().closeEvent(event)
 
