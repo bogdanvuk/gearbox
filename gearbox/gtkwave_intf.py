@@ -135,6 +135,7 @@ class GtkWaveProc(QtCore.QObject):
             except pexpect.TIMEOUT:
                 pass
             except pexpect.EOF:
+                print(f'Gtkwave EOF')
                 self.thrd.quit()
                 return
 
@@ -159,6 +160,7 @@ class GtkWaveProc(QtCore.QObject):
             print(self.p.buffer)
             return
         except pexpect.EOF:
+            print(f'Gtkwave EOF')
             return
 
         resp = '\n'.join([d for d in self.p.before.strip().split('\n') if not d.startswith("$$")])

@@ -28,7 +28,8 @@ def active_intf():
 
 @inject
 def gtkwave(graph_model_ctrl=Inject('gearbox/graph_model_ctrl')):
-    dbg_connect(graph_model_ctrl.graph_loaded, gtkwave_create)
+    graph_model_ctrl.graph_loaded.connect(gtkwave_create)
+    # dbg_connect(graph_model_ctrl.graph_loaded, gtkwave_create)
 
 
 @inject
@@ -212,7 +213,8 @@ class GtkWaveGraphIntf(QtCore.QObject):
         self.vcd_map = vcd_map
         self.graph = vcd_map.subgraph
         self.gtkwave_intf = gtkwave_intf
-        dbg_connect(self.gtkwave_intf.response, self.gtkwave_resp)
+        # dbg_connect(self.gtkwave_intf.response, self.gtkwave_resp)
+        self.gtkwave_intf.response.connect(self.gtkwave_resp)
         self.items_on_wave = {}
         self.should_update = False
         self.updating = False
@@ -228,7 +230,10 @@ class GtkWaveGraphIntf(QtCore.QObject):
             return self.show_node(item)
 
     def show_node(self, node):
-        sigs = self.vcd_map[node]
+        sigs = self.vcd_map.get(node, None)
+        if sigs is None:
+            print(f'No signals found for {node.name}')
+            return
 
         for i in range(0, len(sigs), 20):
             s = sigs[i:i + 20]
@@ -250,7 +255,12 @@ class GtkWaveGraphIntf(QtCore.QObject):
 
         intf_name = pipe.name.replace('.', '/')
         status_sig = intf_name + '_state'
-        valid_sig, ready_sig = self.vcd_map.pipe_handshake_signals(pipe)
+        try:
+            valid_sig, ready_sig = self.vcd_map.pipe_handshake_signals(pipe)
+        except KeyError:
+            print(f'No signals found for {pipe.name}')
+            return
+
         self.items_on_wave[pipe] = intf_name
 
         commands = []

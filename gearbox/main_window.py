@@ -27,7 +27,8 @@ class Action(QtWidgets.QAction):
         self.name = name
         main.domain_changed.connect(self.domain_changed)
         main.add_shortcut(self)
-        dbg_connect(self.triggered, callback)
+        # dbg_connect(self.triggered, callback)
+        self.triggered.connect(callback)
         self.triggered.connect(self.activated_slot)
 
     def activated_slot(self):
@@ -55,7 +56,8 @@ class Shortcut(QtCore.QObject):
 
         self._qshortcut = QtWidgets.QShortcut(QtGui.QKeySequence(*key), main)
         # self._qshortcut.activated.connect(callback)
-        dbg_connect(self._qshortcut.activated, self.activated_slot)
+        # dbg_connect(self._qshortcut.activated, self.activated_slot)
+        self._qshortcut.activated.connect(self.activated_slot)
         self._qshortcut.activatedAmbiguously.connect(main.shortcut_prefix)
         self.activated = self._qshortcut.activated
         # self._qshortcut.setContext(QtCore.Qt.ApplicationShortcut)
