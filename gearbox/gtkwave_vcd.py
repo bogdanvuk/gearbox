@@ -175,7 +175,16 @@ class VerilatorVCDMap(VCDMap):
 
 
 def get_type_groups(sigs, t, path):
-    if not typeof(t, (Tuple, Union, Queue, Array)):
+    if typeof(t, Array):
+        group = {}
+        for i in range(len(t)):
+            arr_path = path.copy()
+            arr_path[-1] += f'({i})'
+            group[str(i)] = get_type_groups(sigs, t.data, arr_path)
+
+        return group
+
+    if not typeof(t, (Tuple, Union, Queue)):
         name = '.'.join(path)
         sel = []
         for s in sigs:

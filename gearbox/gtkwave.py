@@ -230,8 +230,9 @@ class GtkWaveGraphIntf(QtCore.QObject):
             return self.show_node(item)
 
     def show_node(self, node):
-        sigs = self.vcd_map.get(node, None)
-        if sigs is None:
+        try:
+            sigs = self.vcd_map[node]
+        except KeyError:
             print(f'No signals found for {node.name}')
             return
 

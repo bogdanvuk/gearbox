@@ -119,7 +119,8 @@ def main_loop(script_fn, argv, layers=Inject('gearbox/layers')):
         load_rc('.pygears', os.path.dirname(script_fn))
         sim_bridge_inst.invoke_method('run_model', script_fn=script_fn)
 
-    main_window.showFullScreen()
+    # main_window.showFullScreen()
+    main_window.showMaximized()
     ret = app.exec_()
     script_fn = reg['gearbox/main/new_model_script_fn']
 
