@@ -91,8 +91,10 @@ class GtkWave:
             self.create_gtkwave_buffer()
         else:
             print(f'Connecting init for {vcd_trace_obj}, {vcd_map_cls}')
-            single_shot_connect(window.initialized,
-                                partial(self.create_gtkwave_buffer, window, vcd_trace_obj, vcd_map_cls))
+            single_shot_connect(
+                window.initialized,
+                partial(self.create_gtkwave_buffer, window, vcd_trace_obj,
+                        vcd_map_cls))
 
     def create_gtkwave_buffer(self, window, vcd_trace_obj, vcd_map_cls):
 
@@ -205,6 +207,21 @@ class NodeActivityVisitor(HierVisitorBase):
             return True
 
 
+def chunk_list(l, size=2048):
+    chunks = []
+    cur_chunk = []
+    cur_len = 0
+    for val in l:
+        cur_chunk.append(val)
+        cur_len += len(val)
+        if cur_len > 1024:
+            chunks.append(cur_chunk)
+            cur_chunk = []
+            cur_len = 0
+
+    return chunks
+
+
 class GtkWaveGraphIntf(QtCore.QObject):
     vcd_loaded = QtCore.Signal()
 
@@ -238,11 +255,13 @@ class GtkWaveGraphIntf(QtCore.QObject):
 
         for i in range(0, len(sigs), 20):
             s = sigs[i:i + 20]
-            self.gtkwave_intf.command([f'gtkwave::addSignalsFromList {{{" ".join(s)}}}'])
+            self.gtkwave_intf.command(
+                [f'gtkwave::addSignalsFromList {{{" ".join(s)}}}'])
 
         for i in range(0, len(sigs), 20):
             s = sigs[i:i + 20]
-            self.gtkwave_intf.command([f'gtkwave::highlightSignalsFromList {{{" ".join(s)}}}'])
+            self.gtkwave_intf.command(
+                [f'gtkwave::highlightSignalsFromList {{{" ".join(s)}}}'])
 
         self.gtkwave_intf.command([f'gtkwave::/Edit/Create_Group {node.name}'])
 
@@ -266,15 +285,19 @@ class GtkWaveGraphIntf(QtCore.QObject):
 
         commands = []
 
-        dti_translate_path = os.path.join(os.path.dirname(__file__), "dti_translate.py")
-        commands.append(f'gtkwave::addSignalsFromList {{{valid_sig} {ready_sig}}}')
-        commands.append(f'gtkwave::highlightSignalsFromList {{{valid_sig} {ready_sig}}}')
+        dti_translate_path = os.path.join(os.path.dirname(__file__),
+                                          "dti_translate.py")
+        commands.append(
+            f'gtkwave::addSignalsFromList {{{valid_sig} {ready_sig}}}')
+        commands.append(
+            f'gtkwave::highlightSignalsFromList {{{valid_sig} {ready_sig}}}')
 
         commands.append(f'gtkwave::/Edit/Combine_Down {{{status_sig}}}')
         commands.append(f'select_trace_by_name {{{status_sig}}}')
         commands.append('gtkwave::/Edit/Toggle_Group_Open|Close')
         commands.append(
-            f'gtkwave::setCurrentTranslateTransProc "{sys.executable} {dti_translate_path}"')
+            f'gtkwave::setCurrentTranslateTransProc "{sys.executable} {dti_translate_path}"'
+        )
         commands.append(f'gtkwave::installTransFilter 1')
 
         def dfs(name, lvl):
@@ -299,14 +322,19 @@ class GtkWaveGraphIntf(QtCore.QObject):
 
         all_sigs = groups[-1][1]
 
-        commands.append('gtkwave::addSignalsFromList {' + " ".join(all_sigs) + '}')
+        for c in chunk_list(all_sigs):
+            commands.append('gtkwave::addSignalsFromList {' + " ".join(c) + '}')
 
         for name, selected in reversed(groups):
-            commands.append('gtkwave::highlightSignalsFromList {' + " ".join(selected) + '}')
+
+            for c in chunk_list(selected):
+                commands.append('gtkwave::highlightSignalsFromList {' + " ".join(c) + '}')
+
             commands.append(f'gtkwave::/Edit/Combine_Down {name}')
 
         commands.append('select_trace_by_name {' + intf_name + '}')
         commands.append('gtkwave::/Edit/Toggle_Group_Open|Close')
+
         self.gtkwave_intf.command(commands)
 
         return intf_name
@@ -349,11 +377,13 @@ class GtkWaveGraphIntf(QtCore.QObject):
                 # print("Again")
                 return
 
-        self.update_pipes(PipeActivityVisitor(self.vcd_map).visit(self.vcd_map.model))
+        self.update_pipes(
+            PipeActivityVisitor(self.vcd_map).visit(self.vcd_map.model))
         # self.update_pipes(p for p in self.vcd_map.vcd_pipes if p.view.isVisible())
 
         if self.gtkwave_intf.shmidcat:
-            self.gtkwave_intf.command(f'set_marker_if_needed {self.timestep*10}')
+            self.gtkwave_intf.command(
+                f'set_marker_if_needed {self.timestep*10}')
 
         if self.should_update:
             self.should_update = False
@@ -361,7 +391,8 @@ class GtkWaveGraphIntf(QtCore.QObject):
             if self.gtkwave_intf.shmidcat:
                 self.gtkwave_intf.command_nb(f'gtkwave::nop', self.cmd_id)
             else:
-                self.gtkwave_intf.command_nb(f'gtkwave::reLoadFile', self.cmd_id)
+                self.gtkwave_intf.command_nb(f'gtkwave::reLoadFile',
+                                             self.cmd_id)
 
         else:
             self.updating = False
@@ -372,8 +403,8 @@ class GtkWaveGraphIntf(QtCore.QObject):
 
         ts = self.vcd_map.timestep
 
-        signal_names = [(pipe, self.vcd_map.pipe_data_signal_stem(pipe)[:-4]) for pipe in pipes
-                        if pipe.status[0] != ts]
+        signal_names = [(pipe, self.vcd_map.pipe_data_signal_stem(pipe)[:-4])
+                        for pipe in pipes if pipe.status[0] != ts]
 
         for i in range(0, len(signal_names), 20):
 
@@ -381,7 +412,8 @@ class GtkWaveGraphIntf(QtCore.QObject):
             cur_names = signal_names[cur_slice]
 
             ret = self.gtkwave_intf.command(
-                f'get_values {ts*10} [list {" ".join(s[1] for s in cur_names)}]')
+                f'get_values {ts*10} [list {" ".join(s[1] for s in cur_names)}]'
+            )
 
             if ret is None:
                 return
@@ -406,7 +438,8 @@ class GtkWaveGraphIntf(QtCore.QObject):
         # )
 
         if timestep < self.timestep:
-            self.update_pipes(PipeActivityVisitor(self.vcd_map).visit(self.vcd_map.model))
+            self.update_pipes(
+                PipeActivityVisitor(self.vcd_map).visit(self.vcd_map.model))
             # self.update_pipes(p for p in self.vcd_map.vcd_pipes if p.view.isVisible())
             self.gtkwave_intf.command(f'set_marker_if_needed {timestep*10}')
         elif not self.updating:
@@ -415,7 +448,8 @@ class GtkWaveGraphIntf(QtCore.QObject):
             if self.gtkwave_intf.shmidcat:
                 self.gtkwave_intf.command_nb(f'gtkwave::nop', self.cmd_id)
             else:
-                self.gtkwave_intf.command_nb(f'gtkwave::reLoadFile', self.cmd_id)
+                self.gtkwave_intf.command_nb(f'gtkwave::reLoadFile',
+                                             self.cmd_id)
         else:
             self.should_update = True
 
@@ -426,9 +460,13 @@ class GtkWaveBufferPlugin(LayoutPlugin):
         reg['gearbox/plugins/gtkwave'] = {}
 
         @inject
-        def menu_visibility(var, visible, gtkwave=MayInject('gearbox/gtkwave/inst')):
+        def menu_visibility(var,
+                            visible,
+                            gtkwave=MayInject('gearbox/gtkwave/inst')):
             if gtkwave:
                 for inst in gtkwave.instances:
                     inst.command('gtkwave::toggleStripGUI')
 
-        reg.confdef('gearbox/gtkwave/menus', default=False, setter=menu_visibility)
+        reg.confdef('gearbox/gtkwave/menus',
+                    default=False,
+                    setter=menu_visibility)

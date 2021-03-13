@@ -107,7 +107,8 @@ register_prefix('graph', Qt.Key_Z, 'zoom')
 @shortcut('graph', (Qt.Key_Z, Qt.Key_Z))
 @inject
 def zoom_selected(graph=Inject('gearbox/graph')):
-    graph.zoom_to_nodes(graph.selected_nodes())
+    # graph.zoom_to_nodes(graph.selected_nodes())
+    graph.centerOn(graph.selected_nodes()[0])
 
 
 @shortcut('graph', (Qt.Key_Z, Qt.Key_A))
