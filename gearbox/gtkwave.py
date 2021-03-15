@@ -7,6 +7,7 @@ from .timekeep import timestep, timestep_event_register
 from pygears.sim.modules import SimVerilated
 from .node_model import find_cosim_modules, PipeModel, NodeModel
 from pygears.core.hier_node import HierVisitorBase, HierYielderBase
+from pygears.core.graph import get_source_producer
 from pygears.conf import Inject, MayInject, inject, reg
 from typing import NamedTuple
 from .gtkwave_intf import GtkWaveWindow
@@ -196,8 +197,10 @@ class PipeActivityVisitor(HierYielderBase):
 
 class NodeActivityVisitor(HierVisitorBase):
     def NodeModel(self, node):
-        if (any(p.status == 'active' for p in node.input_ext_pipes)
-                and (not any(p.status == 'active' or p.status == 'handshaked'
+        if not node.rtl.hierarchical and node.rtl not in reg['sim/map']:
+            node.set_status('done')
+        elif (any(p.status == 'active' for p in node.input_ext_pipes)
+              and (not any(p.status == 'active' or p.status == 'handshaked'
                              for p in node.output_ext_pipes))):
             node.set_status('stuck')
         else:
@@ -340,12 +343,16 @@ class GtkWaveGraphIntf(QtCore.QObject):
         return intf_name
 
     def update_rtl_intf(self, pipe, wave_status):
+        done = get_source_producer(pipe.rtl).done
+
         if wave_status == '1 0':
             status = 'active'
         elif wave_status == '0 1':
             status = 'waited'
         elif wave_status == '1 1':
             status = 'handshaked'
+        elif done:
+            status = 'done'
         else:
             status = 'empty'
 

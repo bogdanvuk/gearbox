@@ -19,6 +19,7 @@ PIPE_SIM_STATUS_COLOR = {
     'empty': '#7f9597',
     'active': '#b4325a',
     'waited': '#325aa0',
+    'done': '#c84d6e56',
     'handshaked': '#3c6414',
     'error': '@text-color-error'
 }

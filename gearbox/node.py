@@ -16,6 +16,8 @@ NODE_SIM_STATUS_COLOR = {
     'empty': '#32000000',
     'stuck': '#c8aa325a',
     'stuck_hier': '#c8aa325a',
+    'done': '#c84d6e56',
+    'done_hier': '#c84d6e56',
     'error': '@text-color-error',
     'error_hier': '@text-color-error'
 }
