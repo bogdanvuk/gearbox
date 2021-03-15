@@ -222,6 +222,9 @@ def chunk_list(l, size=2048):
             cur_chunk = []
             cur_len = 0
 
+    if cur_chunk:
+        chunks.append(cur_chunk)
+
     return chunks
 
 
