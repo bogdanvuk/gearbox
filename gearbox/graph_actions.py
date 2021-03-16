@@ -4,6 +4,7 @@ from .layout import show_buffer
 from .graph import GraphBufferPlugin
 from .pipe import Pipe
 from .popup_desc import popup_desc, popup_cancel
+from pygears.conf.trace import gear_definition_location
 from functools import wraps
 from PySide2.QtCore import Qt
 from pygears.conf import Inject, inject, reg
@@ -30,6 +31,16 @@ def single_select_action(func):
 @shortcut('graph', Qt.SHIFT + Qt.Key_K)
 @single_select_action
 def node_up_level(node, graph):
+    if isinstance(node, Pipe) or node.collapsed:
+        graph.select(node.parent)
+    else:
+        node.collapse()
+
+
+@shortcut('graph', Qt.Key_W)
+@single_select_action
+def node_show_frame(node, graph):
+    breakpoint()
     if isinstance(node, Pipe) or node.collapsed:
         graph.select(node.parent)
     else:
@@ -193,8 +204,8 @@ def describe_item(node, graph):
 @single_select_action
 def describe_inst(node, graph):
     if not isinstance(node, Pipe):
-        buff = describe_trace(
-            node.model.rtl.gear.trace, name=f'inst - {node.model.rtl.name}')
+        buff = describe_trace(node.model.rtl.trace,
+                              name=f'inst - {node.model.rtl.name}')
         show_buffer(buff)
 
 
@@ -216,10 +227,23 @@ def zoom_out(graph=Inject('gearbox/graph')):
 @single_select_action
 def describe_definition(node, graph):
     if not isinstance(node, Pipe):
-        func = node.model.definition.__wrapped__
-        fn = inspect.getfile(func)
-        lines, lineno = inspect.getsourcelines(func)
-        buff = describe_file(fn, lineno=slice(lineno, lineno + len(lines)))
+        func, fn, ln, lines = gear_definition_location(node.model.definition)
+
+        buff = describe_file(fn, lineno=slice(ln, ln + len(lines)))
+        show_buffer(buff)
+
+
+@shortcut('graph', (Qt.Key_D, Qt.Key_F))
+@single_select_action
+def describe_frame(node, graph):
+    if not isinstance(node, Pipe):
+        sim_gear = reg['sim/map'][node.model.rtl]
+        if sim_gear.async_gen is None:
+            return
+
+        ln = sim_gear.async_gen.ag_frame.f_lineno
+        func, fn, _, _ = gear_definition_location(node.model.definition)
+        buff = describe_file(fn, lineno=slice(ln, ln + 1))
         show_buffer(buff)
 
 
@@ -267,8 +291,8 @@ def toggle_expand(node, graph):
 
 @shortcut('graph', Qt.Key_P)
 @inject
-def send_to_wave(
-        graph=Inject('gearbox/graph'), gtkwave=Inject('gearbox/gtkwave/inst')):
+def send_to_wave(graph=Inject('gearbox/graph'),
+                 gtkwave=Inject('gearbox/gtkwave/inst')):
 
     added = []
     selected_item = graph.selected_items()
@@ -291,9 +315,8 @@ shortcut('graph', Qt.Key_Colon)(time_search)
 
 @shortcut('graph', Qt.Key_Slash)
 @inject
-def node_search(
-        minibuffer=Inject('gearbox/minibuffer'),
-        graph=Inject('gearbox/graph')):
+def node_search(minibuffer=Inject('gearbox/minibuffer'),
+                graph=Inject('gearbox/graph')):
 
     items = graph.selected_items()
     if len(items) == 1:
@@ -304,8 +327,8 @@ def node_search(
     if not model.child:
         model = model.parent
 
-    node_name = get_minibuffer_input(
-        message=f'{model.name}/', completer=node_search_completer(model))
+    node_name = get_minibuffer_input(message=f'{model.name}/',
+                                     completer=node_search_completer(model))
 
     if not node_name:
         return

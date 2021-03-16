@@ -128,6 +128,13 @@ class Gearbox(QtCore.QObject, SimExtend):
         self.handle_event('after_cleanup')
 
     def before_setup(self, sim):
+        # Gearbox has to be last of all plugins to receive 'after_timestep'
+        # event, so that for an example VCD plugin finished flushing waveforms
+        e = sim.events['before_run']
+        i = e.index(self.before_run)
+        del e[i]
+        e.append(self.before_run)
+
         if self.live:
             for m in find_cosim_modules():
                 if isinstance(m, SimVerilated):

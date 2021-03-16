@@ -334,10 +334,10 @@ class NodeModel(NamedHierNode):
 
     @property
     def definition(self):
-        try:
-            return self.rtl.params['definition'].func
-        except KeyError:
+        if self.rtl.definition is None:
             raise TypeError
+
+        return self.rtl.definition.func
 
     @property
     def description(self):
