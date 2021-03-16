@@ -87,7 +87,6 @@ class TimeKeep(QtCore.QObject):
             if val != self._timestep:
                 self._timestep = val
                 reg['gearbox/timestep'] = self._timestep
-                print("Timestep changed")
                 self.timestep_changed.emit(self._timestep)
 
     @property
