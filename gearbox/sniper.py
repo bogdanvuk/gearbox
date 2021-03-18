@@ -107,7 +107,7 @@ class Sniper:
             else:
                 nodes = [pipe.parent for pipe in pipes]
 
-        keys = [2]
+        keys = [6]
 
         for n in nodes:
             if n.collapsed:
