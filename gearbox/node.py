@@ -458,9 +458,9 @@ class NodeItem(AbstractNodeItem):
         # self.setFlag(self.ItemIsMovable, True)
         self.selected = True
 
-    @property
-    def hierarchical(self):
-        return bool(self._nodes)
+    # @property
+    # def hierarchical(self):
+    #     return bool(self._nodes)
 
     def auto_resize(self, nodes=None):
         if self.collapsed:
@@ -505,8 +505,11 @@ class NodeItem(AbstractNodeItem):
         self.graph.node_expand_toggled.emit(False, self.model)
 
     def expand(self):
-        if not self.collapsed or not self.hierarchical:
+        if not self.collapsed or not self.model.hierarchical:
             return None
+
+        if not self.model.rtl_map:
+            self.model.load_children()
 
         for obj in self.children:
             obj.show()

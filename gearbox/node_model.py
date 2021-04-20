@@ -209,6 +209,7 @@ class NodeModel(NamedHierNode):
     def __init__(self, gear, parent=None):
         super().__init__(parent=parent)
 
+        # print(f'NodeModel: {gear.name}')
         self.rtl = gear
         reg['gearbox/graph_model_map'][gear] = self
 
@@ -249,40 +250,44 @@ class NodeModel(NamedHierNode):
             for port in self.rtl.in_ports + self.rtl.out_ports:
                 self.view._add_port(port)
 
-        if self.hierarchical:
-            for child in self.rtl.child:
-                self.rtl_map[child] = NodeModel(child, self)
-
-                if parent is not None:
-                    self.rtl_map[child].view.hide()
-
         self.setup_view(painter=painter)
 
-        if self.hierarchical:
-            for child in self.rtl.local_intfs:
-                for i in range(len(child.consumers)):
-                    if isinstance(child.producer, HDLProducer):
-                        continue
-
-                    if child.consumers and isinstance(child.consumers[0], HDLConsumer):
-                        continue
-
-                    if child.producer is None:
-                        # TODO: This should be an error?
-                        continue
-
-                    self.rtl_map[child] = PipeModel(
-                        child, consumer_id=i, parent=self)
-
-                    if parent is not None:
-                        self.rtl_map[child].view.hide()
-
+        if parent is None:
+            self.load_children()
 
         # import pdb; pdb.set_trace()
         if self.on_error_path:
             self.set_status('error')
         else:
             self.set_status('empty')
+
+    def load_children(self):
+        if not self.hierarchical:
+            return
+
+        for child in self.rtl.child:
+            self.rtl_map[child] = NodeModel(child, self)
+
+            if self.parent is not None:
+                self.rtl_map[child].view.hide()
+
+        for child in self.rtl.local_intfs:
+            for i in range(len(child.consumers)):
+                if isinstance(child.producer, HDLProducer):
+                    continue
+
+                if child.consumers and isinstance(child.consumers[0], HDLConsumer):
+                    continue
+
+                if child.producer is None:
+                    # TODO: This should be an error?
+                    continue
+
+                self.rtl_map[child] = PipeModel(
+                    child, consumer_id=i, parent=self)
+
+                if self.parent is not None:
+                    self.rtl_map[child].view.hide()
 
     def __getitem__(self, path):
         return super().__getitem__(path.replace('.', '/'))
