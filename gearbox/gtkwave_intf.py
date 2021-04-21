@@ -1,6 +1,9 @@
 import os
 import re
 
+import Xlib
+import Xlib.display
+import Xlib.X
 import pexpect
 from PySide2 import QtCore, QtGui, QtWidgets
 
@@ -93,11 +96,11 @@ class GtkWaveProc(QtCore.QObject):
 
         if self.shmidcat:
             print(f'Shared mem addr: {self.trace_fn}')
-            cmd = f'gtkwave -W -I -r {gtkwaverc_fn} -T {script_fn} {self.trace_fn}'
+            cmd = f'gtkwave -W -I -N -r {gtkwaverc_fn} -T {script_fn} {self.trace_fn}'
 
         else:
             print(f'VCD file: {self.trace_fn}')
-            cmd = f'gtkwave -W -r {gtkwaverc_fn} -T {script_fn} {self.trace_fn}'
+            cmd = f'gtkwave -W -N -r {gtkwaverc_fn} -T {script_fn} {self.trace_fn}'
 
         print(cmd)
         self.p = pexpect.spawnu(cmd)
@@ -229,7 +232,8 @@ native_key_map = {
 }
 
 
-class GtkWaveWindow(QtCore.QObject):
+# class GtkWaveWindow(QtCore.QObject):
+class GtkWaveWindow(QtWidgets.QFrame):
     send_command = QtCore.Signal(str, int)
     initialized = QtCore.Signal()
     deleted = QtCore.Signal()
@@ -239,17 +243,11 @@ class GtkWaveWindow(QtCore.QObject):
         self.event_proc = GtkEventProc()
         self.proc = GtkWaveProc(trace_fn)
         self.window_id = None
-        # self.proc = GtkWaveProc(trace_fn, None)
 
         self.proc.gtk_event.connect(self.event_proc.gtk_event)
         self.proc.window_up.connect(self.window_up)
         self.send_command.connect(self.proc.command)
         self.response = self.proc.response
-
-        # self.deleted.connect(self.proc.close)
-        # QtWidgets.QApplication.instance().aboutToQuit.connect(self.close)
-
-        # QtWidgets.QApplication.instance().aboutToQuit.connect(self.proc.close)
 
     @property
     def shmidcat(self):
@@ -272,34 +270,36 @@ class GtkWaveWindow(QtCore.QObject):
         resp = cmd_block.command(cmd, self)
         return resp
 
-    @inject
-    def window_up(self, version, pid, window_id, graph=Inject('gearbox/graph')):
+    def resizeEvent(self, event: QtGui.QResizeEvent) -> None:
+        super().resizeEvent(event)
+        self.win.configure(x=0, y=0, width=self.width(), height=self.height())
+        self.dpy.sync()
+
+    def activateWindow(self) -> None:
+        super().activateWindow()
+        self.win.configure(x=0, y=0, width=self.width(), height=self.height())
+        self.dpy.sync()
+
+    def window_up(self, version, pid, window_id):
         print(f'GtkWave started: {version}, {pid}, {window_id}')
         self.window_id = window_id
-        self.gtkwave_win = QtGui.QWindow.fromWinId(window_id)
-        self.widget = QtWidgets.QWidget.createWindowContainer(self.gtkwave_win)
-        # self.widget.setFocusPolicy(QtCore.Qt.NoFocus)
-
-        self.widget.setWindowFlag(QtCore.Qt.X11BypassWindowManagerHint)
-        self.widget.setWindowFlag(QtCore.Qt.BypassGraphicsProxyWidget)
-        self.widget.setWindowFlag(QtCore.Qt.BypassWindowManagerHint)
+        self.dpy = Xlib.display.Display()
+        self.win = self.dpy.create_resource_object('window', window_id)
+        self.win.reparent(self.window().winId(), 0, 0)
+        # self.win.configure(x=self.x(), y=self.y(), width=self.width(), height=self.height())
+        self.win.configure(x=0, y=0, width=self.width(), height=self.height())
+        self.dpy.sync()
 
         self.command(f'gtkwave::toggleStripGUI')
-        if reg['gearbox/gtkwave/menus']:
-            self.command(f'gtkwave::toggleStripGUI')
+        # if reg['gearbox/gtkwave/menus']:
+        #     self.command(f'gtkwave::toggleStripGUI')
 
         self.command(f'gtkwave::setZoomFactor -7')
 
         self.initialized.emit()
 
     def close(self):
-        # self.gtkwave_win.setParent(None)
-        # self.widget.destroy()
-        # self.widget.setParent()
+        self.destroy()
         print("aboutToQuit GtkWaveWindow")
-
-        # self.gtkwave_win.setParent(None)
-        self.widget.destroy()
-
         self.deleted.emit()
         self.proc.close()

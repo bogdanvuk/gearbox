@@ -155,11 +155,11 @@ class GtkWaveBuffer(Buffer):
     def __init__(self, intf, gtk_window, name):
         self.intf = intf
         self.gtk_window = gtk_window
-        super().__init__(gtk_window.widget, name)
+        super().__init__(gtk_window, name)
 
     def activate(self):
         super().activate()
-        self.gtk_window.widget.activateWindow()
+        self.gtk_window.activateWindow()
 
     def deactivate(self):
         super().deactivate()
@@ -462,6 +462,9 @@ class GtkWaveGraphIntf(QtCore.QObject):
                                              self.cmd_id)
         else:
             self.should_update = True
+
+    def close(self):
+        self.gtkwave_intf.close()
 
 
 class GtkWaveBufferPlugin(LayoutPlugin):

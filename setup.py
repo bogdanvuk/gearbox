@@ -16,7 +16,7 @@ setup(
     license='MIT',
     python_requires='>=3.6.0',
     install_requires=[
-        'pygears', 'pexpect', 'PySide2!=5.12.1', 'pygraphviz', 'pygments'
+        'pygears', 'pexpect', 'PySide2!=5.12.1', 'pygraphviz', 'pygments', 'python-xlib'
     ],
     packages=find_packages(exclude=['docs']),
     package_data={'': ['*.css', '*.png', '*.tcl', 'gtkwaverc']},

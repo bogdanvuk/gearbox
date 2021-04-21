@@ -11,6 +11,7 @@ from gearbox.gtkwave import gtkwave
 from gearbox.main_window import MainWindow
 from gearbox.sniper import sniper
 from gearbox.which_key import which_key
+from pygears.util.fileio import expand
 from pygears.conf import Inject, MayInject, inject, reg
 from pygears.conf.custom_settings import load_rc
 from pygears.sim.extens.vcd import SimVCDPlugin
@@ -115,6 +116,7 @@ def main_loop(script_fn, argv, layers=Inject('gearbox/layers')):
     for l in layers:
         l()
 
+    script_fn = expand(script_fn)
     if script_fn:
         load_rc('.pygears', os.path.dirname(script_fn))
         sim_bridge_inst.invoke_method('run_model', script_fn=script_fn)
