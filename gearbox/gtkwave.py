@@ -197,7 +197,7 @@ class PipeActivityVisitor(HierYielderBase):
 
 class NodeActivityVisitor(HierVisitorBase):
     def NodeModel(self, node):
-        if not node.rtl.hierarchical and node.rtl not in reg['sim/map']:
+        if not (node.rtl.hierarchical or node.rtl in reg['sim/map'] or node.rtl in reg['hdlgen/map']):
             node.set_status('done')
         elif (any(p.status == 'active' for p in node.input_ext_pipes)
               and (not any(p.status == 'active' or p.status == 'handshaked'
