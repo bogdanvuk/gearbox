@@ -492,7 +492,7 @@ class NodeItem(AbstractNodeItem):
                     pipe.show()
 
     def collapse(self):
-        if self.collapsed or not self.hierarchical:
+        if self.collapsed or not self.model.hierarchical:
             return
 
         for obj in self.children:
