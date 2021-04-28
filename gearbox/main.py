@@ -84,7 +84,7 @@ class Application(QtWidgets.QApplication):
 
 
 @inject
-def main_loop(script_fn, argv, layers=Inject('gearbox/layers')):
+def main_loop(script_fn, argv, func=None, funcargs=None, layers=Inject('gearbox/layers')):
     import faulthandler
     faulthandler.enable(file=open('err.log', 'w'))
 
@@ -119,7 +119,7 @@ def main_loop(script_fn, argv, layers=Inject('gearbox/layers')):
     script_fn = expand(script_fn)
     if script_fn:
         load_rc('.pygears', os.path.dirname(script_fn))
-        sim_bridge_inst.invoke_method('run_model', script_fn=script_fn)
+        sim_bridge_inst.invoke_method('run_model', script_fn=script_fn, func=func, funcargs=funcargs)
 
     # main_window.showFullScreen()
     main_window.showMaximized()
@@ -142,7 +142,7 @@ def main_loop(script_fn, argv, layers=Inject('gearbox/layers')):
 
         cmd.append(script_fn)
         os.execl(*cmd)
-    else:
+    elif func is None:
         sys.exit(ret)
 
 

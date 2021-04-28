@@ -10,7 +10,7 @@ from PySide2 import QtCore, QtWidgets
 from pygears import MultiAlternativeError
 from pygears.conf import Inject, PluginBase, inject, reg
 from pygears.conf.trace import pygears_excepthook, log_exception
-from pygears.sim import SimFinish, sim
+from pygears.sim import SimFinish, sim, SimSetupDone
 from pygears.sim.extens.sim_extend import SimExtend
 from pygears.sim.modules import SimVerilated
 
@@ -261,8 +261,8 @@ class PyGearsClient(QtCore.QObject):
     def invoke_method(self, name, *args, **kwds):
         self.invoke(getattr(self, name), *args, **kwds)
 
-    def invoke(self, func, *args, **kwds):
-        self.invoke_queue.put(functools.partial(func, *args, **kwds))
+    def invoke(self, _func, *args, **kwds):
+        self.invoke_queue.put(functools.partial(_func, *args, **kwds))
 
         QtCore.QMetaObject.invokeMethod(self, "invoke_handler",
                                         QtCore.Qt.QueuedConnection)
@@ -361,7 +361,7 @@ class PyGearsClient(QtCore.QObject):
 
         self.model_loaded.emit()
 
-    def run_model(self, script_fn):
+    def run_model(self, script_fn, func=None, funcargs=None):
         artifacts_dir = reg['results-dir']
         if not artifacts_dir:
             artifacts_dir = os.path.join(os.path.dirname(script_fn), 'build')
@@ -395,12 +395,18 @@ class PyGearsClient(QtCore.QObject):
 
         self.err = None
         self.cur_model_issue_id = None
+        reg['sim/dryrun'] = True
         try:
-            reg['sim/dryrun'] = True
-            runpy.run_path(script_fn)
-            reg['sim/dryrun'] = False
+            if func is None:
+                runpy.run_path(script_fn)
+            else:
+                func(**funcargs)
+        except SimSetupDone:
+            pass
         except Exception as e:
             self.err = e
+        finally:
+            reg['sim/dryrun'] = False
 
         self.script_loaded.emit()
 
