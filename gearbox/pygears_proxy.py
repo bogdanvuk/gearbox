@@ -374,7 +374,9 @@ class PyGearsClient(QtCore.QObject):
         reg['trace/ignore'].append(runpy.__file__)
         compilation_log_fn = os.path.join(artifacts_dir, 'compilation.log')
         reg['gearbox/compilation_log_fn'] = compilation_log_fn
-        reg['debug/trace'] = ['*']
+
+        if not reg['debug/trace']:
+            reg['debug/trace'] = ['*']
 
         os.system(f'rm -rf {compilation_log_fn}')
 
