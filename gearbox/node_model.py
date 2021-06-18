@@ -252,7 +252,12 @@ class NodeModel(NamedHierNode):
 
         self.setup_view(painter=painter)
 
-        if parent is None:
+        # if parent is None:
+        #     self.load_children()
+        # if parent is None:
+        #     breakpoint()
+
+        if parent is None or parent.parent is None:
             self.load_children()
 
         # import pdb; pdb.set_trace()

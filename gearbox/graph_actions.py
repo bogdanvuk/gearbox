@@ -1,4 +1,5 @@
 import os
+import stopit
 import inspect
 from .layout import show_buffer
 from .graph import GraphBufferPlugin
@@ -349,8 +350,12 @@ class GraphDescription:
 
     def selection_changed(self, selected):
         if selected:
-            if hasattr(selected[0].model, 'description'):
-                popup_desc(selected[0].model.description, self.buff)
+            try:
+                with stopit.ThreadingTimeout(1, swallow_exc=False):
+                    if hasattr(selected[0].model, 'description'):
+                        popup_desc(selected[0].model.description, self.buff)
+            except:
+                pass
 
     def delete(self):
         popup_cancel()

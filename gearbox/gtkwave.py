@@ -381,7 +381,7 @@ class GtkWaveGraphIntf(QtCore.QObject):
                 except ValueError:
                     self.timestep = 0
 
-            if not gtk_timestep or ts - self.timestep > 100:
+            if not gtk_timestep or ts - self.timestep > reg['gearbox/refresh-rate']:
                 self.should_update = False
                 self.gtkwave_intf.command_nb(f'gtkwave::nop', self.cmd_id)
                 # print("Again")

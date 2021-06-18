@@ -1,3 +1,4 @@
+from pygears.conf import PluginBase
 from functools import partial
 from PySide2 import QtCore
 from pygears.sim import timestep as sim_timestep
@@ -33,13 +34,10 @@ class TimeKeep(QtCore.QObject):
     timestep_changed = QtCore.Signal(int)
 
     @inject
-    def __init__(self,
-                 cont_refresh_step=100,
-                 sim_bridge=Inject('gearbox/sim_bridge')):
+    def __init__(self, sim_bridge=Inject('gearbox/sim_bridge')):
         super().__init__()
         self._timestep = None
         self._time_target = None
-        self._cont_refresh_step = cont_refresh_step
         reg['gearbox/timestep'] = self.max_timestep
         sim_bridge.after_timestep.connect(self.sim_break)
         sim_bridge.after_cleanup.connect(self.sim_break)
@@ -66,7 +64,7 @@ class TimeKeep(QtCore.QObject):
         if self._timestep is None:
             self._timestep = 0
 
-        if self.max_timestep >= self._timestep + self._cont_refresh_step:
+        if self.max_timestep >= self._timestep + reg['gearbox/refresh-rate']:
             self.timestep = self.max_timestep
 
         if self.max_timestep == self._time_target:
@@ -92,3 +90,9 @@ class TimeKeep(QtCore.QObject):
     @property
     def max_timestep(self):
         return sim_timestep()
+
+
+class SimPlugin(PluginBase):
+    @classmethod
+    def bind(cls):
+        reg['gearbox/refresh-rate'] = 100

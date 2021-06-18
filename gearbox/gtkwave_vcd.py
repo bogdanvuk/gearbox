@@ -70,7 +70,11 @@ class VCDMap:
         self.module = module
         self.model = reg['gearbox/graph_model_map'][module]
         self.sigs = sigs
-        self.sigmap = get_item_signals(find('/'), sigs, self.path_prefix)
+        if module.parent is None:
+            self.sigmap = get_item_signals(find('/'), sigs, self.path_prefix)
+        else:
+            self.sigmap = get_item_signals(module.parent, sigs, self.path_prefix)
+
         self.item_signals = {}
 
     @property
